@@ -8,24 +8,44 @@ generator client {
 }
 
 datasource db {
-  provider  = "postgresql"
+  provider = "postgresql"
 }
 
 model Setor {
-  id        String   @id @default(cuid())
+  id        String           @id @default(cuid())
   nome      String
+  senha     String?          // Senha opcional para proteger o acesso ao setor
   pops      Pop[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  registros RegistroDiario[]
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 }
 
 model Pop {
   id                  String   @id @default(cuid())
   titulo              String
+  peso                Int // Novo campo para o Peso (ex: 2, 3, 5)
   orientacaoAvaliacao String
   instrucaoTrabalho   String
   setorId             String
   setor               Setor    @relation(fields: [setorId], references: [id], onDelete: Cascade)
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
+}
+
+model RegistroDiario {
+  id      String   @id @default(cuid())
+  data    DateTime @db.Date // Apenas a data, sem a hora
+  setorId String
+  setor   Setor    @relation(fields: [setorId], references: [id], onDelete: Cascade)
+
+  // Usamos JSON para as respostas. 
+  // Em vez de criar milhares de linhas numa tabela filha, salvamos tudo num único campo de texto estruturado.
+  // Exemplo: { "pop_id_1": true, "pop_id_2": false }
+  respostas Json @default("{}")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([data, setorId]) // Garante que exista apenas 1 checklist por setor por dia
 }

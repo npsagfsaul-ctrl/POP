@@ -37,6 +37,23 @@ export default async function NovoPop() {
           </div>
 
           <div className="form-group">
+            <label htmlFor="peso" className="form-label">
+              Peso do POP na Avaliação
+            </label>
+            <input
+              type="number"
+              id="peso"
+              name="peso"
+              className="form-input"
+              placeholder="Ex: 1, 2, 3, 5"
+              defaultValue={1}
+              min={1}
+              max={10}
+              required
+            />
+          </div>
+
+          <div className="form-group">
             <label htmlFor="setorId" className="form-label">
               Setor Responsável
             </label>

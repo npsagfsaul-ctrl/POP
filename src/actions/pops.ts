@@ -9,6 +9,7 @@ export async function createPop(formData: FormData) {
   const setorId = formData.get('setorId') as string;
   const orientacaoAvaliacao = formData.get('orientacaoAvaliacao') as string;
   const instrucaoTrabalho = formData.get('instrucaoTrabalho') as string;
+  const peso = Number(formData.get('peso') || 1);
 
   if (!titulo || !setorId || !orientacaoAvaliacao || !instrucaoTrabalho) {
     throw new Error('Todos os campos são obrigatórios.');
@@ -20,6 +21,7 @@ export async function createPop(formData: FormData) {
       setorId,
       orientacaoAvaliacao,
       instrucaoTrabalho,
+      peso,
     },
   });
 

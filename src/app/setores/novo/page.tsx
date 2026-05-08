@@ -21,6 +21,22 @@ export default function NovoSetor() {
             />
           </div>
 
+          <div className="form-group">
+            <label htmlFor="senha" className="form-label">
+              Senha de Acesso (Opcional)
+            </label>
+            <input
+              type="password"
+              id="senha"
+              name="senha"
+              className="form-input"
+              placeholder="Deixe em branco para acesso livre"
+            />
+            <p className="text-xs text-muted mt-1">
+              Se definida, esta senha será solicitada para acessar os dados deste setor.
+            </p>
+          </div>
+
           <div className="flex justify-end gap-4 mt-8">
             <button type="submit" className="btn btn-primary">
               Salvar Setor
