@@ -43,6 +43,7 @@ model RegistroDiario {
   // Em vez de criar milhares de linhas numa tabela filha, salvamos tudo num único campo de texto estruturado.
   // Exemplo: { "pop_id_1": true, "pop_id_2": false }
   respostas Json @default("{}")
+  observacoes String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -28,6 +28,7 @@ export default async function ChecklistDiario({
   // Buscar registro existente para a data se houver
   const registroExistente = await getRegistroPorData(setor.id, dataSelecionada);
   const respostasIniciais = registroExistente ? (registroExistente.respostas as Record<string, boolean>) : {};
+  const observacoesInicial = registroExistente ? (registroExistente.observacoes as string) : '';
 
   if (setor.senha) {
     const cookieStore = await cookies();
@@ -73,6 +74,7 @@ export default async function ChecklistDiario({
         pops={pops} 
         dataInicial={dataSelecionada} 
         respostasIniciais={respostasIniciais}
+        observacoesInicial={observacoesInicial}
       />
     </div>
   );

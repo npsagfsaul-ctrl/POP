@@ -16,9 +16,16 @@ interface ChecklistFormProps {
   pops: Pop[];
   dataInicial: string;
   respostasIniciais: Record<string, boolean>;
+  observacoesInicial?: string;
 }
 
-export default function ChecklistForm({ setorId, pops, dataInicial, respostasIniciais }: ChecklistFormProps) {
+export default function ChecklistForm({ 
+  setorId, 
+  pops, 
+  dataInicial, 
+  respostasIniciais,
+  observacoesInicial 
+}: ChecklistFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
 
   const marcarTodosConforme = () => {
@@ -94,6 +101,22 @@ export default function ChecklistForm({ setorId, pops, dataInicial, respostasIni
               </div>
             </div>
           ))}
+        </div>
+
+        <div className="mt-10 border-t pt-8">
+          <label htmlFor="observacoes" className="form-label font-bold text-slate-700 flex items-center gap-2 mb-3">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+            </svg>
+            Observações / Ocorrências do Dia
+          </label>
+          <textarea
+            id="observacoes"
+            name="observacoes"
+            defaultValue={observacoesInicial || ''}
+            placeholder="Descreva aqui qualquer irregularidade, falta de material ou observação relevante..."
+            className="form-input min-h-[120px] resize-y bg-slate-50 border-slate-200 focus:bg-white transition-all text-sm"
+          ></textarea>
         </div>
 
         <div className="flex justify-end mt-8 pt-6 border-t">

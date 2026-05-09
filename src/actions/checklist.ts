@@ -40,10 +40,6 @@ export async function salvarChecklist(formData: FormData) {
   });
 
   // Salvar no banco (cria ou atualiza para o mesmo dia e setor)
-  // Como Prisma não tem upsert simples com campos de Data compostos facilmente sem Unique,
-  // vamos procurar primeiro. A constraint @@unique([data, setorId]) ajuda,
-  // mas o findUnique precisa de index unico exato. Vamos buscar o primeiro.
-  
   const registroExistente = await prisma.registroDiario.findFirst({
     where: {
       setorId,
@@ -51,17 +47,20 @@ export async function salvarChecklist(formData: FormData) {
     }
   });
 
+  const observacoes = formData.get('observacoes') as string;
+
   if (registroExistente) {
     await prisma.registroDiario.update({
       where: { id: registroExistente.id },
-      data: { respostas }
+      data: { respostas, observacoes }
     });
   } else {
     await prisma.registroDiario.create({
       data: {
         setorId,
         data,
-        respostas
+        respostas,
+        observacoes
       }
     });
   }
