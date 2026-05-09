@@ -117,6 +117,7 @@ export default function CalendarioDashboard({ setorId, pops, registros, mes, ano
           hoje.setHours(0, 0, 0, 0);
           
           const isFuturo = dataObjeto > hoje;
+          const isDomingo = dataObjeto.getDay() === 0;
           const registrado = conformidade !== undefined;
           
           let cardStyle = 'bg-white border-slate-200 text-slate-400 hover:border-primary hover:bg-slate-50';
@@ -124,7 +125,12 @@ export default function CalendarioDashboard({ setorId, pops, registros, mes, ano
           let indicatorColor = 'bg-slate-200';
           let textColor = 'text-slate-400';
 
-          if (registrado) {
+          if (isDomingo) {
+            // Domingo = Folga
+            cardStyle = 'bg-slate-100/50 border-slate-200 text-slate-300 opacity-60 cursor-default';
+            statusText = 'Folga';
+            indicatorColor = 'transparent';
+          } else if (registrado) {
             if (conformidade! >= 80) {
               cardStyle = 'bg-emerald-50 border-emerald-100 text-emerald-700 hover:shadow-md';
               indicatorColor = 'bg-emerald-500';
@@ -165,7 +171,7 @@ export default function CalendarioDashboard({ setorId, pops, registros, mes, ano
             </>
           );
 
-          if (isFuturo) {
+          if (isFuturo || isDomingo) {
             return (
               <div key={dia} className={`relative aspect-square flex flex-col items-center justify-center p-2 rounded-2xl border ${cardStyle}`}>
                 {content}
@@ -202,30 +208,40 @@ export default function CalendarioDashboard({ setorId, pops, registros, mes, ano
 
       {(() => {
         let soma = 0;
-        registrosPorDia.forEach(v => soma += v);
-        const media = registrosPorDia.size > 0 ? soma / registrosPorDia.size : 0;
+        let diasContados = 0;
         
-        if (registrosPorDia.size > 0 && media < 80) {
+        registrosPorDia.forEach((valor, dia) => {
+          const dataObjeto = new Date(ano, mes - 1, dia);
+          // Se não for domingo (0), entra na conta
+          if (dataObjeto.getDay() !== 0) {
+            soma += valor;
+            diasContados++;
+          }
+        });
+
+        const media = diasContados > 0 ? soma / diasContados : 0;
+        
+        if (diasContados > 0 && media < 80) {
           return (
             <div className="mt-8 p-8 bg-gradient-to-br from-indigo-50 via-white to-sky-50 border border-indigo-100 rounded-2xl text-center shadow-sm relative overflow-hidden">
               <div className="absolute top-0 left-0 w-1 h-full bg-amber-400"></div>
               <h3 className="text-xl font-bold text-indigo-900 mb-3">Quase lá! 💪</h3>
               <p className="text-indigo-800 leading-relaxed max-w-2xl mx-auto">
-                A média atual de conformidade do setor é de <strong className="text-amber-600 text-lg">{Math.round(media)}%</strong>. 
-                Mantenha o foco nos pequenos detalhes! A meta de 80% está ao seu alcance e a constância é o segredo para o sucesso da equipe.
+                A média atual de conformidade (Seg-Sáb) é de <strong className="text-amber-600 text-lg">{Math.round(media)}%</strong>. 
+                Mantenha o foco nos pequenos detalhes! A meta de 80% está ao seu alcance.
               </p>
             </div>
           );
         }
         
-        if (registrosPorDia.size > 0 && media >= 80) {
+        if (diasContados > 0 && media >= 80) {
           return (
             <div className="mt-8 p-8 bg-gradient-to-br from-emerald-50 via-white to-teal-50 border border-emerald-100 rounded-2xl text-center shadow-sm relative overflow-hidden">
               <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
               <h3 className="text-xl font-bold text-emerald-900 mb-3">Desempenho Excelente! 🌟</h3>
               <p className="text-emerald-800 leading-relaxed max-w-2xl mx-auto">
-                Parabéns à equipe! A média de conformidade está em <strong className="text-emerald-600 text-lg">{Math.round(media)}%</strong>. 
-                Vocês estão superando as expectativas e garantindo a excelência operacional.
+                Parabéns à equipe! A média de conformidade (Seg-Sáb) está em <strong className="text-emerald-600 text-lg">{Math.round(media)}%</strong>. 
+                Vocês estão garantindo a excelência operacional nos dias úteis!
               </p>
             </div>
           );
