@@ -29,10 +29,10 @@ export default async function Home() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {setores.map((setor) => (
-            <Link key={setor.id} href={`/setores/${setor.id}`} className="card group hover:no-underline text-main flex flex-col h-full hover:shadow-xl transition-all duration-300 border border-slate-100">
-              <div className="flex justify-between items-center mb-4">
-                <div className="w-10 h-10 bg-primary-light text-primary rounded-lg flex items-center justify-center group-hover:bg-primary group-hover:text-white transition-all duration-300">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <Link key={setor.id} href={`/setores/${setor.id}`} className="card group hover:no-underline text-main flex flex-col h-full hover:shadow-lg transition-all duration-300 border border-slate-100 p-5">
+              <div className="flex justify-between items-center mb-3">
+                <div className="text-primary group-hover:scale-110 transition-transform">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                   </svg>
                 </div>

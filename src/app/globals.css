@@ -32,10 +32,10 @@
   --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 
   /* Radii */
-  --radius-sm: 0.5rem;
-  --radius-md: 0.75rem;
-  --radius-lg: 1rem;
-  --radius-xl: 1.5rem;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.4rem;
+  --radius-lg: 0.6rem;
+  --radius-xl: 1rem;
 }
 
 * {
@@ -220,8 +220,9 @@ a:hover {
 }
 
 .btn-sm {
-  padding: 0.4rem 0.875rem;
-  font-size: 0.8125rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.75rem;
+  border-radius: var(--radius-sm);
 }
 
 /* Utilities */
