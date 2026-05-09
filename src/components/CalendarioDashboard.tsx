@@ -190,6 +190,7 @@ export default function CalendarioDashboard({ setorId, pops, registros, mes, ano
             </Link>
           );
         })}
+      </div>
 
       <div className="flex flex-wrap gap-6 mt-10 p-6 bg-slate-50 rounded-2xl text-sm text-slate-600 justify-center border border-slate-100">
         <div className="flex items-center gap-2">
