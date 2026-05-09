@@ -64,6 +64,15 @@ export async function verificarSenhaSetor(setorId: string, senhaTentativa: strin
   return { success: false, error: 'Senha incorreta' };
 }
 
+export async function deleteSetor(id: string) {
+  await prisma.setor.delete({
+    where: { id },
+  });
+
+  revalidatePath('/');
+  redirect('/');
+}
+
 export async function getSetores() {
   return await prisma.setor.findMany({
     orderBy: {

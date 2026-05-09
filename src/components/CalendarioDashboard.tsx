@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 
 interface Pop {
   id: string;
@@ -51,12 +52,45 @@ export default function CalendarioDashboard({ setorId, pops, registros, mes, ano
 
   const diasDaSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
+  // Navegação
+  const prevMes = mes === 1 ? 12 : mes - 1;
+  const prevAno = mes === 1 ? ano - 1 : ano;
+  const nextMes = mes === 12 ? 1 : mes + 1;
+  const nextAno = mes === 12 ? ano + 1 : ano;
+
+  const nomeMeses = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+  ];
+
   return (
     <div className="card mt-8 overflow-visible">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-        <div>
-          <h2 className="text-3xl font-extrabold text-main">Desempenho Mensal</h2>
-          <p className="text-muted">Acompanhamento de conformidade — {mes.toString().padStart(2, '0')}/{ano}</p>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center bg-slate-100 rounded-lg p-1">
+            <Link 
+              href={`/setores/${setorId}?mes=${prevMes}&ano=${prevAno}`}
+              className="p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-slate-600"
+              title="Mês Anterior"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+            </Link>
+            <Link 
+              href={`/setores/${setorId}?mes=${nextMes}&ano=${nextAno}`}
+              className="p-2 hover:bg-white hover:shadow-sm rounded-md transition-all text-slate-600"
+              title="Próximo Mês"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+              </svg>
+            </Link>
+          </div>
+          <div>
+            <h2 className="text-3xl font-extrabold text-main leading-tight">Desempenho Mensal</h2>
+            <p className="text-muted font-medium">{nomeMeses[mes - 1]} de {ano}</p>
+          </div>
         </div>
         <div className="bg-primary-light px-4 py-2 rounded-xl text-primary font-bold flex items-center gap-2">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
