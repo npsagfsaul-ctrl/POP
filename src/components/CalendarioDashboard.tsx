@@ -28,9 +28,7 @@ export default function CalendarioDashboard({ setorId, pops, registros, mes, ano
   
   registros.forEach(registro => {
     const dia = new Date(registro.data).getUTCDate();
-    const respostas = typeof registro.respostas === 'string' 
-      ? JSON.parse(registro.respostas) 
-      : registro.respostas;
+    const respostas = registro.respostas;
     
     let pesoAtingido = 0;
     pops.forEach(pop => {

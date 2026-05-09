@@ -41,7 +41,7 @@ export default async function RelatorioMensal({
     let totalConforme = 0;
 
     registros.forEach(reg => {
-      const respostas = typeof reg.respostas === 'string' ? JSON.parse(reg.respostas) : reg.respostas;
+      const respostas = reg.respostas as Record<string, boolean>;
       if (respostas && pop.id in respostas) {
         totalRealizado++;
         if (respostas[pop.id] === true) {

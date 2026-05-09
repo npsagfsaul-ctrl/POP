@@ -86,7 +86,10 @@ export default async function VisualizarSetor({
           <CalendarioDashboard 
             setorId={resolvedParams.id} 
             pops={pops} 
-            registros={registros} 
+            registros={registros.map(r => ({
+              ...r,
+              respostas: r.respostas as Record<string, boolean>
+            }))} 
             mes={mesAtual} 
             ano={anoAtual} 
           />
