@@ -54,25 +54,24 @@ export default async function VisualizarSetor({
           </Link>
           <h1>Setor: {setor.nome}</h1>
         </div>
-        <div className="flex gap-4">
-          <Link href={`/setores/${setor.id}/checklist`} className="btn btn-secondary bg-green-500 text-white hover:bg-green-600 border-none">
-            Preencher Checklist Diário
+        <div className="flex flex-wrap gap-2 items-center">
+          <Link href={`/setores/${setor.id}/checklist`} className="btn btn-secondary bg-emerald-500 text-white hover:bg-emerald-600 border-none btn-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+            Checklist Diário
           </Link>
-          <Link href={`/setores/${setor.id}/editar`} className="btn btn-secondary flex items-center gap-2">
+          <Link href={`/setores/${setor.id}/relatorio?mes=${mesAtual}&ano=${anoAtual}`} className="btn btn-secondary btn-sm">
+            Relatório
+          </Link>
+          <Link href={`/setores/${setor.id}/editar`} className="btn btn-secondary btn-sm" title="Editar Setor">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
-            Editar Setor
-          </Link>
-          <Link href={`/setores/${setor.id}/relatorio?mes=${mesAtual}&ano=${anoAtual}`} className="btn btn-secondary flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2a4 4 0 00-4-4H5m14 0h-1a4 4 0 00-4 4v2m-3-3l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            Relatório Analítico
           </Link>
           <DeleteSetorButton setorId={setor.id} setorNome={setor.nome} />
-          <Link href="/pops/novo" className="btn btn-primary">
-            Novo POP neste Setor
+          <Link href="/pops/novo" className="btn btn-primary btn-sm ml-2">
+            Novo POP
           </Link>
         </div>
       </div>

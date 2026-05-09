@@ -25,11 +25,11 @@ export default function RootLayout({
               </div>
               <span className="text-xl">Gestão de POPs</span>
             </Link>
-            <nav className="nav-links">
-              <Link href="/setores/novo" className="btn btn-secondary">
+            <nav className="nav-links flex items-center gap-2">
+              <Link href="/setores/novo" className="btn btn-secondary btn-sm">
                 Novo Setor
               </Link>
-              <Link href="/pops/novo" className="btn btn-primary">
+              <Link href="/pops/novo" className="btn btn-primary btn-sm">
                 Novo POP
               </Link>
             </nav>

@@ -219,6 +219,11 @@ a:hover {
   border-color: var(--text-muted);
 }
 
+.btn-sm {
+  padding: 0.4rem 0.875rem;
+  font-size: 0.8125rem;
+}
+
 /* Utilities */
 .text-muted {
   color: var(--text-muted);
