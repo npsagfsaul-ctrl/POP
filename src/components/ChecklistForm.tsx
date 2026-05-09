@@ -14,10 +14,11 @@ interface Pop {
 interface ChecklistFormProps {
   setorId: string;
   pops: Pop[];
-  hoje: string;
+  dataInicial: string;
+  respostasIniciais: Record<string, boolean>;
 }
 
-export default function ChecklistForm({ setorId, pops, hoje }: ChecklistFormProps) {
+export default function ChecklistForm({ setorId, pops, dataInicial, respostasIniciais }: ChecklistFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
 
   const marcarTodosConforme = () => {
@@ -42,7 +43,7 @@ export default function ChecklistForm({ setorId, pops, hoje }: ChecklistFormProp
               type="date"
               id="data"
               name="data"
-              defaultValue={hoje}
+              defaultValue={dataInicial}
               className="form-input max-w-xs"
               required
             />
@@ -70,6 +71,7 @@ export default function ChecklistForm({ setorId, pops, hoje }: ChecklistFormProp
                   type="checkbox"
                   id={`pop_${pop.id}`}
                   name={`pop_${pop.id}`}
+                  defaultChecked={respostasIniciais[pop.id] === true}
                   className="w-5 h-5 text-primary rounded border-slate-300 focus:ring-primary cursor-pointer"
                 />
               </div>

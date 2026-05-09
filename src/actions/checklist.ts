@@ -87,3 +87,15 @@ export async function getRegistrosMensais(setorId: string, mes: number, ano: num
     },
   });
 }
+
+export async function getRegistroPorData(setorId: string, dataString: string) {
+  const data = new Date(dataString);
+  data.setUTCHours(0, 0, 0, 0);
+
+  return await prisma.registroDiario.findFirst({
+    where: {
+      setorId,
+      data
+    }
+  });
+}

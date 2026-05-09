@@ -4,17 +4,30 @@ import PasswordPrompt from '@/components/PasswordPrompt';
 import Link from 'next/link';
 import { cookies } from 'next/headers';
 import ChecklistForm from '@/components/ChecklistForm';
+import { getRegistroPorData } from '@/actions/checklist';
 
-export default async function ChecklistDiario({ params }: { params: Promise<{ id: string }> }) {
+export default async function ChecklistDiario({ 
+  params,
+  searchParams
+}: { 
+  params: Promise<{ id: string }>,
+  searchParams: Promise<{ data?: string }>
+}) {
   const resolvedParams = await params;
+  const resolvedSearchParams = await searchParams;
   const setor = await getSetorById(resolvedParams.id);
   const pops = await getPopsBySetor(resolvedParams.id);
   
   const hoje = new Date().toISOString().split('T')[0];
+  const dataSelecionada = resolvedSearchParams.data || hoje;
 
   if (!setor) {
     return <div className="text-center py-12">Setor não encontrado.</div>;
   }
+
+  // Buscar registro existente para a data se houver
+  const registroExistente = await getRegistroPorData(setor.id, dataSelecionada);
+  const respostasIniciais = registroExistente ? (registroExistente.respostas as Record<string, boolean>) : {};
 
   if (setor.senha) {
     const cookieStore = await cookies();
@@ -45,7 +58,7 @@ export default async function ChecklistDiario({ params }: { params: Promise<{ id
               &larr; Voltar ao Painel
             </Link>
           </div>
-          <h1 className="text-3xl font-bold">Checklist Diário</h1>
+          <h1 className="text-3xl font-bold">{registroExistente ? 'Editar Checklist' : 'Preencher Checklist'}</h1>
           <p className="text-muted flex items-center gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
@@ -55,7 +68,12 @@ export default async function ChecklistDiario({ params }: { params: Promise<{ id
         </div>
       </div>
 
-      <ChecklistForm setorId={setor.id} pops={pops} hoje={hoje} />
+      <ChecklistForm 
+        setorId={setor.id} 
+        pops={pops} 
+        dataInicial={dataSelecionada} 
+        respostasIniciais={respostasIniciais}
+      />
     </div>
   );
 }

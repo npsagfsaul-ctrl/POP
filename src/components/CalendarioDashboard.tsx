@@ -112,49 +112,78 @@ export default function CalendarioDashboard({ setorId, pops, registros, mes, ano
         {dias.map(dia => {
           const conformidade = registrosPorDia.get(dia);
           const dataString = `${ano}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
-          const isHoje = new Date().toISOString().split('T')[0] === dataString;
+          const dataObjeto = new Date(`${dataString}T00:00:00`);
+          const hoje = new Date();
+          hoje.setHours(0, 0, 0, 0);
           
-          let bgColor = 'bg-white text-slate-400 border-slate-200'; 
+          const isFuturo = dataObjeto > hoje;
+          const registrado = conformidade !== undefined;
+          
+          let cardStyle = 'bg-white border-slate-200 text-slate-400 hover:border-primary hover:bg-slate-50';
           let statusText = 'Pendente';
-          let indicatorColor = 'bg-slate-300';
-          
-          if (conformidade !== undefined) {
-            if (conformidade >= 80) {
-              bgColor = 'bg-emerald-50 text-emerald-700 border-emerald-100';
-              statusText = `${Math.round(conformidade)}%`;
+          let indicatorColor = 'bg-slate-200';
+          let textColor = 'text-slate-400';
+
+          if (registrado) {
+            if (conformidade! >= 80) {
+              cardStyle = 'bg-emerald-50 border-emerald-100 text-emerald-700 hover:shadow-md';
               indicatorColor = 'bg-emerald-500';
+              textColor = 'text-emerald-700';
+              statusText = `${Math.round(conformidade!)}%`;
             } else {
-              bgColor = 'bg-amber-50 text-amber-700 border-amber-100';
-              statusText = `${Math.round(conformidade)}%`;
+              cardStyle = 'bg-amber-50 border-amber-100 text-amber-700 hover:shadow-md';
               indicatorColor = 'bg-amber-500';
+              textColor = 'text-amber-700';
+              statusText = `${Math.round(conformidade!)}%`;
             }
-          } else if (new Date(`${dataString}T00:00:00`) > new Date()) {
-             // Dias futuros
-             bgColor = 'bg-slate-50/30 text-slate-300 border-slate-100 opacity-60';
-             statusText = '-';
-             indicatorColor = 'transparent';
-          } else {
-            // Passado sem registro
-            bgColor = 'bg-rose-50 text-rose-700 border-rose-100';
-            statusText = 'Não realizado';
+          } else if (!isFuturo) {
+            // Passado sem registro = VERMELHO
+            cardStyle = 'bg-rose-50 border-rose-100 text-rose-700 hover:shadow-md';
             indicatorColor = 'bg-rose-500';
+            textColor = 'text-rose-700';
+            statusText = 'Não Realizado';
+          } else {
+            // Futuro
+            cardStyle = 'bg-slate-50/50 border-slate-100 text-slate-300 opacity-60 cursor-not-allowed';
+            statusText = '-';
+            indicatorColor = 'transparent';
+          }
+
+          const content = (
+            <>
+              <span className={`text-base font-bold group-hover:scale-110 transition-transform ${textColor}`}>
+                {dia}
+              </span>
+              <div className="flex flex-col items-center mt-1">
+                <span className="text-[8px] uppercase font-bold tracking-tighter opacity-80">
+                  {statusText}
+                </span>
+                {indicatorColor !== 'transparent' && (
+                  <div className={`w-1.5 h-1.5 rounded-full mt-1 ${indicatorColor}`} />
+                )}
+              </div>
+            </>
+          );
+
+          if (isFuturo) {
+            return (
+              <div key={dia} className={`relative aspect-square flex flex-col items-center justify-center p-2 rounded-2xl border ${cardStyle}`}>
+                {content}
+              </div>
+            );
           }
 
           return (
-            <div 
-              key={dia} 
-              className={`relative aspect-square flex flex-col items-center justify-center rounded-2xl border transition-all duration-300 hover:scale-105 group ${bgColor} ${isHoje ? 'ring-2 ring-primary ring-offset-2' : ''}`}
-              title={statusText}
+            <Link
+              key={dia}
+              href={`/setores/${setorId}/checklist?data=${dataString}`}
+              className={`relative aspect-square flex flex-col items-center justify-center p-2 rounded-2xl border transition-all duration-200 group ${cardStyle}`}
+              title={registrado ? 'Editar Registro' : 'Preencher Checklist'}
             >
-              <span className={`text-xl font-black ${isHoje ? 'text-primary' : ''}`}>{dia}</span>
-              <span className="text-[10px] font-bold mt-1 uppercase tracking-tighter opacity-80">{statusText}</span>
-              {indicatorColor !== 'transparent' && (
-                <div className={`absolute top-2 right-2 w-2 h-2 rounded-full ${indicatorColor}`}></div>
-              )}
-            </div>
+              {content}
+            </Link>
           );
         })}
-      </div>
 
       <div className="flex flex-wrap gap-6 mt-10 p-6 bg-slate-50 rounded-2xl text-sm text-slate-600 justify-center border border-slate-100">
         <div className="flex items-center gap-2">
