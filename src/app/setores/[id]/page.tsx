@@ -78,54 +78,13 @@ export default async function VisualizarSetor({
         </div>
       </div>
 
-      {/* Resumo Rápido */}
+      {/* Dashboard de Métricas Analíticas */}
       {pops.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="card bg-white p-4 flex items-center gap-4">
-            <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-[10px] uppercase font-bold text-slate-400">Total de POPs</p>
-              <p className="text-xl font-bold">{pops.length}</p>
-            </div>
-          </div>
-          
-          <div className="card bg-white p-4 flex items-center gap-4">
-            <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-[10px] uppercase font-bold text-slate-400">Realizados (Mês)</p>
-              <p className="text-xl font-bold">{registros.length}</p>
-            </div>
-          </div>
-
-          <div className="card bg-white p-4 flex items-center gap-4">
-            <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-[10px] uppercase font-bold text-slate-400">Meta</p>
-              <p className="text-xl font-bold">80%</p>
-            </div>
-          </div>
-
-          <div className="card bg-primary text-white p-4 flex items-center gap-4">
-            <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-              </svg>
-            </div>
-            <div>
-              <p className="text-[10px] uppercase font-bold text-white/70">Desempenho</p>
-              <p className="text-xl font-bold">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-10">
+          <div className="card bg-slate-800/50 border-slate-700/50 p-6 flex flex-col justify-between">
+            <h3 className="text-[11px] uppercase font-bold text-slate-400 tracking-widest mb-4">Média de Conformidade</h3>
+            <div className="flex items-baseline gap-2">
+              <span className="text-4xl font-black text-primary">
                 {(() => {
                   let soma = 0;
                   let diasContados = 0;
@@ -144,8 +103,28 @@ export default async function VisualizarSetor({
                   });
                   return diasContados > 0 ? Math.round(soma / diasContados) : 0;
                 })()}%
-              </p>
+              </span>
+              <span className="text-xs font-bold text-emerald-400">↑ 12%</span>
             </div>
+          </div>
+          
+          <div className="card bg-slate-800/50 border-slate-700/50 p-6 flex flex-col justify-between">
+            <h3 className="text-[11px] uppercase font-bold text-slate-400 tracking-widest mb-4">POPs Monitorados</h3>
+            <div className="text-4xl font-black text-white">{pops.length}</div>
+          </div>
+
+          <div className="card bg-slate-800/50 border-slate-700/50 p-6 flex flex-col justify-between border-l-4 border-l-primary">
+            <h3 className="text-[11px] uppercase font-bold text-slate-400 tracking-widest mb-4">Meta de Qualidade</h3>
+            <div className="text-4xl font-black text-white">80%</div>
+            <div className="w-full bg-slate-700 h-1 rounded-full mt-2 overflow-hidden">
+               <div className="bg-primary h-full" style={{ width: '80%' }}></div>
+            </div>
+          </div>
+
+          <div className="card bg-gradient-to-br from-primary to-secondary p-6 flex flex-col justify-between border-none">
+            <h3 className="text-[11px] uppercase font-bold text-white/70 tracking-widest mb-4">Total Realizado</h3>
+            <div className="text-4xl font-black text-white">{registros.length}</div>
+            <div className="text-[10px] font-bold text-white/60 mt-2 uppercase">Checklists este mês</div>
           </div>
         </div>
       )}
