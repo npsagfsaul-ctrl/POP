@@ -8,7 +8,7 @@ interface Pop {
 
 interface Registro {
   data: Date;
-  respostas: Record<string, boolean>; // JSON estruturado
+  respostas: Record<string, boolean>;
 }
 
 interface CalendarioProps {
@@ -20,92 +20,104 @@ interface CalendarioProps {
 }
 
 export default function CalendarioDashboard({ setorId, pops, registros, mes, ano }: CalendarioProps) {
-  // Calcular peso total possível
   const pesoTotal = pops.reduce((acc, pop) => acc + pop.peso, 0);
 
-  // Mapear registros por dia
-  const registrosPorDia = new Map<number, number>(); // dia -> % de conformidade (0-100)
-  
+  const registrosPorDia = new Map<number, number>();
   registros.forEach(registro => {
     const dia = new Date(registro.data).getUTCDate();
     const respostas = registro.respostas;
-    
     let pesoAtingido = 0;
     pops.forEach(pop => {
-      if (respostas && respostas[pop.id] === true) {
-        pesoAtingido += pop.peso;
-      }
+      if (respostas && respostas[pop.id] === true) pesoAtingido += pop.peso;
     });
-
     const conformidade = pesoTotal > 0 ? (pesoAtingido / pesoTotal) * 100 : 0;
     registrosPorDia.set(dia, conformidade);
   });
 
-  // Gerar dias do mês
   const diasNoMes = new Date(ano, mes, 0).getDate();
-  const primeiroDiaSemana = new Date(ano, mes - 1, 1).getDay(); // 0 = Domingo
-  
+  const primeiroDiaSemana = new Date(ano, mes - 1, 1).getDay();
   const dias = Array.from({ length: diasNoMes }, (_, i) => i + 1);
   const espacosVazios = Array.from({ length: primeiroDiaSemana }, (_, i) => i);
-
   const diasDaSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 
-  // Navegação
   const prevMes = mes === 1 ? 12 : mes - 1;
   const prevAno = mes === 1 ? ano - 1 : ano;
   const nextMes = mes === 12 ? 1 : mes + 1;
   const nextAno = mes === 12 ? ano + 1 : ano;
 
   const nomeMeses = [
-    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
-    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    'Janeiro','Fevereiro','Março','Abril','Maio','Junho',
+    'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'
   ];
 
+  // Calcular média mensal
+  let soma = 0;
+  let diasContados = 0;
+  registrosPorDia.forEach((valor, dia) => {
+    const dataObjeto = new Date(ano, mes - 1, dia);
+    if (dataObjeto.getDay() !== 0) {
+      soma += valor;
+      diasContados++;
+    }
+  });
+  const media = diasContados > 0 ? Math.round(soma / diasContados) : 0;
+
   return (
-    <div className="card bg-slate-800/40 border-slate-700/50 mt-8 overflow-visible">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
-        <div className="flex items-center gap-6">
-          <div className="flex items-center bg-slate-900/50 rounded-xl p-1 border border-white/5">
-            <Link 
+    <div className="card" style={{ marginTop: 24 }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
+        <div>
+          <h2 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: 2 }}>
+            Registro de Atividades
+          </h2>
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+            {nomeMeses[mes - 1]} de {ano}
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {/* Meta badge */}
+          <span className="badge badge-primary" style={{ fontSize: '0.8125rem' }}>
+            Meta: 80%
+          </span>
+
+          {/* Nav meses */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', padding: '4px' }}>
+            <Link
               href={`/setores/${setorId}?mes=${prevMes}&ano=${prevAno}`}
-              className="p-2 hover:bg-slate-800 hover:text-white rounded-lg transition-all text-slate-500"
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 'var(--radius-sm)', color: 'var(--text-muted)', transition: 'all 0.15s ease' }}
               title="Mês Anterior"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
               </svg>
             </Link>
-            <div className="px-3 text-xs font-bold text-slate-400 uppercase tracking-tighter">Hoje</div>
-            <Link 
+            <span style={{ fontSize: '0.8125rem', fontWeight: 600, color: 'var(--text-main)', padding: '0 8px' }}>
+              {nomeMeses[mes - 1].slice(0, 3)}
+            </span>
+            <Link
               href={`/setores/${setorId}?mes=${nextMes}&ano=${nextAno}`}
-              className="p-2 hover:bg-slate-800 hover:text-white rounded-lg transition-all text-slate-500"
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: 28, height: 28, borderRadius: 'var(--radius-sm)', color: 'var(--text-muted)', transition: 'all 0.15s ease' }}
               title="Próximo Mês"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
               </svg>
             </Link>
           </div>
-          <div>
-            <h2 className="text-3xl font-black text-white leading-tight tracking-tight">Registro de Atividades</h2>
-            <p className="text-slate-400 font-bold uppercase text-[10px] tracking-[0.2em]">{nomeMeses[mes - 1]} {ano}</p>
-          </div>
-        </div>
-        <div className="bg-primary/10 border border-primary/20 px-5 py-2 rounded-2xl text-primary font-black text-sm flex items-center gap-3">
-          <div className="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
-          META: 80%
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-4 mb-4 text-center">
+      {/* Calendar */}
+      <div className="calendar-grid" style={{ marginBottom: 8 }}>
         {diasDaSemana.map(d => (
-          <div key={d} className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">{d}</div>
+          <div key={d} className="cal-header">{d}</div>
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-4">
+      <div className="calendar-grid">
         {espacosVazios.map(i => (
-          <div key={`empty-${i}`} className="aspect-square rounded-2xl bg-slate-900/20 border border-white/5 opacity-30"></div>
+          <div key={`empty-${i}`} className="cal-day empty" />
         ))}
 
         {dias.map(dia => {
@@ -114,64 +126,38 @@ export default function CalendarioDashboard({ setorId, pops, registros, mes, ano
           const dataObjeto = new Date(`${dataString}T00:00:00`);
           const hoje = new Date();
           hoje.setHours(0, 0, 0, 0);
-          
+
           const isFuturo = dataObjeto > hoje;
           const isDomingo = dataObjeto.getDay() === 0;
           const registrado = conformidade !== undefined;
-          
-          let cardStyle = 'bg-slate-900/30 border-white/5 text-slate-600 hover:border-primary/50 hover:bg-slate-900/50';
-          let statusText = '-';
-          let indicatorColor = 'bg-slate-700';
-          let textColor = 'text-slate-400';
+
+          let cls = '';
+          let statusText = '';
 
           if (isDomingo) {
-            cardStyle = 'bg-slate-900/10 border-transparent text-slate-700 opacity-40 cursor-default';
+            cls = 'sunday';
             statusText = 'OFF';
-            indicatorColor = 'transparent';
+          } else if (isFuturo) {
+            cls = 'future';
+            statusText = '';
           } else if (registrado) {
-            if (conformidade! >= 80) {
-              cardStyle = 'bg-teal-500/10 border-teal-500/20 text-teal-400 hover:shadow-[0_0_20px_rgba(45,212,191,0.1)]';
-              indicatorColor = 'bg-teal-400';
-              textColor = 'text-teal-400';
-              statusText = `${Math.round(conformidade!)}%`;
-            } else {
-              cardStyle = 'bg-amber-500/10 border-amber-500/20 text-amber-400 hover:shadow-[0_0_20px_rgba(251,191,36,0.1)]';
-              indicatorColor = 'bg-amber-400';
-              textColor = 'text-amber-400';
-              statusText = `${Math.round(conformidade!)}%`;
-            }
-          } else if (!isFuturo) {
-            cardStyle = 'bg-rose-500/10 border-rose-500/20 text-rose-400 hover:shadow-[0_0_20px_rgba(251,113,133,0.1)]';
-            indicatorColor = 'bg-rose-400';
-            textColor = 'text-rose-400';
-            statusText = 'LOST';
+            cls = conformidade! >= 80 ? 'success' : 'warning';
+            statusText = `${Math.round(conformidade!)}%`;
           } else {
-            cardStyle = 'bg-slate-900/20 border-white/5 text-slate-600 opacity-50 cursor-not-allowed';
-            statusText = 'PEND';
-            indicatorColor = 'transparent';
+            cls = 'danger';
+            statusText = '—';
           }
 
-          const content = (
+          const inner = (
             <>
-              <span className={`text-lg font-black transition-transform group-hover:scale-110 ${textColor}`}>
-                {dia}
-              </span>
-              <div className="flex flex-col items-center mt-1">
-                <span className="text-[7px] uppercase font-black tracking-widest opacity-60">
-                  {statusText}
-                </span>
-                {indicatorColor !== 'transparent' && (
-                  <div className={`w-1 h-1 rounded-full mt-1.5 shadow-sm ${indicatorColor}`} />
-                )}
-              </div>
+              <span className="cal-num">{dia}</span>
+              {statusText && <span className="cal-pct">{statusText}</span>}
             </>
           );
 
           if (isFuturo || isDomingo) {
             return (
-              <div key={dia} className={`relative aspect-square flex flex-col items-center justify-center p-2 rounded-2xl border transition-all ${cardStyle}`}>
-                {content}
-              </div>
+              <div key={dia} className={`cal-day ${cls}`}>{inner}</div>
             );
           }
 
@@ -179,63 +165,53 @@ export default function CalendarioDashboard({ setorId, pops, registros, mes, ano
             <Link
               key={dia}
               href={`/setores/${setorId}/checklist?data=${dataString}`}
-              className={`relative aspect-square flex flex-col items-center justify-center p-2 rounded-2xl border transition-all duration-300 group shadow-sm ${cardStyle}`}
+              className={`cal-day ${cls}`}
               title={registrado ? 'Editar Registro' : 'Preencher Checklist'}
             >
-              {content}
+              {inner}
             </Link>
           );
         })}
       </div>
 
-      <div className="flex flex-wrap gap-8 mt-12 p-8 bg-slate-900/40 rounded-3xl text-[10px] font-black uppercase tracking-[0.2em] justify-center border border-white/5">
-        <div className="flex items-center gap-3">
-          <div className="w-2.5 h-2.5 rounded-full bg-teal-500 shadow-[0_0_10px_rgba(45,212,191,0.5)]"></div> 
-          <span className="text-slate-400">Excelente (≥ 80%)</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="w-2.5 h-2.5 rounded-full bg-amber-500 shadow-[0_0_10px_rgba(251,191,36,0.5)]"></div> 
-          <span className="text-slate-400">Abaixo Meta</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_10px_rgba(251,113,133,0.5)]"></div> 
-          <span className="text-slate-400">Não Realizado</span>
-        </div>
-      </div>
-
-      {(() => {
-        let soma = 0;
-        let diasContados = 0;
-        
-        registrosPorDia.forEach((valor, dia) => {
-          const dataObjeto = new Date(ano, mes - 1, dia);
-          if (dataObjeto.getDay() !== 0) {
-            soma += valor;
-            diasContados++;
-          }
-        });
-
-        const media = diasContados > 0 ? soma / diasContados : 0;
-        
-        if (diasContados > 0) {
-          return (
-            <div className="mt-10 p-1 bg-gradient-to-r from-transparent via-slate-700/30 to-transparent rounded-full overflow-hidden">
-               <div className="bg-slate-900/80 backdrop-blur-xl px-10 py-6 rounded-full text-center border border-white/5">
-                  <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.3em] mb-2">Média Mensal Seg-Sáb</p>
-                  <div className="flex items-center justify-center gap-4">
-                    <span className={`text-4xl font-black ${media >= 80 ? 'text-teal-400' : 'text-amber-400'}`}>{Math.round(media)}%</span>
-                    <div className="h-8 w-px bg-slate-800"></div>
-                    <span className="text-slate-500 text-[10px] font-bold max-w-[200px] text-left leading-tight">
-                      {media >= 80 ? 'DESEMPENHO DENTRO DO PADRÃO DE EXCELÊNCIA' : 'NECESSÁRIO AJUSTE DE PROCESSOS PARA ATINGIR A META'}
-                    </span>
-                  </div>
-               </div>
+      {/* Legend + Media */}
+      <div style={{ marginTop: 20, display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+        <div style={{ display: 'flex', gap: 20 }}>
+          {[
+            { cls: 'success', label: 'Excelente (≥80%)', color: 'var(--success)' },
+            { cls: 'warning', label: 'Abaixo da meta', color: 'var(--warning)' },
+            { cls: 'danger',  label: 'Não realizado',  color: 'var(--danger)' },
+          ].map(item => (
+            <div key={item.cls} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+              <span style={{ width: 10, height: 10, borderRadius: '50%', background: item.color, display: 'inline-block' }} />
+              {item.label}
             </div>
-          );
-        }
-        
-        return null;
-      })()}
+          ))}
+        </div>
+
+        {diasContados > 0 && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 12,
+            background: 'var(--surface-2)', border: '1px solid var(--border)',
+            borderRadius: 'var(--radius-lg)', padding: '10px 20px'
+          }}>
+            <div>
+              <div style={{ fontSize: '0.6875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 2 }}>
+                Média Mensal
+              </div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: media >= 80 ? 'var(--success)' : 'var(--warning)', lineHeight: 1 }}>
+                {media}%
+              </div>
+            </div>
+            <div style={{ width: 1, height: 36, background: 'var(--border)' }} />
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', maxWidth: 140 }}>
+              {media >= 80
+                ? '✓ Dentro do padrão de excelência'
+                : '⚠ Necessário ajuste de processos'}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

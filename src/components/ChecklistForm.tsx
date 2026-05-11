@@ -19,12 +19,12 @@ interface ChecklistFormProps {
   observacoesInicial?: string;
 }
 
-export default function ChecklistForm({ 
-  setorId, 
-  pops, 
-  dataInicial, 
+export default function ChecklistForm({
+  setorId,
+  pops,
+  dataInicial,
   respostasIniciais,
-  observacoesInicial 
+  observacoesInicial,
 }: ChecklistFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -40,9 +40,10 @@ export default function ChecklistForm({
     <div className="card">
       <form ref={formRef} action={salvarChecklist}>
         <input type="hidden" name="setorId" value={setorId} />
-        
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
-          <div className="form-group mb-0 flex-grow">
+
+        {/* Header do form */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginBottom: 24 }}>
+          <div className="form-group" style={{ marginBottom: 0, minWidth: 200 }}>
             <label htmlFor="data" className="form-label">
               Data do Checklist
             </label>
@@ -51,50 +52,62 @@ export default function ChecklistForm({
               id="data"
               name="data"
               defaultValue={dataInicial}
-              className="form-input max-w-xs"
+              className="form-input"
+              style={{ maxWidth: 200 }}
               required
             />
           </div>
-          
-          <button 
-            type="button" 
+
+          <button
+            type="button"
             onClick={marcarTodosConforme}
-            className="btn btn-secondary btn-sm flex items-center gap-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+            className="btn btn-success btn-sm"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
             Tudo Conforme / Nada a Declarar
           </button>
         </div>
 
-        <div className="space-y-4">
-          <h3 className="text-lg font-medium border-b pb-2 mb-4">Procedimentos (POPs)</h3>
-          
+        <div className="divider" />
+
+        {/* Lista de POPs */}
+        <div style={{ marginBottom: 8 }}>
+          <h3 style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: 12 }}>
+            Procedimentos Operacionais ({pops.length})
+          </h3>
+
           {pops.map((pop) => (
-            <div key={pop.id} className="flex items-start p-4 border rounded-lg hover:bg-slate-50 transition-colors bg-white">
-              <div className="flex-shrink-0 mt-1">
-                <input
-                  type="checkbox"
-                  id={`pop_${pop.id}`}
-                  name={`pop_${pop.id}`}
-                  defaultChecked={respostasIniciais[pop.id] === true}
-                  className="w-5 h-5 text-primary rounded border-slate-300 focus:ring-primary cursor-pointer"
-                />
-              </div>
-              <div className="ml-4 flex-grow">
-                <label htmlFor={`pop_${pop.id}`} className="font-bold cursor-pointer block text-main mb-1">
-                  {pop.titulo}
-                  <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-blue-50 text-blue-700 uppercase tracking-wider border border-blue-100">
-                    Peso: {pop.peso}
+            <div key={pop.id} className="pop-item">
+              <input
+                type="checkbox"
+                id={`pop_${pop.id}`}
+                name={`pop_${pop.id}`}
+                defaultChecked={respostasIniciais[pop.id] === true}
+              />
+              <div style={{ flex: 1 }}>
+                <label htmlFor={`pop_${pop.id}`} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <span className="pop-item-title">{pop.titulo}</span>
+                  <span className="badge badge-primary" style={{ fontSize: '0.6875rem' }}>
+                    Peso {pop.peso}
                   </span>
                 </label>
-                <p className="text-sm text-slate-600 mb-2">
-                  <span className="font-semibold text-slate-700">Avaliar:</span> {pop.orientacaoAvaliacao}
+
+                <p className="pop-item-desc" style={{ marginTop: 4 }}>
+                  <strong style={{ color: 'var(--text-main)' }}>Avaliar:</strong> {pop.orientacaoAvaliacao}
                 </p>
-                <details className="text-xs text-slate-500">
-                  <summary className="cursor-pointer text-primary hover:underline font-medium">Instrução de Trabalho</summary>
-                  <div className="mt-2 p-3 bg-slate-50 rounded-md border border-slate-100 whitespace-pre-wrap text-slate-600 italic">
+
+                <details style={{ marginTop: 6 }}>
+                  <summary style={{ fontSize: '0.8125rem', color: 'var(--primary)', cursor: 'pointer', fontWeight: 500 }}>
+                    Ver instrução de trabalho
+                  </summary>
+                  <div style={{
+                    marginTop: 8, padding: '10px 14px',
+                    background: 'var(--surface-2)', borderRadius: 'var(--radius-md)',
+                    border: '1px solid var(--border)', fontSize: '0.8125rem',
+                    color: 'var(--text-muted)', whiteSpace: 'pre-wrap', lineHeight: 1.6
+                  }}>
                     {pop.instrucaoTrabalho}
                   </div>
                 </details>
@@ -103,10 +116,13 @@ export default function ChecklistForm({
           ))}
         </div>
 
-        <div className="mt-10 border-t pt-8">
-          <label htmlFor="observacoes" className="form-label font-bold text-slate-700 flex items-center gap-2 mb-3">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+        <div className="divider" />
+
+        {/* Observações */}
+        <div className="form-group">
+          <label htmlFor="observacoes" className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
             </svg>
             Observações / Ocorrências do Dia
           </label>
@@ -114,13 +130,18 @@ export default function ChecklistForm({
             id="observacoes"
             name="observacoes"
             defaultValue={observacoesInicial || ''}
-            placeholder="Descreva aqui qualquer irregularidade, falta de material ou observação relevante..."
-            className="form-input min-h-[120px] resize-y bg-slate-50 border-slate-200 focus:bg-white transition-all text-sm"
-          ></textarea>
+            placeholder="Descreva irregularidades, falta de material ou observações relevantes..."
+            className="form-textarea"
+          />
+          <p className="form-hint">Campo opcional — preencha caso haja algo a relatar.</p>
         </div>
 
-        <div className="flex justify-end mt-8 pt-6 border-t">
-          <button type="submit" className="btn btn-primary px-10 py-3 text-lg shadow-lg">
+        {/* Submit */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 8 }}>
+          <button type="submit" className="btn btn-primary btn-lg">
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
             Finalizar Checklist
           </button>
         </div>

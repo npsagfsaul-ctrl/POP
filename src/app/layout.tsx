@@ -1,41 +1,69 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { isAdmin } from "@/actions/admin";
+import Sidebar from "@/components/Sidebar";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Sistema de POPs",
+  title: "Sistema de POPs | Gestão de Procedimentos",
   description: "Gerenciamento de Procedimentos Operacionais Padrão",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const adminMode = await isAdmin();
+
   return (
     <html lang="pt-BR">
-      <body className="antialiased bg-slate-950 text-slate-50 min-h-screen">
-        <header className="header">
-          <div className="container header-content">
-            <Link href="/" className="header-logo hover:opacity-80 flex items-center gap-3">
-              <div className="w-8 h-8 bg-primary/10 rounded-lg flex items-center justify-center border border-primary/20">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" className="h-4 w-4 text-primary" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M7 3a1 1 0 000 2h6a1 1 0 100-2H7zM4 7a1 1 0 011-1h10a1 1 0 110 2H5a1 1 0 01-1-1zM2 11a2 2 0 012-2h12a2 2 0 012 2v4a2 2 0 01-2 2H4a2 2 0 01-2-2v-4z" />
-                </svg>
+      <body>
+        <div className="app-wrapper">
+          <Sidebar isAdmin={adminMode} />
+
+          <div className="main-content">
+            {/* Topbar */}
+            <header className="topbar">
+              <div>
+                <span className="topbar-title">Sistema de POPs</span>
               </div>
-              <span className="text-xl font-black tracking-tighter uppercase">Gestão de POPs</span>
-            </Link>
-            <nav className="nav-links flex items-center gap-4">
-              <Link href="/" className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 hover:text-primary transition-colors hidden md:block">Sectores</Link>
-              <Link href="/setores/novo" className="btn btn-secondary btn-sm border-white/5 bg-slate-900/50">
-                Novo Setor
-              </Link>
-            </nav>
+
+              <div className="topbar-actions">
+                {adminMode ? (
+                  <>
+                    <Link
+                      href="/setores/novo"
+                      className="btn btn-primary btn-sm"
+                    >
+                      <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                      </svg>
+                      Novo Setor
+                    </Link>
+                    <form action="/api/auth/logout" method="POST">
+                      <button type="submit" className="btn btn-secondary btn-sm">
+                        Sair
+                      </button>
+                    </form>
+                  </>
+                ) : (
+                  <Link href="/admin/login" className="btn btn-outline btn-sm">
+                    <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                    </svg>
+                    Login ADM
+                  </Link>
+                )}
+              </div>
+            </header>
+
+            {/* Page Content */}
+            <main className="page-content">
+              {children}
+            </main>
           </div>
-        </header>
-        <main className="container pb-20">
-          {children}
-        </main>
+        </div>
       </body>
     </html>
   );
