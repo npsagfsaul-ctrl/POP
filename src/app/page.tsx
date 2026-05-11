@@ -1,6 +1,8 @@
 import { getSetores } from '@/actions/setores';
 import Link from 'next/link';
 
+export const dynamic = 'force-dynamic';
+
 export default async function Home() {
   const setores = await getSetores();
 

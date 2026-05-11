@@ -9,6 +9,8 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { cookies } from 'next/headers';
 
+export const dynamic = 'force-dynamic';
+
 export default async function VisualizarSetor({ 
   params, 
   searchParams 
@@ -52,7 +54,7 @@ export default async function VisualizarSetor({
           <Link href="/" className="text-muted text-sm hover:underline mb-2 inline-block">
             &larr; Voltar para Setores
           </Link>
-          <h1>Setor: {setor.nome}</h1>
+          <h1 className="text-3xl font-bold">Setor: {setor.nome}</h1>
         </div>
         <div className="flex flex-wrap gap-2 items-center">
           <Link href={`/setores/${setor.id}/checklist`} className="btn btn-secondary bg-emerald-500 text-white hover:bg-emerald-600 border-none btn-sm">
@@ -75,6 +77,79 @@ export default async function VisualizarSetor({
           </Link>
         </div>
       </div>
+
+      {/* Resumo Rápido */}
+      {pops.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+          <div className="card bg-white p-4 flex items-center gap-4">
+            <div className="w-12 h-12 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase font-bold text-slate-400">Total de POPs</p>
+              <p className="text-xl font-bold">{pops.length}</p>
+            </div>
+          </div>
+          
+          <div className="card bg-white p-4 flex items-center gap-4">
+            <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase font-bold text-slate-400">Realizados (Mês)</p>
+              <p className="text-xl font-bold">{registros.length}</p>
+            </div>
+          </div>
+
+          <div className="card bg-white p-4 flex items-center gap-4">
+            <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase font-bold text-slate-400">Meta</p>
+              <p className="text-xl font-bold">80%</p>
+            </div>
+          </div>
+
+          <div className="card bg-primary text-white p-4 flex items-center gap-4">
+            <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase font-bold text-white/70">Desempenho</p>
+              <p className="text-xl font-bold">
+                {(() => {
+                  let soma = 0;
+                  let diasContados = 0;
+                  const pesoTotal = pops.reduce((acc, p) => acc + p.peso, 0);
+                  
+                  registros.forEach(reg => {
+                    if (new Date(reg.data).getUTCDay() !== 0) { // Excluir domingos
+                      let pesoAtingido = 0;
+                      const respostas = reg.respostas as Record<string, boolean>;
+                      pops.forEach(pop => {
+                        if (respostas && respostas[pop.id] === true) pesoAtingido += pop.peso;
+                      });
+                      soma += (pesoAtingido / pesoTotal) * 100;
+                      diasContados++;
+                    }
+                  });
+                  return diasContados > 0 ? Math.round(soma / diasContados) : 0;
+                })()}%
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
 
       {pops.length === 0 ? (
         <div className="card text-center py-12">
