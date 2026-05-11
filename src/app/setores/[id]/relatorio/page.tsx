@@ -230,6 +230,3 @@ export default async function RelatorioMensal({
     </div>
   );
 }
-
-  );
-}
