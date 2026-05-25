@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { isAdmin } from "@/actions/admin";
 import Sidebar from "@/components/Sidebar";
+import LogoutButton from "@/components/LogoutButton";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -41,11 +42,7 @@ export default async function RootLayout({
                       </svg>
                       Novo Setor
                     </Link>
-                    <form action="/api/auth/logout" method="POST">
-                      <button type="submit" className="btn btn-secondary btn-sm">
-                        Sair
-                      </button>
-                    </form>
+                    <LogoutButton />
                   </>
                 ) : (
                   <Link href="/admin/login" className="btn btn-outline btn-sm">
