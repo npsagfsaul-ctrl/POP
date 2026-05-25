@@ -204,16 +204,19 @@ export default async function VisualizarSetor({
             }))}
             mes={mesAtual}
             ano={anoAtual}
+            adminMode={adminMode}
           />
 
           {/* POPs List */}
           <div className="card" style={{ marginTop: 24 }}>
             <div className="card-title">
-              POPs Cadastrados
-              <span className="badge badge-primary" style={{ marginLeft: 8, fontSize: '0.75rem' }}>{pops.length}</span>
+              POPs Cadastrados (Preenchidos no Mês)
+              <span className="badge badge-primary" style={{ marginLeft: 8, fontSize: '0.75rem' }}>
+                {pops.filter(pop => registros.some(reg => (reg.respostas as Record<string, boolean>)?.[pop.id] !== undefined)).length}
+              </span>
             </div>
 
-            {pops.map((pop) => (
+            {pops.filter(pop => registros.some(reg => (reg.respostas as Record<string, boolean>)?.[pop.id] !== undefined)).map((pop) => (
               <div key={pop.id} style={{
                 padding: '14px 0',
                 borderBottom: '1px solid var(--border)',

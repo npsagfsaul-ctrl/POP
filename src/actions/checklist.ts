@@ -98,3 +98,44 @@ export async function getRegistroPorData(setorId: string, dataString: string) {
     }
   });
 }
+
+export async function salvarComentarioAdmin(setorId: string, dataString: string, comentarioAdmin: string) {
+  const data = new Date(dataString);
+  data.setUTCHours(0, 0, 0, 0);
+
+  const registroExistente = await prisma.registroDiario.findFirst({
+    where: { setorId, data }
+  });
+
+  if (registroExistente) {
+    await prisma.registroDiario.update({
+      where: { id: registroExistente.id },
+      data: { 
+        comentarioAdmin, 
+        alertaAdmin: comentarioAdmin.trim() !== '' 
+      }
+    });
+  } else {
+    // Se não existir, criamos um em branco só para o comentário
+    await prisma.registroDiario.create({
+      data: {
+        setorId,
+        data,
+        respostas: {},
+        comentarioAdmin,
+        alertaAdmin: comentarioAdmin.trim() !== ''
+      }
+    });
+  }
+
+  revalidatePath(`/setores/${setorId}`);
+}
+
+export async function marcarAlertaComoLido(registroId: string, setorId: string) {
+  await prisma.registroDiario.update({
+    where: { id: registroId },
+    data: { alertaAdmin: false }
+  });
+  
+  revalidatePath(`/setores/${setorId}`);
+}

@@ -45,6 +45,9 @@ model RegistroDiario {
   respostas Json @default("{}")
   observacoes String?
 
+  comentarioAdmin String?
+  alertaAdmin     Boolean @default(false)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
