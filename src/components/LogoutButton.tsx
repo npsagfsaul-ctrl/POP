@@ -8,7 +8,7 @@ export default function LogoutButton() {
 
   async function handleLogout() {
     await logoutAdmin();
-    router.refresh();
+    window.location.href = '/';
   }
 
   return (
