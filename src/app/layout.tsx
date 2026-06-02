@@ -42,8 +42,7 @@ export default async function RootLayout({
                       </svg>
                       Novo Setor
                     </Link>
-
-                <LogoutButton />
+                    <LogoutButton />
                   </>
                 ) : (
                   <Link href="/admin/login" className="btn btn-outline btn-sm">

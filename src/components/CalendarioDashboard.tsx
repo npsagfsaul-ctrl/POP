@@ -1,5 +1,8 @@
-import React from 'react';
+'use client';
+
+import React, { useState } from 'react';
 import Link from 'next/link';
+import { salvarComentarioAdmin, marcarAlertaComoLido } from '@/actions/checklist';
 
 interface Pop {
   id: string;
@@ -7,8 +10,11 @@ interface Pop {
 }
 
 interface Registro {
+  id: string;
   data: Date;
   respostas: Record<string, boolean>;
+  comentarioAdmin?: string | null;
+  alertaAdmin?: boolean;
 }
 
 interface CalendarioProps {
@@ -17,22 +23,31 @@ interface CalendarioProps {
   registros: Registro[];
   mes: number;
   ano: number;
+  adminMode?: boolean;
 }
 
-export default function CalendarioDashboard({ setorId, pops, registros, mes, ano }: CalendarioProps) {
+export default function CalendarioDashboard({ setorId, pops, registros, mes, ano, adminMode = false }: CalendarioProps) {
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedDia, setSelectedDia] = useState<number | null>(null);
+  const [comentarioTexto, setComentarioTexto] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
   const pesoTotal = pops.reduce((acc, pop) => acc + pop.peso, 0);
 
-  const registrosPorDia = new Map<number, number>();
+  const registrosPorDia = new Map<number, Registro>();
   registros.forEach(registro => {
     const dia = new Date(registro.data).getUTCDate();
+    registrosPorDia.set(dia, registro);
+  });
+
+  const getConformidade = (registro: Registro) => {
     const respostas = registro.respostas;
     let pesoAtingido = 0;
     pops.forEach(pop => {
       if (respostas && respostas[pop.id] === true) pesoAtingido += pop.peso;
     });
-    const conformidade = pesoTotal > 0 ? (pesoAtingido / pesoTotal) * 100 : 0;
-    registrosPorDia.set(dia, conformidade);
-  });
+    return pesoTotal > 0 ? (pesoAtingido / pesoTotal) * 100 : 0;
+  };
 
   const diasNoMes = new Date(ano, mes, 0).getDate();
   const primeiroDiaSemana = new Date(ano, mes - 1, 1).getDay();
@@ -53,17 +68,52 @@ export default function CalendarioDashboard({ setorId, pops, registros, mes, ano
   // Calcular média mensal
   let soma = 0;
   let diasContados = 0;
-  registrosPorDia.forEach((valor, dia) => {
+  registrosPorDia.forEach((registro, dia) => {
     const dataObjeto = new Date(ano, mes - 1, dia);
     if (dataObjeto.getDay() !== 0) {
-      soma += valor;
+      soma += getConformidade(registro);
       diasContados++;
     }
   });
   const media = diasContados > 0 ? Math.round(soma / diasContados) : 0;
 
+  const handleOpenModal = (e: React.MouseEvent, dia: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const registro = registrosPorDia.get(dia);
+    setComentarioTexto(registro?.comentarioAdmin || '');
+    setSelectedDia(dia);
+    setModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setModalOpen(false);
+    setSelectedDia(null);
+    setComentarioTexto('');
+  };
+
+  const handleSalvarComentario = async () => {
+    if (!selectedDia) return;
+    setIsSaving(true);
+    const dataString = `${ano}-${String(mes).padStart(2, '0')}-${String(selectedDia).padStart(2, '0')}`;
+    await salvarComentarioAdmin(setorId, dataString, comentarioTexto);
+    setIsSaving(false);
+    handleCloseModal();
+  };
+
+  const handleMarcarComoLido = async () => {
+    if (!selectedDia) return;
+    const registro = registrosPorDia.get(selectedDia);
+    if (registro) {
+      setIsSaving(true);
+      await marcarAlertaComoLido(registro.id, setorId);
+      setIsSaving(false);
+      handleCloseModal();
+    }
+  };
+
   return (
-    <div className="card" style={{ marginTop: 24 }}>
+    <div className="card" style={{ marginTop: 24, position: 'relative' }}>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 24 }}>
         <div>
@@ -121,7 +171,8 @@ export default function CalendarioDashboard({ setorId, pops, registros, mes, ano
         ))}
 
         {dias.map(dia => {
-          const conformidade = registrosPorDia.get(dia);
+          const registro = registrosPorDia.get(dia);
+          const conformidade = registro ? getConformidade(registro) : undefined;
           const dataString = `${ano}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
           const dataObjeto = new Date(`${dataString}T00:00:00`);
           const hoje = new Date();
@@ -130,6 +181,8 @@ export default function CalendarioDashboard({ setorId, pops, registros, mes, ano
           const isFuturo = dataObjeto > hoje;
           const isDomingo = dataObjeto.getDay() === 0;
           const registrado = conformidade !== undefined;
+          const temAlerta = !!registro?.alertaAdmin;
+          const temComentarioAdmin = !!registro?.comentarioAdmin;
 
           let cls = '';
           let statusText = '';
@@ -149,10 +202,40 @@ export default function CalendarioDashboard({ setorId, pops, registros, mes, ano
           }
 
           const inner = (
-            <>
+            <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
               <span className="cal-num">{dia}</span>
               {statusText && <span className="cal-pct">{statusText}</span>}
-            </>
+              
+              {/* Alerta badge for sector representative */}
+              {!adminMode && temAlerta && (
+                <div 
+                  onClick={(e) => handleOpenModal(e, dia)}
+                  style={{
+                    position: 'absolute', top: 4, right: 4, width: 12, height: 12, 
+                    backgroundColor: 'var(--danger)', borderRadius: '50%', cursor: 'pointer',
+                    boxShadow: '0 0 0 2px white'
+                  }}
+                  title="Alerta do Administrador"
+                />
+              )}
+
+              {/* Admin Comment Button */}
+              {adminMode && !isDomingo && !isFuturo && (
+                <button
+                  onClick={(e) => handleOpenModal(e, dia)}
+                  style={{
+                    position: 'absolute', top: 4, right: 4, background: 'none', border: 'none', cursor: 'pointer',
+                    color: temComentarioAdmin ? 'var(--primary)' : 'var(--text-muted)',
+                    padding: 2, display: 'flex'
+                  }}
+                  title={temComentarioAdmin ? "Editar Comentário" : "Adicionar Comentário"}
+                >
+                  <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                  </svg>
+                </button>
+              )}
+            </div>
           );
 
           if (isFuturo || isDomingo) {
@@ -167,6 +250,7 @@ export default function CalendarioDashboard({ setorId, pops, registros, mes, ano
               href={`/setores/${setorId}/checklist?data=${dataString}`}
               className={`cal-day ${cls}`}
               title={registrado ? 'Editar Registro' : 'Preencher Checklist'}
+              style={{ position: 'relative' }}
             >
               {inner}
             </Link>
@@ -212,6 +296,51 @@ export default function CalendarioDashboard({ setorId, pops, registros, mes, ano
           </div>
         )}
       </div>
+
+      {/* Modal for Comments/Alerts */}
+      {modalOpen && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000,
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>
+          <div className="card" style={{ width: '100%', maxWidth: 400, padding: 24 }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: 16 }}>
+              {adminMode ? `Comentário - ${selectedDia}/${mes}/${ano}` : `Alerta do Administrador`}
+            </h3>
+            
+            {adminMode ? (
+              <>
+                <textarea
+                  className="form-input"
+                  style={{ minHeight: 100, marginBottom: 16 }}
+                  placeholder="Digite o comentário/alerta para este dia..."
+                  value={comentarioTexto}
+                  onChange={(e) => setComentarioTexto(e.target.value)}
+                />
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                  <button className="btn btn-secondary" onClick={handleCloseModal} disabled={isSaving}>Cancelar</button>
+                  <button className="btn btn-primary" onClick={handleSalvarComentario} disabled={isSaving}>
+                    {isSaving ? 'Salvando...' : 'Salvar Alerta'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div style={{ background: 'var(--surface-2)', padding: 16, borderRadius: 'var(--radius-md)', marginBottom: 16 }}>
+                  <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{comentarioTexto || 'Sem mensagem.'}</p>
+                </div>
+                <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                  <button className="btn btn-secondary" onClick={handleCloseModal} disabled={isSaving}>Fechar</button>
+                  <button className="btn btn-primary" onClick={handleMarcarComoLido} disabled={isSaving}>
+                    {isSaving ? 'Marcando...' : 'Marcar como lido'}
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
