@@ -55,6 +55,8 @@ export default async function VisualizarSetor({
   let somaConformidade = 0;
   let diasContados = 0;
 
+  let diasAbaixo100 = 0;
+
   registros.forEach(reg => {
     if (new Date(reg.data).getUTCDay() !== 0) {
       let pesoAtingido = 0;
@@ -62,8 +64,10 @@ export default async function VisualizarSetor({
       pops.forEach(pop => {
         if (respostas && respostas[pop.id] === true) pesoAtingido += pop.peso;
       });
-      somaConformidade += (pesoAtingido / (pesoTotal || 1)) * 100;
+      const conformidade = (pesoAtingido / (pesoTotal || 1)) * 100;
+      somaConformidade += conformidade;
       diasContados++;
+      if (conformidade < 100) diasAbaixo100++;
     }
   });
 
@@ -157,15 +161,15 @@ export default async function VisualizarSetor({
           </div>
 
           <div className="stat-card">
-            <div className="stat-icon success">
-              <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            <div className="stat-icon" style={{ background: diasAbaixo100 === 0 ? 'rgba(34,197,94,0.12)' : 'rgba(251,191,36,0.12)' }}>
+              <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke={diasAbaixo100 === 0 ? 'var(--success)' : 'var(--warning)'} strokeWidth={1.8}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
             <div>
-              <div className="stat-label">Registros este Mês</div>
-              <div className="stat-value">{registros.length}</div>
-              <div className="stat-sub">checklists realizados</div>
+              <div className="stat-label">Dias Abaixo de 100%</div>
+              <div className="stat-value" style={{ color: diasAbaixo100 === 0 ? 'var(--success)' : 'var(--warning)' }}>{diasAbaixo100}</div>
+              <div className="stat-sub">{diasAbaixo100 === 0 ? 'sem pendências!' : 'dias com pendência'}</div>
             </div>
           </div>
         </div>
