@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "build": {
+    "env": {
+      "DATABASE_URL": "@database_url",
+      "DIRECT_URL": "@direct_url"
+    },
+    "command": "npm run build",
+    "cwd": "./"
+  },
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/src/app/api/$1" },
+    { "src": "/admin/(.*)", "dest": "/src/app/admin/$1" },
+    { "src": "/(.*)", "dest": "/src/app/$1" }
+  ]
+}

@@ -17,20 +17,22 @@ model Setor {
   senha     String?          // Senha opcional para proteger o acesso ao setor
   pops      Pop[]
   registros RegistroDiario[]
+  alertas   Alerta[]
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
 }
 
 model Pop {
-  id                  String   @id @default(cuid())
+  id                  String    @id @default(cuid())
   titulo              String
   peso                Int // Novo campo para o Peso (ex: 2, 3, 5)
   orientacaoAvaliacao String
   instrucaoTrabalho   String
   setorId             String
-  setor               Setor    @relation(fields: [setorId], references: [id], onDelete: Cascade)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  setor               Setor     @relation(fields: [setorId], references: [id], onDelete: Cascade)
+  dataAgendada        DateTime? @db.Date // POP agendado para um dia específico (opcional)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 }
 
 model RegistroDiario {
@@ -49,4 +51,16 @@ model RegistroDiario {
   updatedAt DateTime @updatedAt
 
   @@unique([data, setorId]) // Garante que exista apenas 1 checklist por setor por dia
+}
+
+model Alerta {
+  id        String   @id @default(cuid())
+  conteudo  String
+  data      DateTime @db.Date
+  setorId   String
+  setor     Setor    @relation(fields: [setorId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([data, setorId])
 }

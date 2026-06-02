@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { getSetorById } from '@/actions/setores';
 
 interface SidebarProps {
   isAdmin: boolean;
@@ -40,6 +42,18 @@ const IconLock = () => (
 
 export default function Sidebar({ isAdmin }: SidebarProps) {
   const pathname = usePathname();
+  const [setorNome, setSetorNome] = useState<string | null>(null);
+
+  useEffect(() => {
+    const match = pathname.match(/^\/setores\/([^/]+)/);
+    if (match && match[1] !== 'novo') {
+      getSetorById(match[1]).then(setor => {
+        if (setor) setSetorNome(setor.nome);
+      });
+    } else {
+      setSetorNome(null);
+    }
+  }, [pathname]);
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
@@ -70,11 +84,6 @@ export default function Sidebar({ isAdmin }: SidebarProps) {
           Setores
         </Link>
 
-        <Link href="/" className={`sidebar-link ${isActive('/checklist') ? 'active' : ''}`}>
-          <IconClipboard />
-          Checklists
-        </Link>
-
         {isAdmin && (
           <>
             <div className="sidebar-section-label" style={{ marginTop: 12 }}>Administração</div>
@@ -95,16 +104,6 @@ export default function Sidebar({ isAdmin }: SidebarProps) {
             </Link>
           </>
         )}
-
-        {!isAdmin && (
-          <>
-            <div className="sidebar-section-label" style={{ marginTop: 12 }}>Acesso</div>
-            <Link href="/admin/login" className="sidebar-link">
-              <IconLock />
-              Login ADM
-            </Link>
-          </>
-        )}
       </nav>
 
       {/* Footer */}
@@ -114,7 +113,9 @@ export default function Sidebar({ isAdmin }: SidebarProps) {
             {isAdmin ? 'A' : 'U'}
           </div>
           <div>
-            <div className="sidebar-user-name">{isAdmin ? 'Administrador' : 'Usuário'}</div>
+            <div className="sidebar-user-name">
+              {isAdmin ? 'Administrador' : (setorNome ? `Usuário do ${setorNome}` : 'Usuário')}
+            </div>
             <div className="sidebar-user-role">{isAdmin ? 'Acesso total' : 'Somente leitura'}</div>
           </div>
         </div>
