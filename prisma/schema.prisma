@@ -12,14 +12,15 @@ datasource db {
 }
 
 model Setor {
-  id        String           @id @default(cuid())
-  nome      String
-  senha     String?          // Senha opcional para proteger o acesso ao setor
-  pops      Pop[]
-  registros RegistroDiario[]
-  alertas   Alerta[]
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
+  id          String           @id @default(cuid())
+  nome        String
+  senha       String?          // Senha opcional para proteger o acesso ao setor
+  pops        Pop[]
+  registros   RegistroDiario[]
+  alertas     Alerta[]
+  ocorrencias Ocorrencia[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
 }
 
 model Pop {
@@ -66,4 +67,57 @@ model Alerta {
   updatedAt DateTime @updatedAt
 
   @@unique([data, setorId])
+}
+
+// ─── MINI INTRANET ───
+
+enum TipoComunicado {
+  AVISO    // Amarelo ⚠️
+  NOVIDADE // Azul 🆕
+  URGENTE  // Vermelho 🚨
+  INFO     // Cinza ℹ️
+}
+
+model Comunicado {
+  id        String         @id @default(cuid())
+  titulo    String
+  conteudo  String
+  tipo      TipoComunicado @default(AVISO)
+  destaque  Boolean        @default(false)
+  expiresAt DateTime?      // Data de expiração opcional
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+model Lembrete {
+  id        String   @id @default(cuid())
+  titulo    String
+  data      DateTime @db.Date
+  descricao String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Gravidade {
+  BAIXA
+  MEDIA
+  ALTA
+  CRITICA
+}
+
+enum StatusOcorrencia {
+  ABERTA
+  RESOLVIDA
+}
+
+model Ocorrencia {
+  id        String           @id @default(cuid())
+  descricao String
+  gravidade Gravidade        @default(MEDIA)
+  status    StatusOcorrencia @default(ABERTA)
+  resolucao String?          // Comentário do admin ao resolver
+  setorId   String
+  setor     Setor            @relation(fields: [setorId], references: [id], onDelete: Cascade)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
 }

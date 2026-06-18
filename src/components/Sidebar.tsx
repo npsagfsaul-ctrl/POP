@@ -7,11 +7,30 @@ import { getSetorById } from '@/actions/setores';
 
 interface SidebarProps {
   isAdmin: boolean;
+  ocorrenciasAbertas?: number;
 }
 
 const IconHome = () => (
   <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+  </svg>
+);
+
+const IconMural = () => (
+  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
+  </svg>
+);
+
+const IconCalendar = () => (
+  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+  </svg>
+);
+
+const IconAlert = () => (
+  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
   </svg>
 );
 
@@ -34,13 +53,7 @@ const IconPlus = () => (
   </svg>
 );
 
-const IconLock = () => (
-  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-  </svg>
-);
-
-export default function Sidebar({ isAdmin }: SidebarProps) {
+export default function Sidebar({ isAdmin, ocorrenciasAbertas = 0 }: SidebarProps) {
   const pathname = usePathname();
   const [setorNome, setSetorNome] = useState<string | null>(null);
 
@@ -70,8 +83,8 @@ export default function Sidebar({ isAdmin }: SidebarProps) {
           </svg>
         </div>
         <div>
-          <div className="sidebar-logo-text">Gestão POPs</div>
-          <div className="sidebar-logo-sub">Sistema de Procedimentos</div>
+          <div className="sidebar-logo-text">Portal Correios</div>
+          <div className="sidebar-logo-sub">Sistema Interno</div>
         </div>
       </div>
 
@@ -80,6 +93,11 @@ export default function Sidebar({ isAdmin }: SidebarProps) {
         <div className="sidebar-section-label">Principal</div>
 
         <Link href="/" className={`sidebar-link ${isActive('/') ? 'active' : ''}`}>
+          <IconMural />
+          Mural
+        </Link>
+
+        <Link href="/setores" className={`sidebar-link ${isActive('/setores') ? 'active' : ''}`}>
           <IconHome />
           Setores
         </Link>
@@ -87,6 +105,29 @@ export default function Sidebar({ isAdmin }: SidebarProps) {
         {isAdmin && (
           <>
             <div className="sidebar-section-label" style={{ marginTop: 12 }}>Administração</div>
+
+            <Link href="/admin/comunicados" className={`sidebar-link ${isActive('/admin/comunicados') ? 'active' : ''}`}>
+              <IconMural />
+              Comunicados
+            </Link>
+
+            <Link href="/admin/lembretes" className={`sidebar-link ${isActive('/admin/lembretes') ? 'active' : ''}`}>
+              <IconCalendar />
+              Lembretes
+            </Link>
+
+            <Link href="/admin/ocorrencias" className={`sidebar-link ${isActive('/admin/ocorrencias') ? 'active' : ''}`}>
+              <IconAlert />
+              Ocorrências
+              {ocorrenciasAbertas > 0 && (
+                <span className="sidebar-badge">{ocorrenciasAbertas}</span>
+              )}
+            </Link>
+
+            <Link href="/admin/relatorio" className={`sidebar-link ${isActive('/admin/relatorio') ? 'active' : ''}`}>
+              <IconClipboard />
+              Relatório Geral
+            </Link>
 
             <Link href="/setores/novo" className={`sidebar-link ${isActive('/setores/novo') ? 'active' : ''}`}>
               <IconPlus />

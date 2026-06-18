@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { isAdmin } from "@/actions/admin";
+import { contarOcorrenciasAbertas } from "@/actions/ocorrencias";
 import Sidebar from "@/components/Sidebar";
 import LogoutButton from "@/components/LogoutButton";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Sistema de POPs | Gestão de Procedimentos",
-  description: "Gerenciamento de Procedimentos Operacionais Padrão",
+  title: "Portal Correios | Sistema Interno",
+  description: "Portal interno da agência — comunicados, lembretes, checklists e ocorrências",
 };
 
 export default async function RootLayout({
@@ -16,18 +17,19 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const adminMode = await isAdmin();
+  const ocorrenciasAbertas = adminMode ? await contarOcorrenciasAbertas() : 0;
 
   return (
     <html lang="pt-BR">
       <body>
         <div className="app-wrapper">
-          <Sidebar isAdmin={adminMode} />
+          <Sidebar isAdmin={adminMode} ocorrenciasAbertas={ocorrenciasAbertas} />
 
           <div className="main-content">
             {/* Topbar */}
             <header className="topbar">
               <div>
-                <span className="topbar-title">Sistema de POPs</span>
+                <span className="topbar-title">Portal Correios</span>
               </div>
 
               <div className="topbar-actions">
