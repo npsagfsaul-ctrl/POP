@@ -1,7 +1,7 @@
 'use client';
 
 import { salvarChecklist } from '@/actions/checklist';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 
 interface Pop {
   id: string;
@@ -28,12 +28,81 @@ export default function ChecklistForm({
 }: ChecklistFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
 
-  const marcarTodosConforme = () => {
-    if (!formRef.current) return;
-    const checkboxes = formRef.current.querySelectorAll('input[type="checkbox"]');
-    checkboxes.forEach((cb) => {
-      (cb as HTMLInputElement).checked = true;
+  // Inicializar estado das ocorrências (false no DB = ocorrência = true na UI)
+  const [ocorrencias, setOcorrencias] = useState<Record<string, boolean>>(() => {
+    const init: Record<string, boolean> = {};
+    pops.forEach(pop => {
+      // Se tiver uma resposta explicitamente false no BD, é uma ocorrência.
+      init[pop.id] = respostasIniciais[pop.id] === false;
     });
+    return init;
+  });
+
+  // Extrair descrições antigas se houver
+  const [descricoes, setDescricoes] = useState<Record<string, string>>(() => {
+    const initDesc: Record<string, string> = {};
+    let text = observacoesInicial || '';
+    
+    pops.forEach(pop => {
+      const startMarker = `[Ocorrência - ${pop.titulo}]\n`;
+      const endMarker = `\n[Fim Ocorrência]`;
+      const startIdx = text.indexOf(startMarker);
+      if (startIdx !== -1) {
+        const endIdx = text.indexOf(endMarker, startIdx);
+        if (endIdx !== -1) {
+          initDesc[pop.id] = text.substring(startIdx + startMarker.length, endIdx);
+          text = text.substring(0, startIdx) + text.substring(endIdx + endMarker.length);
+        }
+      }
+    });
+    return initDesc;
+  });
+
+  const [obsGlobal, setObsGlobal] = useState(() => {
+    let text = observacoesInicial || '';
+    pops.forEach(pop => {
+      const startMarker = `[Ocorrência - ${pop.titulo}]\n`;
+      const endMarker = `\n[Fim Ocorrência]`;
+      while(true) {
+        const startIdx = text.indexOf(startMarker);
+        if (startIdx === -1) break;
+        const endIdx = text.indexOf(endMarker, startIdx);
+        if (endIdx === -1) break;
+        text = text.substring(0, startIdx) + text.substring(endIdx + endMarker.length);
+      }
+    });
+    return text.trim();
+  });
+
+  // Toggle "Sem ocorrência"
+  const [semOcorrencia, setSemOcorrencia] = useState(() => {
+    // Se não há nenhuma ocorrência marcada inicialmente
+    return pops.every(pop => respostasIniciais[pop.id] !== false);
+  });
+
+  const handleToggleSemOcorrencia = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const isChecked = e.target.checked;
+    if (isChecked) {
+      // Verifica se tem alguma ocorrência marcada
+      const temOcorrenciaMarcada = Object.values(ocorrencias).some(v => v);
+      if (temOcorrenciaMarcada) {
+        alert("A operação não pode ser feita pois foi escolhido sem ocorrência e com uma ocorrência.");
+        return; // não deixa marcar
+      }
+    }
+    setSemOcorrencia(isChecked);
+  };
+
+  const handleCheckboxOcorrencia = (popId: string, isChecked: boolean) => {
+    if (semOcorrencia && isChecked) {
+      alert("A operação não pode ser feita pois foi escolhido sem ocorrência e com uma ocorrência. Desmarque 'Sem ocorrência' primeiro.");
+      return;
+    }
+    setOcorrencias(prev => ({ ...prev, [popId]: isChecked }));
+  };
+
+  const handleDescricaoChange = (popId: string, val: string) => {
+    setDescricoes(prev => ({ ...prev, [popId]: val }));
   };
 
   return (
@@ -58,16 +127,18 @@ export default function ChecklistForm({
             />
           </div>
 
-          <button
-            type="button"
-            onClick={marcarTodosConforme}
-            className="btn btn-success btn-sm"
-          >
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-            Tudo Conforme / Nada a Declarar
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', background: 'var(--success-light, #ecfdf5)', border: '1px solid var(--success, #10b981)', borderRadius: 'var(--radius-md)' }}>
+            <input 
+              type="checkbox" 
+              id="semOcorrencia" 
+              checked={semOcorrencia}
+              onChange={handleToggleSemOcorrencia}
+              style={{ width: 18, height: 18, cursor: 'pointer' }}
+            />
+            <label htmlFor="semOcorrencia" style={{ cursor: 'pointer', fontWeight: 600, color: 'var(--success-dark, #047857)' }}>
+              Sem ocorrência
+            </label>
+          </div>
         </div>
 
         <div className="divider" />
@@ -79,16 +150,20 @@ export default function ChecklistForm({
           </h3>
 
           {pops.map((pop) => (
-            <div key={pop.id} className="pop-item">
+            <div key={pop.id} className="pop-item" style={{ opacity: semOcorrencia ? 0.6 : 1, transition: 'opacity 0.2s' }}>
               <input
                 type="checkbox"
                 id={`pop_${pop.id}`}
                 name={`pop_${pop.id}`}
-                defaultChecked={respostasIniciais[pop.id] === true}
+                checked={ocorrencias[pop.id] || false}
+                onChange={(e) => handleCheckboxOcorrencia(pop.id, e.target.checked)}
+                disabled={semOcorrencia}
               />
               <div style={{ flex: 1 }}>
-                <label htmlFor={`pop_${pop.id}`} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <span className="pop-item-title">{pop.titulo}</span>
+                <label htmlFor={`pop_${pop.id}`} style={{ cursor: semOcorrencia ? 'default' : 'pointer', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                  <span className="pop-item-title" style={{ color: ocorrencias[pop.id] ? 'var(--danger, #dc2626)' : 'inherit' }}>
+                    {pop.titulo} {ocorrencias[pop.id] && <span style={{fontSize:'0.75rem', color:'var(--danger, #dc2626)', fontWeight: 'bold'}}>(Ocorrência)</span>}
+                  </span>
                   <span className="badge badge-primary" style={{ fontSize: '0.6875rem' }}>
                     Peso {pop.peso}
                   </span>
@@ -111,30 +186,50 @@ export default function ChecklistForm({
                     {pop.instrucaoTrabalho}
                   </div>
                 </details>
+
+                {/* Textarea para descrição se houver ocorrência */}
+                {ocorrencias[pop.id] && (
+                  <div style={{ marginTop: 12 }}>
+                    <label htmlFor={`desc_pop_${pop.id}`} className="form-label" style={{ color: 'var(--danger, #dc2626)', fontWeight: 600 }}>
+                      Descreva o caso/problema (Obrigatório)
+                    </label>
+                    <textarea
+                      id={`desc_pop_${pop.id}`}
+                      name={`desc_pop_${pop.id}`}
+                      value={descricoes[pop.id] || ''}
+                      onChange={(e) => handleDescricaoChange(pop.id, e.target.value)}
+                      placeholder="Detalhes da ocorrência..."
+                      className="form-textarea"
+                      style={{ border: '1px solid var(--danger, #dc2626)', minHeight: 80 }}
+                      disabled={semOcorrencia}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           ))}
         </div>
 
-        <div className="divider" />
+        {/* Global observations if they previously existed (for continuity), otherwise hide */}
+        {obsGlobal && (
+          <>
+            <div className="divider" />
+            <div className="form-group">
+              <label htmlFor="observacoes_globais" className="form-label">
+                Observações Adicionais Anteriores
+              </label>
+              <textarea
+                id="observacoes_globais"
+                name="observacoes_globais"
+                value={obsGlobal}
+                onChange={(e) => setObsGlobal(e.target.value)}
+                className="form-textarea"
+              />
+            </div>
+          </>
+        )}
 
-        {/* Observações */}
-        <div className="form-group">
-          <label htmlFor="observacoes" className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-            </svg>
-            Observações / Ocorrências do Dia
-          </label>
-          <textarea
-            id="observacoes"
-            name="observacoes"
-            defaultValue={observacoesInicial || ''}
-            placeholder="Descreva irregularidades, falta de material ou observações relevantes..."
-            className="form-textarea"
-          />
-          <p className="form-hint">Campo opcional — preencha caso haja algo a relatar.</p>
-        </div>
+        <div className="divider" />
 
         {/* Submit */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 8 }}>

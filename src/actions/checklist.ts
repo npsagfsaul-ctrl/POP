@@ -19,25 +19,40 @@ export async function salvarChecklist(formData: FormData) {
   // Collect responses from form data
   const respostas: Record<string, boolean> = {};
   
-  // All fields starting with 'pop_' are checklist items
-  for (const [key, value] of formData.entries()) {
-    if (key.startsWith('pop_')) {
-      const popId = key.replace('pop_', '');
-      respostas[popId] = value === 'on' || value === 'true';
-    }
-  }
-
-  // Obter todos os POPs do setor para garantir que os desmarcados fiquem como false
   const popsDoSetor = await prisma.pop.findMany({
     where: { setorId },
-    select: { id: true }
+    select: { id: true, titulo: true }
   });
 
   popsDoSetor.forEach(pop => {
-    if (!(pop.id in respostas)) {
-      respostas[pop.id] = false;
-    }
+    respostas[pop.id] = true; // Por padrão, tudo é conforme
   });
+
+  const observacoesList: string[] = [];
+
+  for (const [key, value] of formData.entries()) {
+    if (key.startsWith('pop_')) {
+      const popId = key.replace('pop_', '');
+      if (value === 'on' || value === 'true') {
+        respostas[popId] = false; // Tem ocorrência (marcado)
+        
+        const desc = formData.get(`desc_pop_${popId}`) as string;
+        if (desc && desc.trim()) {
+           const pop = popsDoSetor.find(p => p.id === popId);
+           if (pop) {
+             observacoesList.push(`[Ocorrência - ${pop.titulo}]\n${desc.trim()}\n[Fim Ocorrência]`);
+           }
+        }
+      }
+    }
+  }
+
+  const globalObs = formData.get('observacoes_globais') as string;
+  if (globalObs && globalObs.trim()) {
+    observacoesList.push(globalObs.trim());
+  }
+
+  const observacoesFinal = observacoesList.length > 0 ? observacoesList.join('\n\n') : null;
 
   // Salvar no banco (cria ou atualiza para o mesmo dia e setor)
   const registroExistente = await prisma.registroDiario.findFirst({
@@ -47,12 +62,10 @@ export async function salvarChecklist(formData: FormData) {
     }
   });
 
-  const observacoes = formData.get('observacoes') as string;
-
   if (registroExistente) {
     await prisma.registroDiario.update({
       where: { id: registroExistente.id },
-      data: { respostas, observacoes }
+      data: { respostas, observacoes: observacoesFinal || '' }
     });
   } else {
     await prisma.registroDiario.create({
@@ -60,7 +73,7 @@ export async function salvarChecklist(formData: FormData) {
         setorId,
         data,
         respostas,
-        observacoes
+        observacoes: observacoesFinal || ''
       }
     });
   }
