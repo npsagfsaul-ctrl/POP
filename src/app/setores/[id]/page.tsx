@@ -125,7 +125,7 @@ export default async function VisualizarSetor({
             </div>
             <div>
               <div className="stat-label">Conformidade Média</div>
-              <div className="stat-value" style={{ color: mediaConformidade >= 80 ? 'var(--success)' : 'var(--warning)' }}>
+              <div className="stat-value" style={{ color: mediaConformidade === 100 ? 'var(--success)' : mediaConformidade >= 80 ? 'var(--warning)' : 'var(--danger)' }}>
                 {mediaConformidade}%
               </div>
               <div className="stat-sub">Seg–Sáb este mês</div>

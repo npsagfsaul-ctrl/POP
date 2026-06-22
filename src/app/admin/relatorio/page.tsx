@@ -120,7 +120,7 @@ export default async function RelatorioGeral({
                 <td style={{ padding: '16px 8px', textAlign: 'center' }}>{setor.pops.length}</td>
                 <td style={{ padding: '16px 8px', textAlign: 'center' }}>{setor.diasContados}</td>
                 <td style={{ padding: '16px 8px', textAlign: 'center' }}>
-                  <span className={`badge ${setor.mediaConformidade >= 80 ? 'badge-success' : 'badge-warning'}`}>
+                  <span className={`badge ${setor.mediaConformidade === 100 ? 'badge-success' : setor.mediaConformidade >= 80 ? 'badge-warning' : 'badge-danger'}`}>
                     {setor.mediaConformidade}%
                   </span>
                 </td>

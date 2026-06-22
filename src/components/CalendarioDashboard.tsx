@@ -194,7 +194,7 @@ export default function CalendarioDashboard({ setorId, pops, registros, mes, ano
             cls = 'future';
             statusText = '';
           } else if (registrado) {
-            cls = conformidade! >= 80 ? 'success' : 'warning';
+            cls = conformidade! === 100 ? 'success' : conformidade! >= 80 ? 'warning' : 'danger';
             statusText = `${Math.round(conformidade!)}%`;
           } else {
             cls = 'danger';
@@ -262,9 +262,9 @@ export default function CalendarioDashboard({ setorId, pops, registros, mes, ano
       <div style={{ marginTop: 20, display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
         <div style={{ display: 'flex', gap: 20 }}>
           {[
-            { cls: 'success', label: 'Excelente (≥80%)', color: 'var(--success)' },
-            { cls: 'warning', label: 'Abaixo da meta', color: 'var(--warning)' },
-            { cls: 'danger',  label: 'Não realizado',  color: 'var(--danger)' },
+            { cls: 'success', label: '100% Conforme', color: 'var(--success)' },
+            { cls: 'warning', label: 'Atenção (80% a 99%)', color: 'var(--warning)' },
+            { cls: 'danger',  label: 'Abaixo da meta (<80%)',  color: 'var(--danger)' },
           ].map(item => (
             <div key={item.cls} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
               <span style={{ width: 10, height: 10, borderRadius: '50%', background: item.color, display: 'inline-block' }} />
@@ -283,15 +283,17 @@ export default function CalendarioDashboard({ setorId, pops, registros, mes, ano
               <div style={{ fontSize: '0.6875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 2 }}>
                 Média Mensal
               </div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: media >= 80 ? 'var(--success)' : 'var(--warning)', lineHeight: 1 }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: media === 100 ? 'var(--success)' : media >= 80 ? 'var(--warning)' : 'var(--danger)', lineHeight: 1 }}>
                 {media}%
               </div>
             </div>
             <div style={{ width: 1, height: 36, background: 'var(--border)' }} />
             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', maxWidth: 140 }}>
-              {media >= 80
-                ? '✓ Dentro do padrão de excelência'
-                : '⚠ Necessário ajuste de processos'}
+              {media === 100
+                ? '✓ Padrão de excelência'
+                : media >= 80
+                ? '⚠ Atenção às ocorrências'
+                : '❌ Abaixo da meta'}
             </div>
           </div>
         )}
