@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import prisma from '@/lib/prisma';
 import { getRegistrosMensais } from '@/actions/checklist';
+import { calcularConformidade } from '@/lib/conformidade';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,28 +31,19 @@ export default async function RelatorioGeral({
     const pops = setor.pops;
     const registros = await getRegistrosMensais(setor.id, mesAtual, anoAtual);
 
-    const pesoTotal = pops.reduce((acc, p) => acc + p.peso, 0);
-    let somaConformidade = 0;
-    let diasContados = 0;
-
-    registros.forEach(reg => {
-      if (new Date(reg.data).getUTCDay() !== 0) { // Não conta domingo
-        let pesoAtingido = 0;
-        const respostas = reg.respostas as Record<string, boolean>;
-        pops.forEach(pop => {
-          if (respostas && respostas[pop.id] === true) pesoAtingido += pop.peso;
-        });
-        somaConformidade += pesoTotal > 0 ? (pesoAtingido / pesoTotal) * 100 : 0;
-        diasContados++;
-      }
-    });
-
-    const mediaConformidade = diasContados > 0 ? Math.round(somaConformidade / diasContados) : 0;
+    // Dias úteis até hoje; dia útil sem checklist conta como 80%.
+    const { media: mediaConformidade, diasPreenchidos } = calcularConformidade(
+      pops,
+      registros,
+      mesAtual,
+      anoAtual,
+      hoje,
+    );
 
     return {
       ...setor,
       mediaConformidade,
-      diasContados
+      diasContados: diasPreenchidos,
     };
   }));
 

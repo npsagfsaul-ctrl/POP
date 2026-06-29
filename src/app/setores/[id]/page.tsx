@@ -8,6 +8,7 @@ import DeleteSetorButton from '@/components/DeleteSetorButton';
 import DeletePopButton from '@/components/DeletePopButton';
 import { getPopsBySetor } from '@/actions/pops';
 import { getRegistrosMensais } from '@/actions/checklist';
+import { calcularConformidade } from '@/lib/conformidade';
 import prisma from '@/lib/prisma';
 
 
@@ -50,28 +51,14 @@ export default async function VisualizarSetor({
 
   const registros = await getRegistrosMensais(resolvedParams.id, mesAtual, anoAtual);
 
-  // Calcular métricas
-  const pesoTotal = pops.reduce((acc, p) => acc + p.peso, 0);
-  let somaConformidade = 0;
-  let diasContados = 0;
-
-  let diasAbaixo100 = 0;
-
-  registros.forEach(reg => {
-    if (new Date(reg.data).getUTCDay() !== 0) {
-      let pesoAtingido = 0;
-      const respostas = reg.respostas as Record<string, boolean>;
-      pops.forEach(pop => {
-        if (respostas && respostas[pop.id] === true) pesoAtingido += pop.peso;
-      });
-      const conformidade = (pesoAtingido / (pesoTotal || 1)) * 100;
-      somaConformidade += conformidade;
-      diasContados++;
-      if (conformidade < 100) diasAbaixo100++;
-    }
-  });
-
-  const mediaConformidade = diasContados > 0 ? Math.round(somaConformidade / diasContados) : 0;
+  // Calcular métricas (dias úteis até hoje; dia útil sem checklist conta como 80%)
+  const { media: mediaConformidade, diasUteis, diasAbaixo100 } = calcularConformidade(
+    pops,
+    registros,
+    mesAtual,
+    anoAtual,
+    hoje,
+  );
 
   return (
     <div>
@@ -203,6 +190,8 @@ export default async function VisualizarSetor({
             mes={mesAtual}
             ano={anoAtual}
             adminMode={adminMode}
+            mediaMensal={mediaConformidade}
+            diasConsiderados={diasUteis}
           />
 
           {/* POPs List */}

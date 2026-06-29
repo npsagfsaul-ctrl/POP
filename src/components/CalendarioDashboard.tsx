@@ -24,9 +24,13 @@ interface CalendarioProps {
   mes: number;
   ano: number;
   adminMode?: boolean;
+  /** Média já calculada pelo servidor (dias úteis até hoje; dia vazio = 80%). */
+  mediaMensal?: number;
+  /** Dias úteis considerados no cálculo da média. */
+  diasConsiderados?: number;
 }
 
-export default function CalendarioDashboard({ setorId, pops, registros, mes, ano, adminMode = false }: CalendarioProps) {
+export default function CalendarioDashboard({ setorId, pops, registros, mes, ano, adminMode = false, mediaMensal, diasConsiderados }: CalendarioProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedDia, setSelectedDia] = useState<number | null>(null);
   const [comentarioTexto, setComentarioTexto] = useState('');
@@ -75,7 +79,11 @@ export default function CalendarioDashboard({ setorId, pops, registros, mes, ano
       diasContados++;
     }
   });
-  const media = diasContados > 0 ? Math.round(soma / diasContados) : 0;
+  const mediaLocal = diasContados > 0 ? Math.round(soma / diasContados) : 0;
+
+  // Prefere a média vinda do servidor (regra: dias úteis até hoje, dia vazio = 80%).
+  const media = mediaMensal !== undefined ? mediaMensal : mediaLocal;
+  const temMedia = mediaMensal !== undefined ? (diasConsiderados ?? 0) > 0 : diasContados > 0;
 
   const handleOpenModal = (e: React.MouseEvent, dia: number) => {
     e.preventDefault();
@@ -273,7 +281,7 @@ export default function CalendarioDashboard({ setorId, pops, registros, mes, ano
           ))}
         </div>
 
-        {diasContados > 0 && (
+        {temMedia && (
           <div style={{
             display: 'flex', alignItems: 'center', gap: 12,
             background: 'var(--surface-2)', border: '1px solid var(--border)',

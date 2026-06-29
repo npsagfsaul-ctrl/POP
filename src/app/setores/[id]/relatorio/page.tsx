@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { getPopsBySetor } from '@/actions/pops';
 import { getRegistrosMensais } from '@/actions/checklist';
+import { calcularConformidade } from '@/lib/conformidade';
 import PrintButton from '@/components/PrintButton';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -35,9 +36,6 @@ export default async function RelatorioMensal({
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
   ];
 
-  // Peso total por checklist
-  const pesoTotalPorChecklist = pops.reduce((acc, p) => acc + p.peso, 0);
-
   // Filtrar registros para excluir domingos
   const registrosUteis = registros.filter(reg => {
     const data = new Date(reg.data);
@@ -69,22 +67,9 @@ export default async function RelatorioMensal({
     };
   });
 
-  // Cálculo da Média de Conformidade Global (Seg-Sáb)
-  // Somamos o peso atingido em todos os dias úteis registrados e dividimos pelo peso total possível nesses mesmos dias
-  let pesoAtingidoTotal = 0;
-  let pesoPossivelTotal = 0;
-
-  registrosUteis.forEach(reg => {
-    const respostas = reg.respostas as Record<string, boolean>;
-    pops.forEach(pop => {
-      pesoPossivelTotal += pop.peso;
-      if (respostas && respostas[pop.id] === true) {
-        pesoAtingidoTotal += pop.peso;
-      }
-    });
-  });
-
-  const mediaGlobal = pesoPossivelTotal > 0 ? (pesoAtingidoTotal / pesoPossivelTotal) * 100 : 0;
+  // Média de Conformidade Global — mesma regra do dashboard:
+  // dias úteis (Seg–Sáb) até hoje; dia sem checklist conta como 80%.
+  const { media: mediaGlobal } = calcularConformidade(pops, registros, mes, ano, hoje);
 
   // Ordenar por menor percentual para destacar problemas
   const criticalPops = [...statsPorPop].sort((a, b) => a.percentual - b.percentual);
