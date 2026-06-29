@@ -34,6 +34,10 @@ export interface ResultadoConformidade {
   diasPendentes: number;
   /** Dias úteis com conformidade abaixo de 100% (inclui os sem checklist). */
   diasAbaixo100: number;
+  /** Dias úteis com 100% de conformidade (sem nenhuma pendência). */
+  diasPerfeitos: number;
+  /** % de dias perfeitos sobre os dias úteis (dias 100% ÷ dias úteis). */
+  percentualPerfeitos: number;
 }
 
 export function calcularConformidade(
@@ -90,6 +94,8 @@ export function calcularConformidade(
   }
 
   const media = diasUteis > 0 ? Math.round(soma / diasUteis) : 0;
+  const diasPerfeitos = diasUteis - diasAbaixo100;
+  const percentualPerfeitos = diasUteis > 0 ? Math.round((diasPerfeitos / diasUteis) * 100) : 0;
 
   return {
     media,
@@ -97,5 +103,7 @@ export function calcularConformidade(
     diasPreenchidos,
     diasPendentes: diasUteis - diasPreenchidos,
     diasAbaixo100,
+    diasPerfeitos,
+    percentualPerfeitos,
   };
 }

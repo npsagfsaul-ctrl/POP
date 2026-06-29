@@ -51,14 +51,9 @@ export default async function VisualizarSetor({
 
   const registros = await getRegistrosMensais(resolvedParams.id, mesAtual, anoAtual);
 
-  // Calcular métricas (dias úteis até hoje; dia útil sem checklist conta como 80%)
-  const { media: mediaConformidade, diasUteis, diasAbaixo100 } = calcularConformidade(
-    pops,
-    registros,
-    mesAtual,
-    anoAtual,
-    hoje,
-  );
+  // Calcular métricas (dias úteis até hoje; dia útil sem checklist = 0%)
+  const { media: mediaConformidade, diasUteis, diasAbaixo100, percentualPerfeitos } =
+    calcularConformidade(pops, registros, mesAtual, anoAtual, hoje);
 
   return (
     <div>
@@ -115,7 +110,7 @@ export default async function VisualizarSetor({
               <div className="stat-value" style={{ color: mediaConformidade === 100 ? 'var(--success)' : mediaConformidade >= 80 ? 'var(--warning)' : 'var(--danger)' }}>
                 {mediaConformidade}%
               </div>
-              <div className="stat-sub">Seg–Sáb este mês</div>
+              <div className="stat-sub">{percentualPerfeitos}% dias perfeitos · Seg–Sáb</div>
             </div>
           </div>
 
