@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { calcularConformidade } from '@/lib/conformidade';
 import PDFDocument from 'pdfkit';
 
 function getCurrentMonthYear() {
@@ -19,17 +20,11 @@ export async function GET() {
 
   const relatorio = await Promise.all(
     setores.map(async setor => {
-      const pesoTotal = setor.pops.reduce((a, p) => a + p.peso, 0);
-      const popMap = new Map(setor.pops.map(p => [p.id, p]));
-      let pesoAtingido = 0;
       const registrosSetor = registros.filter(r => r.setorId === setor.id);
-      for (const reg of registrosSetor) {
-        const respostas = reg.respostas as Record<string, boolean>;
-        for (const [popId, ok] of Object.entries(respostas)) {
-          if (ok && popMap.has(popId)) pesoAtingido += popMap.get(popId)!.peso;
-        }
-      }
-      const percentual = pesoTotal > 0 ? (pesoAtingido / pesoTotal) * 100 : 0;
+
+      // Mesma regra do dashboard: média dos dias úteis até hoje;
+      // dia sem checklist = 0%.
+      const { media: percentual } = calcularConformidade(setor.pops, registrosSetor, month, year);
 
       const concluidoIds = new Set<string>();
       for (const reg of registrosSetor) {

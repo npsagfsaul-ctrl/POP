@@ -7,7 +7,8 @@
 //   (dias futuros do mês corrente NÃO entram na conta).
 // - Dia útil COM checklist: conformidade = pesoAtingido / pesoTotal,
 //   onde respostas[popId] === true significa "conforme".
-// - Dia útil SEM checklist: conta como META_DIA_VAZIO (80%).
+// - Dia útil SEM checklist: conta como 0% (pendência real — bate com a
+//   célula vermelha "não realizado" do calendário).
 
 export interface PopPeso {
   id: string;
@@ -19,8 +20,8 @@ export interface RegistroConformidade {
   respostas: Record<string, boolean> | unknown;
 }
 
-/** Dia útil sem checklist preenchido conta como este valor (= meta de qualidade). */
-export const META_DIA_VAZIO = 80;
+/** Dia útil (passado) sem checklist preenchido conta como este valor de conformidade. */
+export const VALOR_DIA_SEM_CHECKLIST = 0;
 
 export interface ResultadoConformidade {
   /** Média final arredondada (0–100). */
@@ -81,7 +82,7 @@ export function calcularConformidade(
       conformidade = pesoTotal > 0 ? (pesoAtingido / pesoTotal) * 100 : 0;
       diasPreenchidos++;
     } else {
-      conformidade = META_DIA_VAZIO;
+      conformidade = VALOR_DIA_SEM_CHECKLIST;
     }
 
     soma += conformidade;
