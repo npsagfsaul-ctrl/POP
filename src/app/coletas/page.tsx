@@ -4,7 +4,9 @@ import { getColetasPorData } from '@/actions/coletas';
 import { getColetores } from '@/actions/coletores';
 import { getAtendentes } from '@/actions/atendentes';
 import { getClientes } from '@/actions/clientes';
+import { coletasLiberado } from '@/actions/coletasAcesso';
 import ColetasDoDia from '@/components/ColetasDoDia';
+import ColetasPasswordPrompt from '@/components/ColetasPasswordPrompt';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,6 +22,11 @@ export default async function ColetasPage({
   searchParams: Promise<{ data?: string }>;
 }) {
   const adminMode = await isAdmin();
+
+  // Proteção por senha (admin entra direto)
+  if (!adminMode && !(await coletasLiberado())) {
+    return <ColetasPasswordPrompt />;
+  }
 
   const sp = await searchParams;
   const dataStr = sp.data || hojeISO();
@@ -58,9 +65,14 @@ export default async function ColetasPage({
             <span className="breadcrumb-current">Coletas</span>
           </nav>
         </div>
-        {adminMode && (
-          <Link href="/coletas/cadastros" className="btn btn-secondary btn-sm">⚙ Cadastros</Link>
-        )}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Link href={`/coletas/imprimir?data=${dataStr}`} className="btn btn-secondary btn-sm">
+            🖨 Imprimir rotas
+          </Link>
+          {adminMode && (
+            <Link href="/coletas/cadastros" className="btn btn-secondary btn-sm">⚙ Cadastros</Link>
+          )}
+        </div>
       </div>
 
       {(coletores.length === 0 || clientes.length === 0) && (

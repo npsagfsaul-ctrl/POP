@@ -186,3 +186,9 @@ model Coleta {
 
   @@index([data])
 }
+
+// Configurações simples chave/valor (ex.: senha de acesso às Coletas)
+model Config {
+  chave String @id
+  valor String
+}

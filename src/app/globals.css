@@ -1128,3 +1128,31 @@ tbody tr:hover td { background: var(--surface-2); }
   }
 }
 
+/* ─── IMPRESSÃO ─── */
+@media print {
+  .sidebar,
+  .topbar,
+  .no-print,
+  .print\:hidden {
+    display: none !important;
+  }
+  .main-content {
+    margin: 0 !important;
+  }
+  .page-content {
+    padding: 0 !important;
+  }
+  body {
+    background: #fff !important;
+  }
+  /* Cada coletor em uma página separada */
+  .coletas-print .print-page {
+    break-after: page;
+    page-break-after: always;
+  }
+  .coletas-print .print-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+}
+
