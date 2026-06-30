@@ -16,8 +16,8 @@ export async function criarColetor(formData: FormData) {
   if (!nome) throw new Error('Nome do coletor é obrigatório.');
 
   await prisma.coletor.create({ data: { nome, cor } });
-  revalidatePath('/admin/coletas/cadastros');
-  revalidatePath('/admin/coletas');
+  revalidatePath('/coletas/cadastros');
+  revalidatePath('/coletas');
 }
 
 export async function atualizarColetor(id: string, formData: FormData) {
@@ -26,14 +26,14 @@ export async function atualizarColetor(id: string, formData: FormData) {
   if (!nome) throw new Error('Nome do coletor é obrigatório.');
 
   await prisma.coletor.update({ where: { id }, data: { nome, cor } });
-  revalidatePath('/admin/coletas/cadastros');
-  revalidatePath('/admin/coletas');
+  revalidatePath('/coletas/cadastros');
+  revalidatePath('/coletas');
 }
 
 export async function alternarColetorAtivo(id: string, ativo: boolean) {
   await prisma.coletor.update({ where: { id }, data: { ativo } });
-  revalidatePath('/admin/coletas/cadastros');
-  revalidatePath('/admin/coletas');
+  revalidatePath('/coletas/cadastros');
+  revalidatePath('/coletas');
 }
 
 export async function deletarColetor(id: string) {
@@ -42,5 +42,5 @@ export async function deletarColetor(id: string) {
   } catch {
     throw new Error('Não dá para excluir: este coletor já tem coletas registradas. Use "Desativar".');
   }
-  revalidatePath('/admin/coletas/cadastros');
+  revalidatePath('/coletas/cadastros');
 }

@@ -47,7 +47,7 @@ export async function criarColeta(formData: FormData) {
     },
   });
 
-  revalidatePath('/admin/coletas');
+  revalidatePath('/coletas');
 }
 
 export async function atualizarColeta(id: string, formData: FormData) {
@@ -69,10 +69,10 @@ export async function atualizarColeta(id: string, formData: FormData) {
     data: { periodo, tipo, coletorId, clienteId, atendenteId, observacao, naoTeveColeta },
   });
 
-  revalidatePath('/admin/coletas');
+  revalidatePath('/coletas');
 }
 
 export async function deletarColeta(id: string) {
   await prisma.coleta.delete({ where: { id } });
-  revalidatePath('/admin/coletas');
+  revalidatePath('/coletas');
 }

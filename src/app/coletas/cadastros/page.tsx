@@ -32,12 +32,12 @@ export default async function CadastrosColetaPage() {
           <nav className="breadcrumb">
             <Link href="/" className="breadcrumb-link">Mural</Link>
             <span className="breadcrumb-sep">›</span>
-            <Link href="/admin/coletas" className="breadcrumb-link">Coletas</Link>
+            <Link href="/coletas" className="breadcrumb-link">Coletas</Link>
             <span className="breadcrumb-sep">›</span>
             <span className="breadcrumb-current">Cadastros</span>
           </nav>
         </div>
-        <Link href="/admin/coletas" className="btn btn-secondary btn-sm">← Voltar para Coletas</Link>
+        <Link href="/coletas" className="btn btn-secondary btn-sm">← Voltar para Coletas</Link>
       </div>
 
       <CadastroManager

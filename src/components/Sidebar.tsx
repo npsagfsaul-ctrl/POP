@@ -109,6 +109,11 @@ export default function Sidebar({ isAdmin, ocorrenciasAbertas = 0 }: SidebarProp
           Setores
         </Link>
 
+        <Link href="/coletas" className={`sidebar-link ${isActive('/coletas') ? 'active' : ''}`}>
+          <IconTruck />
+          Coletas
+        </Link>
+
         {isAdmin && (
           <>
             <div className="sidebar-section-label" style={{ marginTop: 12 }}>Administração</div>
@@ -129,11 +134,6 @@ export default function Sidebar({ isAdmin, ocorrenciasAbertas = 0 }: SidebarProp
               {ocorrenciasAbertas > 0 && (
                 <span className="sidebar-badge">{ocorrenciasAbertas}</span>
               )}
-            </Link>
-
-            <Link href="/admin/coletas" className={`sidebar-link ${isActive('/admin/coletas') ? 'active' : ''}`}>
-              <IconTruck />
-              Coletas
             </Link>
 
             <Link href="/admin/relatorio" className={`sidebar-link ${isActive('/admin/relatorio') ? 'active' : ''}`}>

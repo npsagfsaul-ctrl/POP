@@ -1,5 +1,4 @@
 import { isAdmin } from '@/actions/admin';
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getColetasPorData } from '@/actions/coletas';
 import { getColetores } from '@/actions/coletores';
@@ -21,7 +20,6 @@ export default async function ColetasPage({
   searchParams: Promise<{ data?: string }>;
 }) {
   const adminMode = await isAdmin();
-  if (!adminMode) redirect('/admin/login');
 
   const sp = await searchParams;
   const dataStr = sp.data || hojeISO();
@@ -60,13 +58,19 @@ export default async function ColetasPage({
             <span className="breadcrumb-current">Coletas</span>
           </nav>
         </div>
-        <Link href="/admin/coletas/cadastros" className="btn btn-secondary btn-sm">⚙ Cadastros</Link>
+        {adminMode && (
+          <Link href="/coletas/cadastros" className="btn btn-secondary btn-sm">⚙ Cadastros</Link>
+        )}
       </div>
 
       {(coletores.length === 0 || clientes.length === 0) && (
         <div className="alert alert-info" style={{ marginBottom: 16 }}>
-          Antes de lançar coletas, cadastre os{' '}
-          <Link href="/admin/coletas/cadastros" style={{ textDecoration: 'underline' }}>coletores e clientes</Link>.
+          {adminMode ? (
+            <>Antes de lançar coletas, cadastre os{' '}
+              <Link href="/coletas/cadastros" style={{ textDecoration: 'underline' }}>coletores e clientes</Link>.</>
+          ) : (
+            <>Os coletores e clientes ainda não foram cadastrados. Peça ao administrador para configurar.</>
+          )}
         </div>
       )}
 

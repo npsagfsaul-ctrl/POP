@@ -15,8 +15,8 @@ export async function criarAtendente(formData: FormData) {
   if (!nome) throw new Error('Nome do atendente é obrigatório.');
 
   await prisma.atendente.create({ data: { nome } });
-  revalidatePath('/admin/coletas/cadastros');
-  revalidatePath('/admin/coletas');
+  revalidatePath('/coletas/cadastros');
+  revalidatePath('/coletas');
 }
 
 export async function atualizarAtendente(id: string, formData: FormData) {
@@ -24,14 +24,14 @@ export async function atualizarAtendente(id: string, formData: FormData) {
   if (!nome) throw new Error('Nome do atendente é obrigatório.');
 
   await prisma.atendente.update({ where: { id }, data: { nome } });
-  revalidatePath('/admin/coletas/cadastros');
-  revalidatePath('/admin/coletas');
+  revalidatePath('/coletas/cadastros');
+  revalidatePath('/coletas');
 }
 
 export async function alternarAtendenteAtivo(id: string, ativo: boolean) {
   await prisma.atendente.update({ where: { id }, data: { ativo } });
-  revalidatePath('/admin/coletas/cadastros');
-  revalidatePath('/admin/coletas');
+  revalidatePath('/coletas/cadastros');
+  revalidatePath('/coletas');
 }
 
 export async function deletarAtendente(id: string) {
@@ -40,5 +40,5 @@ export async function deletarAtendente(id: string) {
   } catch {
     throw new Error('Não dá para excluir: este atendente já tem coletas registradas. Use "Desativar".');
   }
-  revalidatePath('/admin/coletas/cadastros');
+  revalidatePath('/coletas/cadastros');
 }

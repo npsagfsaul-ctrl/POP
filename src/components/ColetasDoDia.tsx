@@ -66,7 +66,7 @@ export default function ColetasDoDia({ data, coletas, coletores, atendentes, cli
   const [erro, setErro] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const irParaData = (novaData: string) => router.push(`/admin/coletas?data=${novaData}`);
+  const irParaData = (novaData: string) => router.push(`/coletas?data=${novaData}`);
 
   const abrirAdicionar = (periodo: Periodo) => {
     setEditando(null);

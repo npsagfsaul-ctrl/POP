@@ -16,8 +16,8 @@ export async function criarCliente(formData: FormData) {
   if (!nome) throw new Error('Nome do cliente é obrigatório.');
 
   await prisma.cliente.create({ data: { nome, codigo } });
-  revalidatePath('/admin/coletas/cadastros');
-  revalidatePath('/admin/coletas');
+  revalidatePath('/coletas/cadastros');
+  revalidatePath('/coletas');
 }
 
 export async function atualizarCliente(id: string, formData: FormData) {
@@ -26,14 +26,14 @@ export async function atualizarCliente(id: string, formData: FormData) {
   if (!nome) throw new Error('Nome do cliente é obrigatório.');
 
   await prisma.cliente.update({ where: { id }, data: { nome, codigo } });
-  revalidatePath('/admin/coletas/cadastros');
-  revalidatePath('/admin/coletas');
+  revalidatePath('/coletas/cadastros');
+  revalidatePath('/coletas');
 }
 
 export async function alternarClienteAtivo(id: string, ativo: boolean) {
   await prisma.cliente.update({ where: { id }, data: { ativo } });
-  revalidatePath('/admin/coletas/cadastros');
-  revalidatePath('/admin/coletas');
+  revalidatePath('/coletas/cadastros');
+  revalidatePath('/coletas');
 }
 
 export async function deletarCliente(id: string) {
@@ -42,5 +42,5 @@ export async function deletarCliente(id: string) {
   } catch {
     throw new Error('Não dá para excluir: este cliente já tem coletas registradas. Use "Desativar".');
   }
-  revalidatePath('/admin/coletas/cadastros');
+  revalidatePath('/coletas/cadastros');
 }
