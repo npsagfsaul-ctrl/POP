@@ -121,3 +121,68 @@ model Ocorrencia {
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
 }
+
+// ─── COLETAS DO DIA ───
+
+enum PeriodoColeta {
+  MANHA
+  TARDE
+  RETORNO
+}
+
+enum TipoColeta {
+  FIXA  // coleta recorrente da rota
+  EXTRA // coleta avulsa que entrou no dia
+}
+
+model Coletor {
+  id        String   @id @default(cuid())
+  nome      String
+  cor       String   @default("#3b82f6") // cor de identificação do coletor
+  ativo     Boolean  @default(true)
+  coletas   Coleta[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Atendente {
+  id        String   @id @default(cuid())
+  nome      String
+  ativo     Boolean  @default(true)
+  coletas   Coleta[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Cliente {
+  id        String   @id @default(cuid())
+  nome      String
+  codigo    String?  // código do cliente (o número entre parênteses na planilha)
+  ativo     Boolean  @default(true)
+  coletas   Coleta[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Coleta {
+  id            String        @id @default(cuid())
+  data          DateTime      @db.Date
+  periodo       PeriodoColeta
+  tipo          TipoColeta    @default(EXTRA)
+  observacao    String?
+  naoTeveColeta Boolean       @default(false) // marca "não teve coleta" sem perder o registro
+
+  coletorId String
+  coletor   Coletor @relation(fields: [coletorId], references: [id], onDelete: Restrict)
+
+  clienteId String
+  cliente   Cliente @relation(fields: [clienteId], references: [id], onDelete: Restrict)
+
+  atendenteId String?
+  atendente   Atendente? @relation(fields: [atendenteId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([data])
+}

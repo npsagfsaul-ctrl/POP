@@ -53,6 +53,13 @@ const IconPlus = () => (
   </svg>
 );
 
+const IconTruck = () => (
+  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 001 1h2m-3-1V8h4l3 4v4a1 1 0 01-1 1h-1m-2 0H9" />
+  </svg>
+);
+
 export default function Sidebar({ isAdmin, ocorrenciasAbertas = 0 }: SidebarProps) {
   const pathname = usePathname();
   const [setorNome, setSetorNome] = useState<string | null>(null);
@@ -122,6 +129,11 @@ export default function Sidebar({ isAdmin, ocorrenciasAbertas = 0 }: SidebarProp
               {ocorrenciasAbertas > 0 && (
                 <span className="sidebar-badge">{ocorrenciasAbertas}</span>
               )}
+            </Link>
+
+            <Link href="/admin/coletas" className={`sidebar-link ${isActive('/admin/coletas') ? 'active' : ''}`}>
+              <IconTruck />
+              Coletas
             </Link>
 
             <Link href="/admin/relatorio" className={`sidebar-link ${isActive('/admin/relatorio') ? 'active' : ''}`}>
