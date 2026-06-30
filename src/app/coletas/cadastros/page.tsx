@@ -42,6 +42,20 @@ export default async function CadastrosColetaPage() {
         <Link href="/coletas" className="btn btn-secondary btn-sm">← Voltar para Coletas</Link>
       </div>
 
+      {/* Backup / Exportação */}
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div className="card-title">🛡️ Backup / Exportação</div>
+        <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: -4, marginBottom: 12 }}>
+          Baixe uma cópia dos dados em planilha (CSV, abre no Excel). Faça isso de vez em quando para ter
+          sempre uma cópia em mãos, independente do sistema.
+        </p>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <a href="/api/coletas/export?tipo=coletas" className="btn btn-primary btn-sm">⬇ Coletas (histórico completo)</a>
+          <a href="/api/coletas/export?tipo=clientes" className="btn btn-secondary btn-sm">⬇ Clientes</a>
+          <a href="/api/coletas/export?tipo=coletores" className="btn btn-secondary btn-sm">⬇ Coletores</a>
+        </div>
+      </div>
+
       {/* Senha de acesso às Coletas */}
       <div className="card" style={{ marginBottom: 20 }}>
         <div className="card-title">
