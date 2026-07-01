@@ -12,6 +12,10 @@
 //   como 100% (neutro — nada era exigido, nada há para falhar).
 // - Dia útil COM checklist: conformidade = pesoAtingido / pesoTotalDoDia.
 // - Dia útil SEM checklist (e com pelo menos 1 POP exigível): conta como 0%.
+//
+// Métrica oficial da meta/bônus: `percentualPerfeitos` (dias 100% ÷ dias
+// úteis) — qualquer pendência, por menor que seja, tira o dia de "perfeito".
+// `media` (ponderada pelo peso) é só informativa/secundária.
 
 export interface PopPeso {
   id: string;
@@ -49,7 +53,8 @@ export interface DiaConformidade {
 }
 
 export interface ResultadoConformidade {
-  /** Média final arredondada (0–100). */
+  /** Média ponderada pelo peso dos POPs (0–100). Informativa/secundária —
+   * a métrica oficial para a meta é `percentualPerfeitos`. */
   media: number;
   /** Dias úteis considerados (Seg–Sáb, do dia 1 até hoje, a partir da criação do setor). */
   diasUteis: number;
@@ -61,11 +66,13 @@ export interface ResultadoConformidade {
   diasAbaixo100: number;
   /** Dias úteis com 100% de conformidade (sem nenhuma pendência). */
   diasPerfeitos: number;
-  /** % de dias perfeitos sobre os dias úteis (dias 100% ÷ dias úteis). */
+  /** % de dias perfeitos sobre os dias úteis (dias 100% ÷ dias úteis). Métrica oficial da meta. */
   percentualPerfeitos: number;
-  /** true se a média bateu a meta (>= META_CONFORMIDADE). */
+  /** true se percentualPerfeitos bateu a meta (>= META_CONFORMIDADE). */
   bateuMeta: boolean;
-  /** Soma de pontos percentuais perdidos nos dias NÃO preenchidos. */
+  /** Dias úteis preenchidos mas com alguma pendência (nem perfeitos, nem em branco). */
+  diasComPendencia: number;
+  /** Soma de pontos percentuais perdidos nos dias NÃO preenchidos (média ponderada). */
   perdaPorDiaNaoPreenchido: number;
   /** Soma de pontos percentuais perdidos nos dias preenchidos com pendência (<100%). */
   perdaPorPendencia: number;
@@ -192,7 +199,13 @@ export function calcularConformidade(
     diasAbaixo100,
     diasPerfeitos,
     percentualPerfeitos,
-    bateuMeta: media >= META_CONFORMIDADE,
+    // Métrica oficial para a meta/bônus: % de dias perfeitos (0 tolerância a
+    // pendência). A média ponderada (`media`) fica só como informação extra.
+    bateuMeta: percentualPerfeitos >= META_CONFORMIDADE,
+    // Dias que foram preenchidos mas tiveram alguma pendência (não são nem
+    // "perfeitos" nem "não preenchidos") — usado para explicar a causa da
+    // queda em dias, não em pontos percentuais.
+    diasComPendencia: diasAbaixo100 - (diasUteis - diasPreenchidos),
     perdaPorDiaNaoPreenchido: Math.round(perdaPorDiaNaoPreenchido),
     perdaPorPendencia: Math.round(perdaPorPendencia),
     dias,

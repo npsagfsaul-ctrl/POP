@@ -67,14 +67,15 @@ export default async function RelatorioMensal({
     };
   });
 
-  // Média de Conformidade Global — mesma regra do dashboard:
-  // dias úteis (Seg–Sáb) até hoje, a partir da criação do setor;
-  // dia sem checklist conta como 0%.
+  // Conformidade Global — mesma regra do dashboard: dias úteis (Seg–Sáb) até
+  // hoje, a partir da criação do setor; dia sem checklist conta como 0%.
+  // Métrica oficial da meta: percentualPerfeitos (dias 100% ÷ dias úteis).
   const {
     media: mediaGlobal,
+    percentualPerfeitos,
     bateuMeta,
-    perdaPorDiaNaoPreenchido,
-    perdaPorPendencia,
+    diasPendentes,
+    diasComPendencia,
     dias: diasLedger,
   } = calcularConformidade(pops, registros, mes, ano, hoje, setor.createdAt);
 
@@ -106,24 +107,25 @@ export default async function RelatorioMensal({
           </div>
         </div>
 
-        <div className={`card flex flex-col justify-between ${mediaGlobal >= 80 ? 'bg-emerald-50 border-emerald-100' : 'bg-amber-50 border-amber-100'}`}>
+        <div className={`card flex flex-col justify-between ${bateuMeta ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
           <div>
-            <h3 className={`${mediaGlobal >= 80 ? 'text-emerald-800' : 'text-amber-800'} text-xs font-bold uppercase tracking-wider mb-1 text-center md:text-left`}>Média de Conformidade</h3>
+            <h3 className={`${bateuMeta ? 'text-emerald-800' : 'text-rose-800'} text-xs font-bold uppercase tracking-wider mb-1 text-center md:text-left`}>Conformidade (dias perfeitos)</h3>
             <div className="flex items-center gap-3 justify-center md:justify-start">
-              <p className={`text-5xl font-black ${mediaGlobal >= 80 ? 'text-emerald-900' : 'text-amber-900'}`}>{Math.round(mediaGlobal)}%</p>
-              <div className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${mediaGlobal >= 80 ? 'bg-emerald-200 text-emerald-800' : 'bg-amber-200 text-amber-800'}`}>
-                {mediaGlobal >= 80 ? 'Meta Atingida' : 'Abaixo da Meta'}
+              <p className={`text-5xl font-black ${bateuMeta ? 'text-emerald-900' : 'text-rose-900'}`}>{percentualPerfeitos}%</p>
+              <div className={`px-2 py-1 rounded text-[10px] font-bold uppercase ${bateuMeta ? 'bg-emerald-200 text-emerald-800' : 'bg-rose-200 text-rose-800'}`}>
+                {bateuMeta ? 'Meta Atingida' : 'Abaixo da Meta'}
               </div>
             </div>
+            <p className={`text-[10px] font-medium mt-1 ${bateuMeta ? 'text-emerald-700' : 'text-rose-700'}`}>méd. ponderada {Math.round(mediaGlobal)}%</p>
           </div>
           <div className="mt-4">
              <div className="w-full h-1.5 bg-white/50 rounded-full overflow-hidden">
-                <div 
-                  className={`h-full ${mediaGlobal >= 80 ? 'bg-emerald-500' : 'bg-amber-500'}`} 
-                  style={{ width: `${Math.min(100, mediaGlobal)}%` }}
+                <div
+                  className={`h-full ${bateuMeta ? 'bg-emerald-500' : 'bg-rose-500'}`}
+                  style={{ width: `${Math.min(100, percentualPerfeitos)}%` }}
                 ></div>
              </div>
-             <p className={`text-[10px] font-bold mt-1 ${mediaGlobal >= 80 ? 'text-emerald-700' : 'text-amber-700'}`}>META: 80%</p>
+             <p className={`text-[10px] font-bold mt-1 ${bateuMeta ? 'text-emerald-700' : 'text-rose-700'}`}>META: 80%</p>
           </div>
         </div>
 
@@ -204,10 +206,10 @@ export default async function RelatorioMensal({
             {bateuMeta ? 'Meta 80%: BATEU ✅' : 'Meta 80%: NÃO BATEU ❌'}
           </span>
           <p className="text-sm text-slate-600">
-            {perdaPorDiaNaoPreenchido > 0 || perdaPorPendencia > 0 ? (
-              <>Perda no mês: <strong>{perdaPorDiaNaoPreenchido}pp</strong> por dias não preenchidos e <strong>{perdaPorPendencia}pp</strong> por pendências marcadas.</>
+            {diasPendentes > 0 || diasComPendencia > 0 ? (
+              <>Você perdeu <strong>{diasPendentes} dia(s)</strong> por não preencher o checklist e <strong>{diasComPendencia} dia(s)</strong> por pendências marcadas.</>
             ) : (
-              <>Nenhuma perda no mês — parabéns!</>
+              <>Nenhum dia perdido no mês — parabéns!</>
             )}
           </p>
         </div>
@@ -268,8 +270,9 @@ export default async function RelatorioMensal({
           </p>
           <div className="flex flex-wrap gap-4">
             <div className="bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/10">
-              <p className="text-slate-400 text-[10px] uppercase font-bold mb-1">Média do Setor</p>
-              <p className="text-2xl font-black">{Math.round(mediaGlobal)}%</p>
+              <p className="text-slate-400 text-[10px] uppercase font-bold mb-1">Conformidade do Setor</p>
+              <p className="text-2xl font-black">{percentualPerfeitos}%</p>
+              <p className="text-slate-400 text-[10px] mt-0.5">méd. pond. {Math.round(mediaGlobal)}%</p>
             </div>
             <div className="bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/10">
               <p className="text-slate-400 text-[10px] uppercase font-bold mb-1">Total de POPs</p>
@@ -277,8 +280,8 @@ export default async function RelatorioMensal({
             </div>
             <div className="bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/10">
               <p className="text-slate-400 text-[10px] uppercase font-bold mb-1">Status</p>
-              <p className={`text-2xl font-black ${mediaGlobal >= 80 ? 'text-emerald-400' : 'text-amber-400'}`}>
-                {mediaGlobal >= 80 ? 'EXCELENTE' : 'EM EVOLUÇÃO'}
+              <p className={`text-2xl font-black ${bateuMeta ? 'text-emerald-400' : 'text-rose-400'}`}>
+                {bateuMeta ? 'EXCELENTE' : 'EM EVOLUÇÃO'}
               </p>
             </div>
           </div>

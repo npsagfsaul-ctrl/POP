@@ -289,18 +289,16 @@ export default function CalendarioDashboard({ setorId, pops, registros, mes, ano
           }}>
             <div>
               <div style={{ fontSize: '0.6875rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: 2 }}>
-                Média Mensal
+                Conformidade Mensal
               </div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: media === 100 ? 'var(--success)' : media >= 80 ? 'var(--warning)' : 'var(--danger)', lineHeight: 1 }}>
+              <div style={{ fontSize: '1.5rem', fontWeight: 700, color: media >= 80 ? 'var(--success)' : 'var(--danger)', lineHeight: 1 }}>
                 {media}%
               </div>
             </div>
             <div style={{ width: 1, height: 36, background: 'var(--border)' }} />
             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', maxWidth: 140 }}>
-              {media === 100
-                ? '✓ Padrão de excelência'
-                : media >= 80
-                ? '⚠ Atenção às ocorrências'
+              {media >= 80
+                ? '✓ Dentro da meta'
                 : '❌ Abaixo da meta'}
             </div>
           </div>

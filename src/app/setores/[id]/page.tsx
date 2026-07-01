@@ -52,7 +52,8 @@ export default async function VisualizarSetor({
   const registros = await getRegistrosMensais(resolvedParams.id, mesAtual, anoAtual);
 
   // Calcular métricas (dias úteis até hoje, a partir da criação do setor; dia útil sem checklist = 0%)
-  const { media: mediaConformidade, diasUteis, diasAbaixo100, percentualPerfeitos } =
+  // Métrica oficial da meta: percentualPerfeitos (dias 100% ÷ dias úteis).
+  const { media: mediaConformidade, diasUteis, diasAbaixo100, percentualPerfeitos, bateuMeta } =
     calcularConformidade(pops, registros, mesAtual, anoAtual, hoje, setor.createdAt);
 
   return (
@@ -106,11 +107,11 @@ export default async function VisualizarSetor({
               </svg>
             </div>
             <div>
-              <div className="stat-label">Conformidade Média</div>
-              <div className="stat-value" style={{ color: mediaConformidade === 100 ? 'var(--success)' : mediaConformidade >= 80 ? 'var(--warning)' : 'var(--danger)' }}>
-                {mediaConformidade}%
+              <div className="stat-label">Conformidade (dias perfeitos)</div>
+              <div className="stat-value" style={{ color: bateuMeta ? 'var(--success)' : 'var(--danger)' }}>
+                {percentualPerfeitos}%
               </div>
-              <div className="stat-sub">{percentualPerfeitos}% dias perfeitos · Seg–Sáb</div>
+              <div className="stat-sub">méd. ponderada {mediaConformidade}% · Seg–Sáb</div>
             </div>
           </div>
 
@@ -185,7 +186,7 @@ export default async function VisualizarSetor({
             mes={mesAtual}
             ano={anoAtual}
             adminMode={adminMode}
-            mediaMensal={mediaConformidade}
+            mediaMensal={percentualPerfeitos}
             diasConsiderados={diasUteis}
           />
 

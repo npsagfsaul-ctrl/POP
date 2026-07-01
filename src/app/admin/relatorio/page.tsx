@@ -32,7 +32,8 @@ export default async function RelatorioGeral({
     const registros = await getRegistrosMensais(setor.id, mesAtual, anoAtual);
 
     // Dias úteis até hoje, a partir da criação do setor; dia útil sem checklist = 0%.
-    const { media: mediaConformidade, diasPreenchidos } = calcularConformidade(
+    // Métrica oficial da meta: percentualPerfeitos (dias 100% ÷ dias úteis).
+    const { media: mediaConformidade, diasPreenchidos, percentualPerfeitos, bateuMeta } = calcularConformidade(
       pops,
       registros,
       mesAtual,
@@ -44,6 +45,8 @@ export default async function RelatorioGeral({
     return {
       ...setor,
       mediaConformidade,
+      percentualPerfeitos,
+      bateuMeta,
       diasContados: diasPreenchidos,
     };
   }));
@@ -102,7 +105,7 @@ export default async function RelatorioGeral({
               <th style={{ padding: '12px 8px', textAlign: 'left', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>Setor</th>
               <th style={{ padding: '12px 8px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>POPs Ativos</th>
               <th style={{ padding: '12px 8px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>Dias Preenchidos</th>
-              <th style={{ padding: '12px 8px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>Conformidade Média</th>
+              <th style={{ padding: '12px 8px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>Conformidade (dias perfeitos)</th>
               <th style={{ padding: '12px 8px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.8125rem' }}>Ações</th>
             </tr>
           </thead>
@@ -113,9 +116,12 @@ export default async function RelatorioGeral({
                 <td style={{ padding: '16px 8px', textAlign: 'center' }}>{setor.pops.length}</td>
                 <td style={{ padding: '16px 8px', textAlign: 'center' }}>{setor.diasContados}</td>
                 <td style={{ padding: '16px 8px', textAlign: 'center' }}>
-                  <span className={`badge ${setor.mediaConformidade === 100 ? 'badge-success' : setor.mediaConformidade >= 80 ? 'badge-warning' : 'badge-danger'}`}>
-                    {setor.mediaConformidade}%
+                  <span className={`badge ${setor.bateuMeta ? 'badge-success' : 'badge-danger'}`}>
+                    {setor.percentualPerfeitos}%
                   </span>
+                  <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                    méd. pond. {setor.mediaConformidade}%
+                  </div>
                 </td>
                 <td style={{ padding: '16px 8px', textAlign: 'center' }}>
                   <Link href={`/setores/${setor.id}`} className="btn btn-secondary btn-sm">

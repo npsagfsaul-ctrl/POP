@@ -35,9 +35,9 @@ export async function GET(request: Request) {
       const pesoTotal = setor.pops.reduce((a, p) => a + p.peso, 0);
       const registrosSetor = registros.filter(r => r.setorId === setor.id);
 
-      // Mesma regra do dashboard: média dos dias úteis até hoje, a partir
-      // da criação do setor; dia sem checklist = 0%.
-      const { media: percentual } = calcularConformidade(
+      // Mesma regra do dashboard: dias úteis até hoje, a partir da criação
+      // do setor; dia sem checklist = 0%. Métrica oficial: percentualPerfeitos.
+      const { media: mediaPonderada, percentualPerfeitos: percentual } = calcularConformidade(
         setor.pops, registrosSetor, month, year, new Date(), setor.createdAt,
       );
 
@@ -60,6 +60,7 @@ export async function GET(request: Request) {
         nome: setor.nome,
         pesoTotal,
         percentual: Number(percentual.toFixed(2)),
+        mediaPonderada: Number(mediaPonderada.toFixed(2)),
         principaisPops,
       };
     })

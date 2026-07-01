@@ -22,9 +22,9 @@ export async function GET() {
     setores.map(async setor => {
       const registrosSetor = registros.filter(r => r.setorId === setor.id);
 
-      // Mesma regra do dashboard: média dos dias úteis até hoje, a partir
-      // da criação do setor; dia sem checklist = 0%.
-      const { media: percentual } = calcularConformidade(
+      // Mesma regra do dashboard: dias úteis até hoje, a partir da criação
+      // do setor; dia sem checklist = 0%. Métrica oficial: percentualPerfeitos.
+      const { media: mediaPonderada, percentualPerfeitos: percentual } = calcularConformidade(
         setor.pops, registrosSetor, month, year, new Date(), setor.createdAt,
       );
 
@@ -41,6 +41,7 @@ export async function GET() {
       return {
         nome: setor.nome,
         percentual: Number(percentual.toFixed(2)),
+        mediaPonderada: Number(mediaPonderada.toFixed(2)),
         principaisPops,
       };
     })
@@ -58,6 +59,7 @@ export async function GET() {
   relatorio.forEach(item => {
     doc.fontSize(14).fillColor('#333').text(`Setor: ${item.nome}`);
     doc.fontSize(12).fillColor('#555').text(`Percentual: ${item.percentual}%`);
+    doc.fontSize(9).fillColor('#888').text(`(média ponderada: ${item.mediaPonderada}%)`);
     if (item.principaisPops.length > 0) {
       doc.text('Principais POPs:');
       item.principaisPops.forEach(pop => {
