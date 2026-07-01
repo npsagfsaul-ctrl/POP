@@ -51,9 +51,9 @@ export default async function VisualizarSetor({
 
   const registros = await getRegistrosMensais(resolvedParams.id, mesAtual, anoAtual);
 
-  // Calcular métricas (dias úteis até hoje; dia útil sem checklist = 0%)
+  // Calcular métricas (dias úteis até hoje, a partir da criação do setor; dia útil sem checklist = 0%)
   const { media: mediaConformidade, diasUteis, diasAbaixo100, percentualPerfeitos } =
-    calcularConformidade(pops, registros, mesAtual, anoAtual, hoje);
+    calcularConformidade(pops, registros, mesAtual, anoAtual, hoje, setor.createdAt);
 
   return (
     <div>

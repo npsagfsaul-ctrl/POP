@@ -68,8 +68,15 @@ export default async function RelatorioMensal({
   });
 
   // Média de Conformidade Global — mesma regra do dashboard:
-  // dias úteis (Seg–Sáb) até hoje; dia sem checklist conta como 80%.
-  const { media: mediaGlobal } = calcularConformidade(pops, registros, mes, ano, hoje);
+  // dias úteis (Seg–Sáb) até hoje, a partir da criação do setor;
+  // dia sem checklist conta como 0%.
+  const {
+    media: mediaGlobal,
+    bateuMeta,
+    perdaPorDiaNaoPreenchido,
+    perdaPorPendencia,
+    dias: diasLedger,
+  } = calcularConformidade(pops, registros, mes, ano, hoje, setor.createdAt);
 
   // Ordenar por menor percentual para destacar problemas
   const criticalPops = [...statsPorPop].sort((a, b) => a.percentual - b.percentual);
@@ -182,6 +189,71 @@ export default async function RelatorioMensal({
             </table>
           </div>
         </div>
+      </div>
+
+      <div className="mb-10">
+        <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Fechamento do Mês
+        </h2>
+
+        <div className={`card mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4 ${bateuMeta ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
+          <span className={`px-3 py-1.5 rounded-full text-sm font-bold uppercase w-fit ${bateuMeta ? 'bg-emerald-200 text-emerald-800' : 'bg-rose-200 text-rose-800'}`}>
+            {bateuMeta ? 'Meta 80%: BATEU ✅' : 'Meta 80%: NÃO BATEU ❌'}
+          </span>
+          <p className="text-sm text-slate-600">
+            {perdaPorDiaNaoPreenchido > 0 || perdaPorPendencia > 0 ? (
+              <>Perda no mês: <strong>{perdaPorDiaNaoPreenchido}pp</strong> por dias não preenchidos e <strong>{perdaPorPendencia}pp</strong> por pendências marcadas.</>
+            ) : (
+              <>Nenhuma perda no mês — parabéns!</>
+            )}
+          </p>
+        </div>
+
+        <div className="card overflow-hidden p-0 border-none shadow-lg">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-900 text-white">
+                  <th className="px-6 py-4 font-bold uppercase text-[11px] tracking-widest">Dia</th>
+                  <th className="px-6 py-4 font-bold uppercase text-[11px] tracking-widest text-center">Preenchido?</th>
+                  <th className="px-6 py-4 font-bold uppercase text-[11px] tracking-widest text-center">% do dia</th>
+                  <th className="px-6 py-4 font-bold uppercase text-[11px] tracking-widest">Pendências</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {diasLedger.map((d) => (
+                  <tr key={d.dia} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="px-6 py-3 font-medium text-main">{d.dia}/{mes}</td>
+                    <td className="px-6 py-3 text-center">{d.preenchido ? '✅' : '❌'}</td>
+                    <td className={`px-6 py-3 text-center font-bold ${d.conformidadeDia === 100 ? 'text-emerald-600' : d.conformidadeDia >= 80 ? 'text-amber-600' : 'text-rose-600'}`}>
+                      {d.conformidadeDia}%
+                    </td>
+                    <td className="px-6 py-3 text-sm">
+                      {!d.preenchido ? (
+                        <span className="text-rose-600 font-medium">Checklist não preenchido</span>
+                      ) : d.pendencias.length === 0 ? (
+                        <span className="text-emerald-600">—</span>
+                      ) : (
+                        d.pendencias.map((p) => `${p.titulo} (peso ${p.peso})`).join(', ')
+                      )}
+                    </td>
+                  </tr>
+                ))}
+                {diasLedger.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-6 text-center text-muted">Nenhum dia útil considerado neste período.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <p className="text-xs text-slate-400 mt-2">
+          Este extrato reflete os POPs atualmente cadastrados; POPs excluídos não aparecem no histórico.
+        </p>
       </div>
 
       <div className="bg-slate-900 text-white rounded-3xl p-8 shadow-xl relative overflow-hidden">

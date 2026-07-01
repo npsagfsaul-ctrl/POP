@@ -31,13 +31,14 @@ export default async function RelatorioGeral({
     const pops = setor.pops;
     const registros = await getRegistrosMensais(setor.id, mesAtual, anoAtual);
 
-    // Dias úteis até hoje; dia útil sem checklist conta como 80%.
+    // Dias úteis até hoje, a partir da criação do setor; dia útil sem checklist = 0%.
     const { media: mediaConformidade, diasPreenchidos } = calcularConformidade(
       pops,
       registros,
       mesAtual,
       anoAtual,
       hoje,
+      setor.createdAt,
     );
 
     return {

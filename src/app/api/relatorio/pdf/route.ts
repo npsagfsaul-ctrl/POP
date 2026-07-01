@@ -22,9 +22,11 @@ export async function GET() {
     setores.map(async setor => {
       const registrosSetor = registros.filter(r => r.setorId === setor.id);
 
-      // Mesma regra do dashboard: média dos dias úteis até hoje;
-      // dia sem checklist = 0%.
-      const { media: percentual } = calcularConformidade(setor.pops, registrosSetor, month, year);
+      // Mesma regra do dashboard: média dos dias úteis até hoje, a partir
+      // da criação do setor; dia sem checklist = 0%.
+      const { media: percentual } = calcularConformidade(
+        setor.pops, registrosSetor, month, year, new Date(), setor.createdAt,
+      );
 
       const concluidoIds = new Set<string>();
       for (const reg of registrosSetor) {

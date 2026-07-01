@@ -32,9 +32,11 @@ export async function GET() {
       const pesoTotal = setor.pops.reduce((a, p) => a + p.peso, 0);
       const registrosSetor = registros.filter(r => r.setorId === setor.id);
 
-      // Mesma regra do dashboard: média dos dias úteis até hoje;
-      // dia sem checklist = 0%.
-      const { media: percentual } = calcularConformidade(setor.pops, registrosSetor, month, year);
+      // Mesma regra do dashboard: média dos dias úteis até hoje, a partir
+      // da criação do setor; dia sem checklist = 0%.
+      const { media: percentual } = calcularConformidade(
+        setor.pops, registrosSetor, month, year, new Date(), setor.createdAt,
+      );
 
       // Principais POPs: top 3 por peso que foram concluídos ao menos uma vez
       const concluidoIds = new Set<string>();
