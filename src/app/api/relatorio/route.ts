@@ -8,9 +8,12 @@ function getCurrentMonthYear() {
   return { month: now.getMonth() + 1, year: now.getFullYear() };
 }
 
-/** GET /api/relatorio */
-export async function GET() {
-  const { month, year } = getCurrentMonthYear();
+/** GET /api/relatorio?mes=6&ano=2026 (mes/ano opcionais; padrão é o mês corrente) */
+export async function GET(request: Request) {
+  const params = new URL(request.url).searchParams;
+  const { month: mesAtual, year: anoAtual } = getCurrentMonthYear();
+  const month = params.has('mes') ? parseInt(params.get('mes')!, 10) : mesAtual;
+  const year = params.has('ano') ? parseInt(params.get('ano')!, 10) : anoAtual;
 
   // Fetch all setores with their POPs
   const setores = await prisma.setor.findMany({
