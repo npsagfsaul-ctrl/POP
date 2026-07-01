@@ -175,7 +175,12 @@ export function calcularConformidade(
     });
   }
 
-  const media = diasUteis > 0 ? Math.round(soma / diasUteis) : 0;
+  // "100%" só pode aparecer quando o mês é REALMENTE perfeito (0 pendências).
+  // Sem isso, um mês com pendências de peso pequeno pode arredondar pra "100%"
+  // na tela e contradizer o card "Dias Abaixo de 100%" (que não arredonda).
+  const mediaArredondadaPadrao = diasUteis > 0 ? Math.round(soma / diasUteis) : 0;
+  const media =
+    diasUteis === 0 ? 0 : diasAbaixo100 === 0 ? 100 : Math.min(99, mediaArredondadaPadrao);
   const diasPerfeitos = diasUteis - diasAbaixo100;
   const percentualPerfeitos = diasUteis > 0 ? Math.round((diasPerfeitos / diasUteis) * 100) : 0;
 
