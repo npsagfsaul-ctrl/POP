@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { isAdmin } from '@/actions/admin';
+import { normalizarQuebrasDeLinha } from '@/lib/texto';
 
 function csvLinha(valores: (string | null | undefined)[]) {
   return valores
@@ -38,7 +39,13 @@ export async function GET(request: Request) {
   const linhas = [
     csvLinha(['Título', 'Peso', 'Orientação de Avaliação', 'Instrução de Trabalho', 'Cadastrado em']),
     ...pops.map((p) =>
-      csvLinha([p.titulo, String(p.peso), p.orientacaoAvaliacao, p.instrucaoTrabalho, dataBR(p.createdAt)]),
+      csvLinha([
+        normalizarQuebrasDeLinha(p.titulo),
+        String(p.peso),
+        normalizarQuebrasDeLinha(p.orientacaoAvaliacao),
+        normalizarQuebrasDeLinha(p.instrucaoTrabalho),
+        dataBR(p.createdAt),
+      ]),
     ),
   ];
 

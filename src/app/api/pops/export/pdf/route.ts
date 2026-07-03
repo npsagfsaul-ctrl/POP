@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { isAdmin } from '@/actions/admin';
+import { normalizarQuebrasDeLinha } from '@/lib/texto';
 import PDFDocument from 'pdfkit';
 
 /** GET /api/pops/export/pdf?setorId=XXX — PDF com os POPs cadastrados de um setor */
@@ -45,12 +46,12 @@ export async function GET(request: Request) {
   pops.forEach((pop, i) => {
     if (doc.y > 700) doc.addPage();
 
-    doc.fontSize(13).fillColor('#111').text(`${i + 1}. ${pop.titulo}`, { continued: false });
+    doc.fontSize(13).fillColor('#111').text(`${i + 1}. ${normalizarQuebrasDeLinha(pop.titulo)}`, { continued: false });
     doc.fontSize(10).fillColor('#555').text(`Peso: ${pop.peso}`);
     doc.fontSize(10).fillColor('#333').text(`Orientação de Avaliação: `, { continued: true })
-      .fillColor('#555').text(pop.orientacaoAvaliacao);
+      .fillColor('#555').text(normalizarQuebrasDeLinha(pop.orientacaoAvaliacao));
     doc.fontSize(10).fillColor('#333').text(`Instrução de Trabalho: `, { continued: true })
-      .fillColor('#555').text(pop.instrucaoTrabalho);
+      .fillColor('#555').text(normalizarQuebrasDeLinha(pop.instrucaoTrabalho));
     doc.moveDown();
   });
 

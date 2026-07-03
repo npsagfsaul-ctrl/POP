@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { normalizarQuebrasDeLinha } from '@/lib/texto';
 
 export async function createPop(formData: FormData) {
   const titulo = formData.get('titulo') as string;
@@ -17,10 +18,10 @@ export async function createPop(formData: FormData) {
 
   await prisma.pop.create({
     data: {
-      titulo,
+      titulo: normalizarQuebrasDeLinha(titulo),
       setorId,
-      orientacaoAvaliacao,
-      instrucaoTrabalho,
+      orientacaoAvaliacao: normalizarQuebrasDeLinha(orientacaoAvaliacao),
+      instrucaoTrabalho: normalizarQuebrasDeLinha(instrucaoTrabalho),
       peso,
     },
   });
@@ -43,10 +44,10 @@ export async function updatePop(id: string, formData: FormData) {
   await prisma.pop.update({
     where: { id },
     data: {
-      titulo,
+      titulo: normalizarQuebrasDeLinha(titulo),
       setorId,
-      orientacaoAvaliacao,
-      instrucaoTrabalho,
+      orientacaoAvaliacao: normalizarQuebrasDeLinha(orientacaoAvaliacao),
+      instrucaoTrabalho: normalizarQuebrasDeLinha(instrucaoTrabalho),
       peso,
     },
   });

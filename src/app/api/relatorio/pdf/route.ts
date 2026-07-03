@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { calcularConformidade } from '@/lib/conformidade';
+import { normalizarQuebrasDeLinha } from '@/lib/texto';
 import PDFDocument from 'pdfkit';
 
 function getCurrentMonthYear() {
@@ -63,7 +64,7 @@ export async function GET() {
     if (item.principaisPops.length > 0) {
       doc.text('Principais POPs:');
       item.principaisPops.forEach(pop => {
-        doc.text(`- ${pop.titulo} (peso: ${pop.peso})`, { indent: 20 });
+        doc.text(`- ${normalizarQuebrasDeLinha(pop.titulo)} (peso: ${pop.peso})`, { indent: 20 });
       });
     }
     doc.moveDown();
