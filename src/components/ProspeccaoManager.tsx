@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { criarProspeccao, atualizarProspeccao, deletarProspeccao } from '@/actions/prospeccao';
+import { STATUS_PROSPECCAO_LABEL, StatusProspeccaoTexto } from '@/lib/prospeccaoStatus';
 
-type Status = 'CONTATO' | 'FECHADO' | 'SEM_RETORNO' | 'NAO_TEM_INTERESSE' | 'SEM_PERFIL' | 'DADOS_INCORRETO';
+type Status = StatusProspeccaoTexto;
 
 interface ProspeccaoItem {
   id: string;
@@ -34,12 +35,12 @@ interface Props {
 }
 
 const STATUS_CONFIG: Record<Status, { label: string; badge: string }> = {
-  CONTATO: { label: 'Em contato', badge: 'badge-info' },
-  FECHADO: { label: 'Fechado', badge: 'badge-success' },
-  SEM_RETORNO: { label: 'Sem retorno', badge: 'badge-warning' },
-  NAO_TEM_INTERESSE: { label: 'Não tem interesse', badge: 'badge-danger' },
-  SEM_PERFIL: { label: 'Sem perfil', badge: 'badge-primary' },
-  DADOS_INCORRETO: { label: 'Dados incorretos', badge: 'badge-danger' },
+  CONTATO: { label: STATUS_PROSPECCAO_LABEL.CONTATO, badge: 'badge-info' },
+  FECHADO: { label: STATUS_PROSPECCAO_LABEL.FECHADO, badge: 'badge-success' },
+  SEM_RETORNO: { label: STATUS_PROSPECCAO_LABEL.SEM_RETORNO, badge: 'badge-warning' },
+  NAO_TEM_INTERESSE: { label: STATUS_PROSPECCAO_LABEL.NAO_TEM_INTERESSE, badge: 'badge-danger' },
+  SEM_PERFIL: { label: STATUS_PROSPECCAO_LABEL.SEM_PERFIL, badge: 'badge-primary' },
+  DADOS_INCORRETO: { label: STATUS_PROSPECCAO_LABEL.DADOS_INCORRETO, badge: 'badge-danger' },
 };
 
 function hojeISO() {

@@ -52,7 +52,10 @@ export default async function ProspeccaoPage({
           </nav>
         </div>
         {adminMode && (
-          <Link href="/prospeccao/cadastros" className="btn btn-secondary btn-sm">⚙ Cadastrar Funcionário</Link>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <a href="/api/prospeccao/export" className="btn btn-secondary btn-sm">⬇ Excel (histórico completo)</a>
+            <Link href="/prospeccao/cadastros" className="btn btn-secondary btn-sm">⚙ Cadastrar Funcionário</Link>
+          </div>
         )}
       </div>
 
