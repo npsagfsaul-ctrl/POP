@@ -16,6 +16,10 @@ export async function salvarChecklist(formData: FormData) {
   const data = new Date(dataString);
   data.setUTCHours(0, 0, 0, 0);
 
+  if (data.getUTCDay() === 0) {
+    throw new Error('Não é possível preencher checklist aos domingos (domingos não contam para a meta).');
+  }
+
   // Collect responses from form data
   const respostas: Record<string, boolean> = {};
   

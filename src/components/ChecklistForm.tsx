@@ -28,6 +28,23 @@ export default function ChecklistForm({
 }: ChecklistFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
 
+  // Domingos não contam para a meta e não aparecem no calendário do setor,
+  // então bloqueamos a seleção aqui para não gerar um checklist "invisível".
+  const [dataChecklist, setDataChecklist] = useState(dataInicial);
+  const handleDataChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const novaData = e.target.value;
+    if (!novaData) return;
+    const isDomingo = new Date(`${novaData}T00:00:00`).getDay() === 0;
+    if (isDomingo) {
+      alert('Não é possível preencher checklist aos domingos — domingos não contam para a meta.');
+      return; // mantém a data anterior (input controlado, não avança)
+    }
+    setDataChecklist(novaData);
+  };
+  const isDomingoSelecionado = dataChecklist
+    ? new Date(`${dataChecklist}T00:00:00`).getDay() === 0
+    : false;
+
   // Inicializar estado das ocorrências (false no DB = ocorrência = true na UI)
   const [ocorrencias, setOcorrencias] = useState<Record<string, boolean>>(() => {
     const init: Record<string, boolean> = {};
@@ -120,11 +137,17 @@ export default function ChecklistForm({
               type="date"
               id="data"
               name="data"
-              defaultValue={dataInicial}
+              value={dataChecklist}
+              onChange={handleDataChange}
               className="form-input"
               style={{ maxWidth: 200 }}
               required
             />
+            {isDomingoSelecionado && (
+              <p style={{ color: 'var(--danger, #dc2626)', fontSize: '0.8125rem', marginTop: 6 }}>
+                ⚠ Domingos não contam para a meta — escolha outro dia.
+              </p>
+            )}
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', background: 'var(--success-light, #ecfdf5)', border: '1px solid var(--success, #10b981)', borderRadius: 'var(--radius-md)' }}>
@@ -233,7 +256,7 @@ export default function ChecklistForm({
 
         {/* Submit */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 8 }}>
-          <button type="submit" className="btn btn-primary btn-lg">
+          <button type="submit" className="btn btn-primary btn-lg" disabled={isDomingoSelecionado}>
             <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
             </svg>
