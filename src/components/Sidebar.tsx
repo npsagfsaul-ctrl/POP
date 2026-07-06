@@ -96,7 +96,7 @@ export default function Sidebar({ isAdmin, ocorrenciasAbertas = 0 }: SidebarProp
           </svg>
         </div>
         <div>
-          <div className="sidebar-logo-text">Portal Correios</div>
+          <div className="sidebar-logo-text">Portal AGF Saul</div>
           <div className="sidebar-logo-sub">Sistema Interno</div>
         </div>
       </div>

@@ -7,7 +7,7 @@ import LogoutButton from "@/components/LogoutButton";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Portal Correios | Sistema Interno",
+  title: "Portal AGF Saul | Sistema Interno",
   description: "Portal interno da agência — comunicados, lembretes, checklists e ocorrências",
 };
 
@@ -29,7 +29,7 @@ export default async function RootLayout({
             {/* Topbar */}
             <header className="topbar">
               <div>
-                <span className="topbar-title">Portal Correios</span>
+                <span className="topbar-title">Portal AGF Saul</span>
               </div>
 
               <div className="topbar-actions">
