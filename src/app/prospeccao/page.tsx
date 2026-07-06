@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { getSetores } from '@/actions/setores';
 import { getAtendentes } from '@/actions/atendentes';
 import { getProspeccoes, FiltrosProspeccao } from '@/actions/prospeccao';
-import { isAdmin } from '@/actions/admin';
 import ProspeccaoManager from '@/components/ProspeccaoManager';
 
 export const dynamic = 'force-dynamic';
@@ -13,7 +12,6 @@ export default async function ProspeccaoPage({
   searchParams: Promise<{ setorId?: string; atendenteId?: string; status?: string }>;
 }) {
   const sp = await searchParams;
-  const adminMode = await isAdmin();
 
   const filtros: FiltrosProspeccao = {
     setorId: sp.setorId || undefined,
@@ -51,12 +49,10 @@ export default async function ProspeccaoPage({
             <span className="breadcrumb-current">Prospecção</span>
           </nav>
         </div>
-        {adminMode && (
-          <div style={{ display: 'flex', gap: 8 }}>
-            <a href="/api/prospeccao/export" className="btn btn-secondary btn-sm">⬇ Excel (histórico completo)</a>
-            <Link href="/prospeccao/cadastros" className="btn btn-secondary btn-sm">⚙ Cadastrar Funcionário</Link>
-          </div>
-        )}
+        <div style={{ display: 'flex', gap: 8 }}>
+          <a href="/api/prospeccao/export" className="btn btn-secondary btn-sm">⬇ Excel (histórico completo)</a>
+          <Link href="/prospeccao/cadastros" className="btn btn-secondary btn-sm">⚙ Cadastrar Funcionário</Link>
+        </div>
       </div>
 
       <ProspeccaoManager

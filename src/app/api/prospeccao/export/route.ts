@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { isAdmin } from '@/actions/admin';
 import { normalizarQuebrasDeLinha } from '@/lib/texto';
 import { STATUS_PROSPECCAO_LABEL, StatusProspeccaoTexto } from '@/lib/prospeccaoStatus';
 
@@ -17,10 +16,6 @@ function dataBR(d: Date) {
 
 /** GET /api/prospeccao/export — CSV com todo o histórico de prospecção */
 export async function GET() {
-  if (!(await isAdmin())) {
-    return new NextResponse('Não autorizado', { status: 403 });
-  }
-
   const prospeccoes = await prisma.prospeccao.findMany({
     include: { setor: true, atendente: true },
     orderBy: { data: 'desc' },

@@ -1,5 +1,3 @@
-import { isAdmin } from '@/actions/admin';
-import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import CadastroManager from '@/components/CadastroManager';
 import {
@@ -9,9 +7,6 @@ import {
 export const dynamic = 'force-dynamic';
 
 export default async function CadastrosProspeccaoPage() {
-  const adminMode = await isAdmin();
-  if (!adminMode) redirect('/admin/login');
-
   const atendentes = await getAtendentes();
 
   return (
