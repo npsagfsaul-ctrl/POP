@@ -19,6 +19,7 @@ model Setor {
   registros   RegistroDiario[]
   alertas     Alerta[]
   ocorrencias Ocorrencia[]
+  prospeccoes Prospeccao[]
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 }
@@ -146,12 +147,13 @@ model Coletor {
 }
 
 model Atendente {
-  id        String   @id @default(cuid())
-  nome      String
-  ativo     Boolean  @default(true)
-  coletas   Coleta[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String       @id @default(cuid())
+  nome        String
+  ativo       Boolean      @default(true)
+  coletas     Coleta[]
+  prospeccoes Prospeccao[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 }
 
 model Cliente {
@@ -191,4 +193,35 @@ model Coleta {
 model Config {
   chave String @id
   valor String
+}
+
+// ─── PROSPECÇÃO ───
+
+enum StatusProspeccao {
+  CONTATO           // em contato, aguardando andamento
+  FECHADO           // fechou negócio
+  SEM_RETORNO       // cliente não retornou
+  NAO_TEM_INTERESSE // não tem interesse
+  SEM_PERFIL        // não é um perfil de cliente adequado
+  DADOS_INCORRETO   // telefone/dados de contato errados
+}
+
+model Prospeccao {
+  id          String           @id @default(cuid())
+  data        DateTime         @db.Date
+  nomeCliente String
+  telefone    String?
+  oQueVende   String?
+  status      StatusProspeccao @default(CONTATO)
+
+  setorId String
+  setor   Setor  @relation(fields: [setorId], references: [id], onDelete: Cascade)
+
+  atendenteId String
+  atendente   Atendente @relation(fields: [atendenteId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([data])
 }

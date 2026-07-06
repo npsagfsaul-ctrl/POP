@@ -38,7 +38,8 @@ export async function deletarAtendente(id: string) {
   try {
     await prisma.atendente.delete({ where: { id } });
   } catch {
-    throw new Error('Não dá para excluir: este atendente já tem coletas registradas. Use "Desativar".');
+    throw new Error('Não dá para excluir: este atendente já tem coletas ou prospecções registradas. Use "Desativar".');
   }
   revalidatePath('/coletas/cadastros');
+  revalidatePath('/prospeccao');
 }

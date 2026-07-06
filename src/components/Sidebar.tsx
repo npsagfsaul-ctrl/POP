@@ -60,6 +60,12 @@ const IconTruck = () => (
   </svg>
 );
 
+const IconTarget = () => (
+  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 21a9 9 0 100-18 9 9 0 000 18zM12 17a5 5 0 100-10 5 5 0 000 10zM12 13a1 1 0 100-2 1 1 0 000 2z" />
+  </svg>
+);
+
 export default function Sidebar({ isAdmin, ocorrenciasAbertas = 0 }: SidebarProps) {
   const pathname = usePathname();
   const [setorNome, setSetorNome] = useState<string | null>(null);
@@ -112,6 +118,11 @@ export default function Sidebar({ isAdmin, ocorrenciasAbertas = 0 }: SidebarProp
         <Link href="/coletas" className={`sidebar-link ${isActive('/coletas') ? 'active' : ''}`}>
           <IconTruck />
           Coletas
+        </Link>
+
+        <Link href="/prospeccao" className={`sidebar-link ${isActive('/prospeccao') ? 'active' : ''}`}>
+          <IconTarget />
+          Prospecção
         </Link>
 
         {isAdmin && (
