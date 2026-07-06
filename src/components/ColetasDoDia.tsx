@@ -246,7 +246,7 @@ export default function ColetasDoDia({ data, coletas, coletores, atendentes, cli
               </div>
 
               <div className="form-group">
-                <label className="form-label">Atendente</label>
+                <label className="form-label">Funcionário</label>
                 <select name="atendenteId" className="form-select" defaultValue={editando?.atendenteId ?? ''}>
                   <option value="">— (não informado)</option>
                   {atendentes.map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}

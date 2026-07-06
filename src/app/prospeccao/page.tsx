@@ -52,7 +52,7 @@ export default async function ProspeccaoPage({
           </nav>
         </div>
         {adminMode && (
-          <Link href="/coletas/cadastros" className="btn btn-secondary btn-sm">⚙ Cadastrar Atendente</Link>
+          <Link href="/prospeccao/cadastros" className="btn btn-secondary btn-sm">⚙ Cadastrar Funcionário</Link>
         )}
       </div>
 

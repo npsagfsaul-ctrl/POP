@@ -98,7 +98,7 @@ export default async function CadastrosColetaPage() {
       />
 
       <CadastroManager
-        titulo="Atendentes"
+        titulo="Funcionários"
         descricao="Quem inclui as coletas na lista do dia."
         campos={[{ name: 'nome', label: 'Nome', obrigatorio: true, placeholder: 'Ex: Mariane' }]}
         itens={atendentes}

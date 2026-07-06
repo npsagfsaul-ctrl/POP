@@ -149,7 +149,7 @@ export default function ProspeccaoManager({
             </select>
           </div>
           <div>
-            <label className="form-label" style={{ fontSize: '0.75rem' }}>Atendente</label>
+            <label className="form-label" style={{ fontSize: '0.75rem' }}>Funcionário</label>
             <select className="form-select" value={filtroAtendenteId || ''} onChange={(e) => atualizarFiltro('atendenteId', e.target.value)}>
               <option value="">Todos</option>
               {atendentes.map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}
@@ -173,7 +173,7 @@ export default function ProspeccaoManager({
 
       {semCadastro && (
         <div className="alert alert-info" style={{ marginBottom: 16 }}>
-          É preciso ter ao menos um Setor e um Atendente cadastrados para lançar uma prospecção.
+          É preciso ter ao menos um Setor e um Funcionário cadastrados para lançar uma prospecção.
         </div>
       )}
 
@@ -188,7 +188,7 @@ export default function ProspeccaoManager({
                 <th>Telefone</th>
                 <th>O que vende</th>
                 <th>Setor</th>
-                <th>Atendente</th>
+                <th>Funcionário</th>
                 <th>Status</th>
                 <th>Ações</th>
               </tr>
@@ -273,7 +273,7 @@ export default function ProspeccaoManager({
               </div>
 
               <div className="form-group">
-                <label className="form-label">Atendente *</label>
+                <label className="form-label">Funcionário *</label>
                 <select name="atendenteId" className="form-select" defaultValue={editando?.atendenteId ?? ''} required>
                   <option value="" disabled>Selecione…</option>
                   {atendentes.map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}
