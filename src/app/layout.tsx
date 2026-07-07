@@ -4,6 +4,7 @@ import { isAdmin } from "@/actions/admin";
 import { contarOcorrenciasAbertas } from "@/actions/ocorrencias";
 import Sidebar from "@/components/Sidebar";
 import LogoutButton from "@/components/LogoutButton";
+import SidebarToggle from "@/components/SidebarToggle";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -28,7 +29,8 @@ export default async function RootLayout({
           <div className="main-content">
             {/* Topbar */}
             <header className="topbar">
-              <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <SidebarToggle />
                 <span className="topbar-title">Portal AGF Saul</span>
               </div>
 

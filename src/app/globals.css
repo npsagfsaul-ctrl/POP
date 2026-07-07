@@ -738,6 +738,29 @@ tbody tr:hover td { background: var(--surface-2); }
   font-weight: 600;
 }
 
+/* ─── MENU HAMBURGUER (mobile) ─── */
+.sidebar-toggle-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  color: var(--text-main);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  flex-shrink: 0;
+}
+.sidebar-toggle-btn:hover { background: var(--surface-2); }
+
+.sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 90; /* abaixo do .sidebar (100), acima do conteúdo */
+}
+
 /* ─── RESPONSIVE ─── */
 @media (max-width: 768px) {
   :root { --sidebar-width: 0px; }
@@ -748,6 +771,7 @@ tbody tr:hover td { background: var(--surface-2); }
   .page-content { padding: 16px; }
   .grid-cols-4 { grid-template-columns: repeat(2, 1fr); }
   .grid-cols-3 { grid-template-columns: repeat(1, 1fr); }
+  .sidebar-toggle-btn { display: flex; }
 }
 
 /* ─── SCROLLBAR ─── */

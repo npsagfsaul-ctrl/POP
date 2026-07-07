@@ -69,6 +69,7 @@ const IconTarget = () => (
 export default function Sidebar({ isAdmin, ocorrenciasAbertas = 0 }: SidebarProps) {
   const pathname = usePathname();
   const [setorNome, setSetorNome] = useState<string | null>(null);
+  const [aberto, setAberto] = useState(false);
 
   useEffect(() => {
     const match = pathname.match(/^\/setores\/([^/]+)/);
@@ -81,13 +82,27 @@ export default function Sidebar({ isAdmin, ocorrenciasAbertas = 0 }: SidebarProp
     }
   }, [pathname]);
 
+  // Escuta o botão de menu (hamburguer) do topbar em telas pequenas.
+  useEffect(() => {
+    const toggle = () => setAberto((v) => !v);
+    window.addEventListener('toggle-sidebar', toggle);
+    return () => window.removeEventListener('toggle-sidebar', toggle);
+  }, []);
+
+  // Fecha o menu automaticamente ao navegar para outra página (mobile).
+  useEffect(() => {
+    setAberto(false);
+  }, [pathname]);
+
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
     return pathname.startsWith(href);
   };
 
   return (
-    <aside className="sidebar">
+    <>
+      {aberto && <div className="sidebar-backdrop" onClick={() => setAberto(false)} />}
+      <aside className={`sidebar ${aberto ? 'open' : ''}`}>
       {/* Logo */}
       <div className="sidebar-logo">
         <div className="sidebar-logo-icon">
@@ -184,6 +199,7 @@ export default function Sidebar({ isAdmin, ocorrenciasAbertas = 0 }: SidebarProp
           </div>
         </div>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }
