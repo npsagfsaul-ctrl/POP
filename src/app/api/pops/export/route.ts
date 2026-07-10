@@ -2,19 +2,14 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { isAdmin } from '@/actions/admin';
 import { normalizarQuebrasDeLinha } from '@/lib/texto';
-
-function csvLinha(valores: (string | null | undefined)[]) {
-  return valores
-    .map((v) => `"${(v ?? '').toString().replace(/"/g, '""')}"`)
-    .join(';');
-}
+import ExcelJS from 'exceljs';
 
 function dataBR(d: Date) {
   const dt = new Date(d);
   return `${String(dt.getUTCDate()).padStart(2, '0')}/${String(dt.getUTCMonth() + 1).padStart(2, '0')}/${dt.getUTCFullYear()}`;
 }
 
-/** GET /api/pops/export?setorId=XXX — CSV com os POPs cadastrados de um setor */
+/** GET /api/pops/export?setorId=XXX — Excel (.xlsx) com os POPs cadastrados de um setor */
 export async function GET(request: Request) {
   if (!(await isAdmin())) {
     return new NextResponse('Não autorizado', { status: 403 });
@@ -35,27 +30,49 @@ export async function GET(request: Request) {
     orderBy: { createdAt: 'asc' },
   });
 
-  const hoje = new Date().toISOString().slice(0, 10);
-  const linhas = [
-    csvLinha(['Título', 'Peso', 'Orientação de Avaliação', 'Instrução de Trabalho', 'Cadastrado em']),
-    ...pops.map((p) =>
-      csvLinha([
-        normalizarQuebrasDeLinha(p.titulo),
-        String(p.peso),
-        normalizarQuebrasDeLinha(p.orientacaoAvaliacao),
-        normalizarQuebrasDeLinha(p.instrucaoTrabalho),
-        dataBR(p.createdAt),
-      ]),
-    ),
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'Portal AGF Saul';
+  workbook.created = new Date();
+
+  const sheet = workbook.addWorksheet('POPs', {
+    views: [{ state: 'frozen', ySplit: 1 }], // trava a linha de cabeçalho ao rolar
+  });
+
+  sheet.columns = [
+    { header: 'Título', key: 'titulo', width: 40 },
+    { header: 'Peso', key: 'peso', width: 8 },
+    { header: 'Orientação de Avaliação', key: 'orientacao', width: 55 },
+    { header: 'Instrução de Trabalho', key: 'instrucao', width: 65 },
+    { header: 'Cadastrado em', key: 'cadastradoEm', width: 15 },
   ];
 
-  const csv = '﻿' + linhas.join('\r\n'); // BOM para o Excel reconhecer UTF-8
-  const nomeArquivo = `pops_${setor.nome.replace(/[^a-zA-Z0-9]+/g, '_')}_${hoje}.csv`;
+  sheet.getRow(1).eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4F46E5' } };
+    cell.alignment = { vertical: 'middle', horizontal: 'left' };
+  });
 
-  return new NextResponse(csv, {
+  pops.forEach((p) => {
+    const row = sheet.addRow({
+      titulo: normalizarQuebrasDeLinha(p.titulo),
+      peso: p.peso,
+      orientacao: normalizarQuebrasDeLinha(p.orientacaoAvaliacao),
+      instrucao: normalizarQuebrasDeLinha(p.instrucaoTrabalho),
+      cadastradoEm: dataBR(p.createdAt),
+    });
+    row.eachCell((cell) => {
+      cell.alignment = { vertical: 'top', wrapText: true };
+    });
+  });
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const hoje = new Date().toISOString().slice(0, 10);
+  const nomeArquivo = `pops_${setor.nome.replace(/[^a-zA-Z0-9]+/g, '_')}_${hoje}.xlsx`;
+
+  return new NextResponse(buffer, {
     status: 200,
     headers: {
-      'Content-Type': 'text/csv; charset=utf-8',
+      'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       'Content-Disposition': `attachment; filename="${nomeArquivo}"`,
     },
   });
