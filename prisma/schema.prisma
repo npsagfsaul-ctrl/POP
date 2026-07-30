@@ -203,6 +203,16 @@ model Coleta {
   @@index([data])
 }
 
+// Região/trajeto nomeado (ex.: "Rota do Centro", "Rota Tiradentes")
+model Rota {
+  id         String     @id @default(cuid())
+  nome       String
+  ativo      Boolean    @default(true)
+  rotasFixas RotaFixa[]
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+}
+
 // Coleta recorrente: aparece automaticamente nas Coletas do Dia nos dias marcados.
 model RotaFixa {
   id         String        @id @default(cuid())
@@ -216,6 +226,10 @@ model RotaFixa {
 
   clienteId String
   cliente   Cliente @relation(fields: [clienteId], references: [id], onDelete: Restrict)
+
+  // Rota/região a que esta coleta fixa pertence (opcional)
+  rotaId String?
+  rota   Rota?   @relation(fields: [rotaId], references: [id], onDelete: SetNull)
 
   coletas Coleta[]
 

@@ -77,7 +77,7 @@ export async function GET(request: Request) {
     mes && ano
       ? await getColetasMensais(mes, ano)
       : await prisma.coleta.findMany({
-          include: { coletor: true, cliente: true, atendente: true },
+          include: { coletor: true, cliente: true, atendente: true, rotaFixa: { include: { rota: true } } },
           orderBy: [{ data: 'desc' }, { periodo: 'asc' }, { createdAt: 'asc' }],
         });
 
@@ -94,6 +94,7 @@ export async function GET(request: Request) {
     { header: 'Período', key: 'periodo', width: 10 },
     { header: 'Tipo', key: 'tipo', width: 8 },
     { header: 'Coletor', key: 'coletor', width: 16 },
+    { header: 'Rota', key: 'rota', width: 16 },
     { header: 'Cliente', key: 'cliente', width: 32 },
     { header: 'Código', key: 'codigo', width: 10 },
     { header: 'Funcionário', key: 'funcionario', width: 16 },
@@ -116,6 +117,7 @@ export async function GET(request: Request) {
       periodo: PERIODO_LABEL[c.periodo] ?? c.periodo,
       tipo: TIPO_LABEL[c.tipo] ?? c.tipo,
       coletor: c.coletor.nome,
+      rota: c.rotaFixa?.rota?.nome ?? '',
       cliente: c.cliente.nome,
       codigo: c.cliente.codigo ?? '',
       funcionario: c.atendente?.nome ?? '',

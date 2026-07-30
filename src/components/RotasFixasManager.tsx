@@ -17,6 +17,8 @@ interface RotaFixaItem {
   ativo: boolean;
   coletorId: string;
   clienteId: string;
+  rotaId: string | null;
+  rotaNome: string | null;
   coletorNome: string;
   coletorCor: string;
   clienteNome: string;
@@ -34,6 +36,7 @@ interface Props {
   rotas: RotaFixaItem[];
   coletores: Opcao[];
   clientes: Opcao[];
+  rotasDisponiveis: Opcao[];
 }
 
 const PERIODO_LABEL: Record<Periodo, string> = {
@@ -42,7 +45,7 @@ const PERIODO_LABEL: Record<Periodo, string> = {
   RETORNO: 'Retorno',
 };
 
-export default function RotasFixasManager({ rotas, coletores, clientes }: Props) {
+export default function RotasFixasManager({ rotas, coletores, clientes, rotasDisponiveis }: Props) {
   const router = useRouter();
   const [aberto, setAberto] = useState(false);
   const [editando, setEditando] = useState<RotaFixaItem | null>(null);
@@ -139,6 +142,7 @@ export default function RotasFixasManager({ rotas, coletores, clientes }: Props)
                 {r.clienteCodigo && <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> ({r.clienteCodigo})</span>}
               </span>
               <span className="badge badge-info" style={{ fontSize: '0.7rem' }}>{PERIODO_LABEL[r.periodo]}</span>
+              {r.rotaNome && <span className="badge badge-primary" style={{ fontSize: '0.7rem' }}>{r.rotaNome}</span>}
               <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{formatarDias(r.dias)}</span>
               {!r.ativo && <span className="badge badge-warning" style={{ fontSize: '0.7rem' }}>inativa</span>}
 
@@ -186,13 +190,22 @@ export default function RotasFixasManager({ rotas, coletores, clientes }: Props)
                 </select>
               </div>
 
-              <div className="form-group">
-                <label className="form-label">Período *</label>
-                <select name="periodo" className="form-select" defaultValue={editando?.periodo ?? 'MANHA'} required>
-                  {(Object.keys(PERIODO_LABEL) as Periodo[]).map((p) => (
-                    <option key={p} value={p}>{PERIODO_LABEL[p]}</option>
-                  ))}
-                </select>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div className="form-group">
+                  <label className="form-label">Período *</label>
+                  <select name="periodo" className="form-select" defaultValue={editando?.periodo ?? 'MANHA'} required>
+                    {(Object.keys(PERIODO_LABEL) as Periodo[]).map((p) => (
+                      <option key={p} value={p}>{PERIODO_LABEL[p]}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Rota / Região</label>
+                  <select name="rotaId" className="form-select" defaultValue={editando?.rotaId ?? ''}>
+                    <option value="">— (sem rota)</option>
+                    {rotasDisponiveis.map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+                  </select>
+                </div>
               </div>
 
               <div className="form-group">

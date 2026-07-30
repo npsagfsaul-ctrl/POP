@@ -96,6 +96,7 @@ export default async function ImprimirColetasPage({
                           <td style={tdStyle}>
                             <strong>{c.cliente.nome}</strong>
                             {c.cliente.codigo && <span style={{ color: '#555' }}> ({c.cliente.codigo})</span>}
+                            {c.rotaFixa?.rota?.nome && <span style={{ color: '#777' }}> · {c.rotaFixa.rota.nome}</span>}
                             {c.naoTeveColeta && <span style={{ color: '#b91c1c' }}> — não teve coleta</span>}
                           </td>
                           <td style={{ ...tdStyle, color: '#333' }}>{c.observacao || '—'}</td>

@@ -55,7 +55,7 @@ export async function getColetasPorData(dataString: string) {
   const data = parseData(dataString);
   return prisma.coleta.findMany({
     where: { data },
-    include: { coletor: true, cliente: true, atendente: true },
+    include: { coletor: true, cliente: true, atendente: true, rotaFixa: { include: { rota: true } } },
     orderBy: [{ tipo: 'asc' }, { createdAt: 'asc' }],
   });
 }
@@ -68,7 +68,7 @@ export async function getColetasMensais(mes: number, ano: number) {
 
   return prisma.coleta.findMany({
     where: { data: { gte: dataInicio, lt: dataFim } },
-    include: { coletor: true, cliente: true, atendente: true },
+    include: { coletor: true, cliente: true, atendente: true, rotaFixa: { include: { rota: true } } },
     orderBy: [{ data: 'asc' }, { periodo: 'asc' }, { createdAt: 'asc' }],
   });
 }

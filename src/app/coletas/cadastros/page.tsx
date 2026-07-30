@@ -13,6 +13,7 @@ import {
 } from '@/actions/clientes';
 import { temSenhaColetas, definirSenhaColetas } from '@/actions/coletasAcesso';
 import { getRotasFixas } from '@/actions/rotasFixas';
+import { getRotas, criarRota, atualizarRota, alternarRotaAtivo, deletarRota } from '@/actions/rotas';
 import RotasFixasManager from '@/components/RotasFixasManager';
 
 export const dynamic = 'force-dynamic';
@@ -21,12 +22,13 @@ export default async function CadastrosColetaPage() {
   const adminMode = await isAdmin();
   if (!adminMode) redirect('/admin/login');
 
-  const [coletores, atendentes, clientes, protegida, rotasFixas] = await Promise.all([
+  const [coletores, atendentes, clientes, protegida, rotasFixas, rotas] = await Promise.all([
     getColetores(),
     getAtendentes(),
     getClientes(),
     temSenhaColetas(),
     getRotasFixas(),
+    getRotas(),
   ]);
 
   const rotasView = rotasFixas.map((r) => ({
@@ -37,6 +39,8 @@ export default async function CadastrosColetaPage() {
     ativo: r.ativo,
     coletorId: r.coletorId,
     clienteId: r.clienteId,
+    rotaId: r.rotaId,
+    rotaNome: r.rota?.nome ?? null,
     coletorNome: r.coletor.nome,
     coletorCor: r.coletor.cor,
     clienteNome: r.cliente.nome,
@@ -139,10 +143,22 @@ export default async function CadastrosColetaPage() {
         onDeletar={deletarCliente}
       />
 
+      <CadastroManager
+        titulo="Rotas (regiões)"
+        descricao="Trajetos nomeados usados nas rotas fixas. Ex: Rota do Centro, Rota Tiradentes."
+        campos={[{ name: 'nome', label: 'Nome da rota', obrigatorio: true, placeholder: 'Ex: Rota do Centro' }]}
+        itens={rotas}
+        onCriar={criarRota}
+        onAtualizar={atualizarRota}
+        onAlternarAtivo={alternarRotaAtivo}
+        onDeletar={deletarRota}
+      />
+
       <RotasFixasManager
         rotas={rotasView}
         coletores={coletores.filter((c) => c.ativo).map((c) => ({ id: c.id, nome: c.nome, cor: c.cor }))}
         clientes={clientes.filter((c) => c.ativo).map((c) => ({ id: c.id, nome: c.nome, codigo: c.codigo }))}
+        rotasDisponiveis={rotas.filter((r) => r.ativo).map((r) => ({ id: r.id, nome: r.nome }))}
       />
     </div>
   );

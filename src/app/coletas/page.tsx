@@ -52,6 +52,7 @@ export default async function ColetasPage({
     status: c.status,
     horaColeta: c.horaColeta ? horaBR(c.horaColeta) : null,
     criadaEm: horaBR(c.createdAt),
+    rotaNome: c.rotaFixa?.rota?.nome ?? null,
     observacao: c.observacao,
     naoTeveColeta: c.naoTeveColeta,
     coletorId: c.coletorId,

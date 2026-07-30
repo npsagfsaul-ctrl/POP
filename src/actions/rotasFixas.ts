@@ -6,7 +6,7 @@ import { PeriodoColeta } from '@prisma/client';
 
 export async function getRotasFixas() {
   return prisma.rotaFixa.findMany({
-    include: { coletor: true, cliente: true },
+    include: { coletor: true, cliente: true, rota: true },
     orderBy: [{ periodo: 'asc' }, { createdAt: 'asc' }],
   });
 }
@@ -15,6 +15,7 @@ function extrairCampos(formData: FormData) {
   const periodo = formData.get('periodo') as PeriodoColeta;
   const coletorId = formData.get('coletorId') as string;
   const clienteId = formData.get('clienteId') as string;
+  const rotaId = ((formData.get('rotaId') as string) || '').trim() || null;
   const observacao = ((formData.get('observacao') as string) || '').trim() || null;
 
   const dias: number[] = [];
@@ -29,7 +30,7 @@ function extrairCampos(formData: FormData) {
     throw new Error('Selecione ao menos um dia da semana.');
   }
 
-  return { periodo, coletorId, clienteId, observacao, dias };
+  return { periodo, coletorId, clienteId, rotaId, observacao, dias };
 }
 
 export async function criarRotaFixa(formData: FormData) {

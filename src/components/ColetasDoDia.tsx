@@ -16,6 +16,7 @@ interface ColetaItem {
   status: Status;
   horaColeta: string | null; // HH:mm quando coletada
   criadaEm: string; // HH:mm do cadastro
+  rotaNome: string | null; // rota/região, quando veio de rota fixa
   observacao: string | null;
   naoTeveColeta: boolean;
   coletorId: string;
@@ -211,6 +212,7 @@ export default function ColetasDoDia({ data, coletas, coletores, atendentes, cli
                           <span className={`badge ${c.tipo === 'FIXA' ? 'badge-info' : 'badge-warning'}`} style={{ fontSize: '0.65rem' }}>
                             {c.tipo === 'FIXA' ? 'Fixa' : 'Extra'}
                           </span>
+                          {c.rotaNome && <span className="badge badge-primary" style={{ fontSize: '0.65rem' }}>{c.rotaNome}</span>}
                           <span className={`badge ${cfg.badge}`} style={{ fontSize: '0.65rem' }}>
                             {STATUS_COLETA_LABEL[c.status]}
                             {c.status === 'COLETADO' && c.horaColeta ? ` ${c.horaColeta}` : ''}
