@@ -2,15 +2,20 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { criarColeta, atualizarColeta, deletarColeta } from '@/actions/coletas';
+import { criarColeta, atualizarColeta, atualizarStatusColeta, deletarColeta } from '@/actions/coletas';
+import { STATUS_COLETA_LABEL, StatusColetaTexto } from '@/lib/coletasStatus';
 
 type Periodo = 'MANHA' | 'TARDE' | 'RETORNO';
 type Tipo = 'FIXA' | 'EXTRA';
+type Status = StatusColetaTexto;
 
 interface ColetaItem {
   id: string;
   periodo: Periodo;
   tipo: Tipo;
+  status: Status;
+  horaColeta: string | null; // HH:mm quando coletada
+  criadaEm: string; // HH:mm do cadastro
   observacao: string | null;
   naoTeveColeta: boolean;
   coletorId: string;
@@ -43,6 +48,12 @@ const PERIODOS: { key: Periodo; label: string }[] = [
   { key: 'TARDE', label: 'Tarde' },
   { key: 'RETORNO', label: 'Retorno' },
 ];
+
+const STATUS_CFG: Record<Status, { badge: string; bg: string; dot: string }> = {
+  AGUARDANDO: { badge: 'badge-warning', bg: 'var(--surface-2)', dot: '#f1b44c' },
+  COLETADO: { badge: 'badge-success', bg: 'rgba(52,195,143,0.10)', dot: '#34c38f' },
+  CANCELADO: { badge: 'badge-danger', bg: 'rgba(244,106,106,0.10)', dot: '#f46a6a' },
+};
 
 function shiftData(dataStr: string, delta: number) {
   const [y, m, d] = dataStr.split('-').map(Number);
@@ -108,6 +119,17 @@ export default function ColetasDoDia({ data, coletas, coletores, atendentes, cli
     }
   }
 
+  async function handleStatus(c: ColetaItem, status: Status) {
+    if (status === 'CANCELADO' && !confirm(`Cancelar a coleta de "${c.clienteNome}"?`)) return;
+    setLoading(true);
+    try {
+      await atualizarStatusColeta(c.id, status);
+      router.refresh();
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function handleExcluir(c: ColetaItem) {
     if (!confirm(`Excluir a coleta de "${c.clienteNome}"?`)) return;
     setLoading(true);
@@ -120,11 +142,12 @@ export default function ColetasDoDia({ data, coletas, coletores, atendentes, cli
   }
 
   const semCadastro = coletores.length === 0 || clientes.length === 0;
+  const btnMini: React.CSSProperties = { padding: '2px 8px', fontSize: '0.72rem' };
 
   return (
     <div>
       {/* Navegação de data */}
-      <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 16 }}>
+      <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 12 }}>
         <div style={{ textTransform: 'capitalize', fontWeight: 600, color: 'var(--text-main)' }}>
           {formatarData(data)}
         </div>
@@ -139,6 +162,16 @@ export default function ColetasDoDia({ data, coletas, coletores, atendentes, cli
           />
           <button className="btn btn-secondary btn-sm" onClick={() => irParaData(shiftData(data, 1))}>Próximo dia →</button>
         </div>
+      </div>
+
+      {/* Legenda dos status */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginBottom: 16, padding: '0 4px' }}>
+        {(Object.keys(STATUS_CFG) as Status[]).map((s) => (
+          <span key={s} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+            <span style={{ width: 10, height: 10, borderRadius: '50%', background: STATUS_CFG[s].dot, display: 'inline-block' }} />
+            {STATUS_COLETA_LABEL[s]}
+          </span>
+        ))}
       </div>
 
       {/* Colunas dos períodos */}
@@ -159,41 +192,58 @@ export default function ColetasDoDia({ data, coletas, coletores, atendentes, cli
                 <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', padding: '8px 0' }}>Nenhuma coleta.</p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {doPeriodo.map((c) => (
-                    <div
-                      key={c.id}
-                      style={{
-                        borderLeft: `4px solid ${c.coletorCor}`,
-                        background: 'var(--surface-2)',
-                        borderRadius: 'var(--radius-sm)',
-                        padding: '8px 10px',
-                      }}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 2 }}>
-                        <span style={{ fontWeight: 700, fontSize: '0.85rem', color: c.coletorCor }}>{c.coletorNome}</span>
-                        <span className={`badge ${c.tipo === 'FIXA' ? 'badge-info' : 'badge-warning'}`} style={{ fontSize: '0.65rem' }}>
-                          {c.tipo === 'FIXA' ? 'Fixa' : 'Extra'}
-                        </span>
-                        {c.naoTeveColeta && <span className="badge badge-danger" style={{ fontSize: '0.65rem' }}>não teve coleta</span>}
-                      </div>
-                      <div style={{ fontSize: '0.875rem', fontWeight: 600, textDecoration: c.naoTeveColeta ? 'line-through' : 'none' }}>
-                        {c.clienteNome}
-                        {c.clienteCodigo && <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> ({c.clienteCodigo})</span>}
-                      </div>
-                      {c.observacao && (
-                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>{c.observacao}</div>
-                      )}
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 6 }}>
-                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                          {c.atendenteNome ? `por ${c.atendenteNome}` : '—'}
-                        </span>
-                        <div style={{ display: 'flex', gap: 4 }}>
-                          <button className="btn btn-secondary btn-sm" style={{ padding: '2px 8px', fontSize: '0.72rem' }} onClick={() => abrirEditar(c)}>Editar</button>
-                          <button className="btn btn-danger btn-sm" style={{ padding: '2px 8px', fontSize: '0.72rem' }} onClick={() => handleExcluir(c)}>Excluir</button>
+                  {doPeriodo.map((c) => {
+                    const cfg = STATUS_CFG[c.status];
+                    const riscado = c.naoTeveColeta || c.status === 'CANCELADO';
+                    return (
+                      <div
+                        key={c.id}
+                        style={{
+                          borderLeft: `4px solid ${c.coletorCor}`,
+                          background: cfg.bg,
+                          borderRadius: 'var(--radius-sm)',
+                          padding: '8px 10px',
+                          opacity: c.status === 'CANCELADO' ? 0.75 : 1,
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 2 }}>
+                          <span style={{ fontWeight: 700, fontSize: '0.85rem', color: c.coletorCor }}>{c.coletorNome}</span>
+                          <span className={`badge ${c.tipo === 'FIXA' ? 'badge-info' : 'badge-warning'}`} style={{ fontSize: '0.65rem' }}>
+                            {c.tipo === 'FIXA' ? 'Fixa' : 'Extra'}
+                          </span>
+                          <span className={`badge ${cfg.badge}`} style={{ fontSize: '0.65rem' }}>
+                            {STATUS_COLETA_LABEL[c.status]}
+                            {c.status === 'COLETADO' && c.horaColeta ? ` ${c.horaColeta}` : ''}
+                          </span>
+                          {c.naoTeveColeta && <span className="badge badge-danger" style={{ fontSize: '0.65rem' }}>não teve coleta</span>}
+                        </div>
+                        <div style={{ fontSize: '0.875rem', fontWeight: 600, textDecoration: riscado ? 'line-through' : 'none' }}>
+                          {c.clienteNome}
+                          {c.clienteCodigo && <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> ({c.clienteCodigo})</span>}
+                        </div>
+                        {c.observacao && (
+                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>{c.observacao}</div>
+                        )}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                            {c.atendenteNome ? `por ${c.atendenteNome} às ${c.criadaEm}` : `cadastrada às ${c.criadaEm}`}
+                          </span>
+                          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                            {c.status === 'AGUARDANDO' ? (
+                              <>
+                                <button className="btn btn-success btn-sm" style={btnMini} disabled={loading} onClick={() => handleStatus(c, 'COLETADO')}>✓ Coletado</button>
+                                <button className="btn btn-danger btn-sm" style={btnMini} disabled={loading} onClick={() => handleStatus(c, 'CANCELADO')}>Cancelar</button>
+                              </>
+                            ) : (
+                              <button className="btn btn-secondary btn-sm" style={btnMini} disabled={loading} onClick={() => handleStatus(c, 'AGUARDANDO')}>↩ Desfazer</button>
+                            )}
+                            <button className="btn btn-secondary btn-sm" style={btnMini} onClick={() => abrirEditar(c)}>Editar</button>
+                            <button className="btn btn-danger btn-sm" style={btnMini} disabled={loading} onClick={() => handleExcluir(c)}>Excluir</button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>

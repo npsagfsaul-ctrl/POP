@@ -12,6 +12,8 @@ import {
   getClientes, criarCliente, atualizarCliente, alternarClienteAtivo, deletarCliente,
 } from '@/actions/clientes';
 import { temSenhaColetas, definirSenhaColetas } from '@/actions/coletasAcesso';
+import { getRotasFixas } from '@/actions/rotasFixas';
+import RotasFixasManager from '@/components/RotasFixasManager';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,12 +21,27 @@ export default async function CadastrosColetaPage() {
   const adminMode = await isAdmin();
   if (!adminMode) redirect('/admin/login');
 
-  const [coletores, atendentes, clientes, protegida] = await Promise.all([
+  const [coletores, atendentes, clientes, protegida, rotasFixas] = await Promise.all([
     getColetores(),
     getAtendentes(),
     getClientes(),
     temSenhaColetas(),
+    getRotasFixas(),
   ]);
+
+  const rotasView = rotasFixas.map((r) => ({
+    id: r.id,
+    periodo: r.periodo,
+    dias: Array.isArray(r.dias) ? (r.dias as number[]) : [],
+    observacao: r.observacao,
+    ativo: r.ativo,
+    coletorId: r.coletorId,
+    clienteId: r.clienteId,
+    coletorNome: r.coletor.nome,
+    coletorCor: r.coletor.cor,
+    clienteNome: r.cliente.nome,
+    clienteCodigo: r.cliente.codigo,
+  }));
 
   return (
     <div>
@@ -120,6 +137,12 @@ export default async function CadastrosColetaPage() {
         onAtualizar={atualizarCliente}
         onAlternarAtivo={alternarClienteAtivo}
         onDeletar={deletarCliente}
+      />
+
+      <RotasFixasManager
+        rotas={rotasView}
+        coletores={coletores.filter((c) => c.ativo).map((c) => ({ id: c.id, nome: c.nome, cor: c.cor }))}
+        clientes={clientes.filter((c) => c.ativo).map((c) => ({ id: c.id, nome: c.nome, codigo: c.codigo }))}
       />
     </div>
   );

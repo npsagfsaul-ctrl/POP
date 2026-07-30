@@ -38,10 +38,20 @@ export default async function ColetasPage({
     getClientes(true),
   ]);
 
+  const horaBR = (d: Date) =>
+    new Date(d).toLocaleTimeString('pt-BR', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'America/Sao_Paulo',
+    });
+
   const coletasView = coletas.map((c) => ({
     id: c.id,
     periodo: c.periodo,
     tipo: c.tipo,
+    status: c.status,
+    horaColeta: c.horaColeta ? horaBR(c.horaColeta) : null,
+    criadaEm: horaBR(c.createdAt),
     observacao: c.observacao,
     naoTeveColeta: c.naoTeveColeta,
     coletorId: c.coletorId,
@@ -65,7 +75,10 @@ export default async function ColetasPage({
             <span className="breadcrumb-current">Coletas</span>
           </nav>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Link href="/coletas/historico" className="btn btn-secondary btn-sm">
+            📊 Histórico
+          </Link>
           <Link href={`/coletas/imprimir?data=${dataStr}`} className="btn btn-secondary btn-sm">
             🖨 Imprimir rotas
           </Link>

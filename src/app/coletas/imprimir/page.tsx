@@ -38,7 +38,8 @@ export default async function ImprimirColetasPage({
 
   const sp = await searchParams;
   const dataStr = sp.data || hojeISO();
-  const coletas = await getColetasPorData(dataStr);
+  // Canceladas ficam fora da folha do coletor — ele não deve passar lá.
+  const coletas = (await getColetasPorData(dataStr)).filter((c) => c.status !== 'CANCELADO');
 
   // Agrupa por coletor
   const grupos = new Map<string, { nome: string; cor: string; itens: typeof coletas }>();

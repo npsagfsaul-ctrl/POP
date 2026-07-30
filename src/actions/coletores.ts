@@ -40,7 +40,7 @@ export async function deletarColetor(id: string) {
   try {
     await prisma.coletor.delete({ where: { id } });
   } catch {
-    throw new Error('Não dá para excluir: este coletor já tem coletas registradas. Use "Desativar".');
+    throw new Error('Não dá para excluir: este coletor já tem coletas ou rotas fixas registradas. Use "Desativar".');
   }
   revalidatePath('/coletas/cadastros');
 }

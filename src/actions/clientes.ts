@@ -40,7 +40,7 @@ export async function deletarCliente(id: string) {
   try {
     await prisma.cliente.delete({ where: { id } });
   } catch {
-    throw new Error('Não dá para excluir: este cliente já tem coletas registradas. Use "Desativar".');
+    throw new Error('Não dá para excluir: este cliente já tem coletas ou rotas fixas registradas. Use "Desativar".');
   }
   revalidatePath('/coletas/cadastros');
 }
