@@ -149,8 +149,63 @@ model Coletor {
   ativo      Boolean    @default(true)
   coletas    Coleta[]
   rotasFixas RotaFixa[]
+  turnos     Turno[]
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
+}
+
+// Veículo usado pelos coletores (checklist de saída/retorno via Turno)
+model Veiculo {
+  id        String   @id @default(cuid())
+  nome      String   // ex: "Fiorino Branca"
+  placa     String?
+  ativo     Boolean  @default(true)
+  turnos    Turno[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum StatusTurno {
+  ABERTO
+  ENCERRADO
+}
+
+// Turno de um coletor com um veículo: checklist de saída (liberar rota) e de retorno (encerrar dia)
+model Turno {
+  id     String      @id @default(cuid())
+  data   DateTime    @db.Date
+  status StatusTurno @default(ABERTO)
+
+  coletorId String
+  coletor   Coletor @relation(fields: [coletorId], references: [id], onDelete: Restrict)
+  veiculoId String
+  veiculo   Veiculo @relation(fields: [veiculoId], references: [id], onDelete: Restrict)
+
+  // Checklist inicial (liberar rota)
+  kmInicial          Int
+  combustivelInicial String // "Cheio" | "3/4" | "1/2" | "1/4" | "Reserva"
+  oleoOk             Boolean  @default(true)
+  oleoObs            String?
+  aguaOk             Boolean  @default(true)
+  aguaObs            String?
+  pneusOk            Boolean  @default(true)
+  pneusObs           String?
+  luzesOk            Boolean  @default(true)
+  luzesObs           String?
+  observacaoInicial  String?
+  liberadoEm         DateTime @default(now())
+
+  // Checklist final (encerrar dia)
+  kmFinal            Int?
+  abastecimentoValor Float?
+  abastecimentoNota  String?
+  problemaCarro      String?
+  encerradoEm        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([data])
 }
 
 model Atendente {

@@ -77,6 +77,12 @@ export default async function ColetasPage({
           </nav>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Link href="/coletas/motorista" className="btn btn-secondary btn-sm">
+            🚚 Sou coletor
+          </Link>
+          <Link href="/coletas/turnos" className="btn btn-secondary btn-sm">
+            🧾 Turnos
+          </Link>
           <Link href="/coletas/historico" className="btn btn-secondary btn-sm">
             📊 Histórico
           </Link>

@@ -161,6 +161,9 @@ export default function CadastroManager({
                   {item['codigo'] != null && item['codigo'] !== '' && (
                     <span className="badge badge-info" style={{ fontSize: '0.7rem' }}>cód. {item['codigo'] as string}</span>
                   )}
+                  {item['placa'] != null && item['placa'] !== '' && (
+                    <span className="badge badge-info" style={{ fontSize: '0.7rem' }}>{item['placa'] as string}</span>
+                  )}
                   {!item.ativo && <span className="badge badge-warning" style={{ fontSize: '0.7rem' }}>inativo</span>}
 
                   <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>

@@ -60,6 +60,12 @@ export async function getColetasPorData(dataString: string) {
   });
 }
 
+/** Rota do dia de um único coletor (usada pela tela do coletor no celular). */
+export async function getMinhasColetasHoje(coletorId: string, dataString: string) {
+  const todas = await getColetasPorData(dataString);
+  return todas.filter((c) => c.coletorId === coletorId && c.status !== 'CANCELADO');
+}
+
 export async function getColetasMensais(mes: number, ano: number) {
   const dataInicio = new Date(`${ano}-${String(mes).padStart(2, '0')}-01T00:00:00Z`);
   const proximoMes = mes === 12 ? 1 : mes + 1;

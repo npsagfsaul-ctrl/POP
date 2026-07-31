@@ -14,6 +14,9 @@ import {
 import { temSenhaColetas, definirSenhaColetas } from '@/actions/coletasAcesso';
 import { getRotasFixas } from '@/actions/rotasFixas';
 import { getRotas, criarRota, atualizarRota, alternarRotaAtivo, deletarRota } from '@/actions/rotas';
+import {
+  getVeiculos, criarVeiculo, atualizarVeiculo, alternarVeiculoAtivo, deletarVeiculo,
+} from '@/actions/veiculos';
 import RotasFixasManager from '@/components/RotasFixasManager';
 
 export const dynamic = 'force-dynamic';
@@ -22,13 +25,14 @@ export default async function CadastrosColetaPage() {
   const adminMode = await isAdmin();
   if (!adminMode) redirect('/admin/login');
 
-  const [coletores, atendentes, clientes, protegida, rotasFixas, rotas] = await Promise.all([
+  const [coletores, atendentes, clientes, protegida, rotasFixas, rotas, veiculos] = await Promise.all([
     getColetores(),
     getAtendentes(),
     getClientes(),
     temSenhaColetas(),
     getRotasFixas(),
     getRotas(),
+    getVeiculos(),
   ]);
 
   const rotasView = rotasFixas.map((r) => ({
@@ -152,6 +156,20 @@ export default async function CadastrosColetaPage() {
         onAtualizar={atualizarRota}
         onAlternarAtivo={alternarRotaAtivo}
         onDeletar={deletarRota}
+      />
+
+      <CadastroManager
+        titulo="Veículos"
+        descricao="Frota usada pelos coletores. Aparece no checklist de saída em Coletas → Sou coletor."
+        campos={[
+          { name: 'nome', label: 'Nome', obrigatorio: true, placeholder: 'Ex: Fiorino Branca' },
+          { name: 'placa', label: 'Placa', placeholder: 'Ex: ABC1D23' },
+        ]}
+        itens={veiculos}
+        onCriar={criarVeiculo}
+        onAtualizar={atualizarVeiculo}
+        onAlternarAtivo={alternarVeiculoAtivo}
+        onDeletar={deletarVeiculo}
       />
 
       <RotasFixasManager
