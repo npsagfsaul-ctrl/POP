@@ -46,17 +46,34 @@ export async function getTurnoAberto(coletorId: string) {
 }
 
 export async function abrirTurno(input: AbrirTurnoInput) {
+  const hojeData = parseData(hojeISO());
   const existente = await getTurnoAberto(input.coletorId);
+
   if (existente) {
-    throw new Error('Já existe um turno aberto para este coletor. Encerre o turno anterior antes de abrir outro.');
+    const mesmoDia = new Date(existente.data).getTime() === hojeData.getTime();
+    if (mesmoDia) {
+      throw new Error('Você já liberou a rota hoje. Encerre o dia antes de abrir outro turno.');
+    }
+    // Turno de outro dia que ficou aberto (o coletor esqueceu de encerrar).
+    // Fecha sozinho, senão ele ficaria travado sem entender o motivo — mas
+    // marca como automático, para o escritório saber que o KM final falta.
+    await prisma.turno.update({
+      where: { id: existente.id },
+      data: {
+        status: 'ENCERRADO',
+        encerradoEm: new Date(),
+        encerradoAutomaticamente: true,
+      },
+    });
   }
+
   if (!input.veiculoId) throw new Error('Selecione o veículo.');
   if (!Number.isFinite(input.kmInicial) || input.kmInicial < 0) throw new Error('KM inicial inválido.');
   if (!input.combustivelInicial) throw new Error('Selecione o nível de combustível.');
 
   const turno = await prisma.turno.create({
     data: {
-      data: parseData(hojeISO()),
+      data: hojeData,
       coletorId: input.coletorId,
       veiculoId: input.veiculoId,
       kmInicial: input.kmInicial,

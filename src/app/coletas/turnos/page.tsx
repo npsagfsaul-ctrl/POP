@@ -94,13 +94,22 @@ export default async function TurnosColetaPage({
                     <span style={{ fontWeight: 700, color: t.coletor.cor }}>{t.coletor.nome}</span>
                     <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}> · {t.veiculo.nome}{t.veiculo.placa ? ` (${t.veiculo.placa})` : ''}</span>
                   </div>
-                  <span className={`badge ${t.status === 'ABERTO' ? 'badge-warning' : 'badge-success'}`} style={{ fontSize: '0.7rem' }}>
-                    {t.status === 'ABERTO' ? 'Em andamento' : 'Encerrado'}
+                  <span className={`badge ${t.status === 'ABERTO' ? 'badge-warning' : t.encerradoAutomaticamente ? 'badge-danger' : 'badge-success'}`} style={{ fontSize: '0.7rem' }}>
+                    {t.status === 'ABERTO'
+                      ? 'Em andamento'
+                      : t.encerradoAutomaticamente
+                        ? 'Não encerrado pelo coletor'
+                        : 'Encerrado'}
                   </span>
                 </div>
 
                 <div style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: 6 }}>
-                  KM {t.kmInicial}{t.kmFinal != null ? ` → ${t.kmFinal} (${t.kmFinal - t.kmInicial} km rodados)` : ' (ainda não encerrado)'}
+                  KM {t.kmInicial}
+                  {t.kmFinal != null
+                    ? ` → ${t.kmFinal} (${t.kmFinal - t.kmInicial} km rodados)`
+                    : t.encerradoAutomaticamente
+                      ? ' → sem KM final (o coletor não encerrou o dia)'
+                      : ' (ainda não encerrado)'}
                   {' · '}Combustível na saída: {t.combustivelInicial}
                   {' · '}liberado às {horaBR(t.liberadoEm)}
                   {t.encerradoEm && ` · encerrado às ${horaBR(t.encerradoEm)}`}

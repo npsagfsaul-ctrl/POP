@@ -215,6 +215,9 @@ model Turno {
   abastecimentoNota  String?
   problemaCarro      String?
   encerradoEm        DateTime?
+  // Turno que ficou aberto e foi fechado pelo sistema quando o coletor abriu
+  // um novo em outro dia — sem KM final, porque ninguém informou.
+  encerradoAutomaticamente Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
