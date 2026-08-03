@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { cookies } from 'next/headers';
 import ChecklistForm from '@/components/ChecklistForm';
 import { getRegistroPorData } from '@/actions/checklist';
-import { getAtendentes } from '@/actions/atendentes';
+import { getAtendentesPorSetor } from '@/actions/atendentes';
 import { hojeISOSaoPaulo } from '@/lib/data';
 
 export default async function ChecklistDiario({ 
@@ -34,7 +34,8 @@ export default async function ChecklistDiario({
   const respostasIniciais = registroExistente ? (registroExistente.respostas as Record<string, boolean>) : {};
   const responsaveisIniciais = registroExistente ? (registroExistente.responsaveis as Record<string, string>) : {};
   const observacoesInicial = registroExistente ? (registroExistente.observacoes as string) : '';
-  const atendentes = await getAtendentes(true);
+  // Só os funcionários deste setor (mais os sem setor definido).
+  const atendentes = await getAtendentesPorSetor(setor.id);
 
   if (setor.senha) {
     const cookieStore = await cookies();

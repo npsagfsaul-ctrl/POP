@@ -6,10 +6,14 @@ import { useRouter } from 'next/navigation';
 export interface CampoCadastro {
   name: string;
   label: string;
-  tipo?: 'text' | 'color';
+  tipo?: 'text' | 'color' | 'select';
   placeholder?: string;
   obrigatorio?: boolean;
   largura?: number; // flex-grow relativo no formulário
+  /** Opções do campo `select`. */
+  opcoes?: { value: string; label: string }[];
+  /** Rótulo da opção vazia de um `select` (ex.: "Todos os setores"). */
+  vazioLabel?: string;
 }
 
 export interface ItemCadastro {
@@ -100,6 +104,13 @@ export default function CadastroManager({
                 defaultValue={corPadrao}
                 style={{ width: 48, height: 38, padding: 2, border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', cursor: 'pointer', background: 'var(--surface)' }}
               />
+            ) : c.tipo === 'select' ? (
+              <select name={c.name} className="form-select" defaultValue="" required={c.obrigatorio}>
+                <option value="">{c.vazioLabel ?? '—'}</option>
+                {(c.opcoes ?? []).map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
             ) : (
               <input
                 name={c.name}
@@ -143,6 +154,14 @@ export default function CadastroManager({
                     c.tipo === 'color' ? (
                       <input key={c.name} name={c.name} type="color" defaultValue={(item[c.name] as string) || corPadrao}
                         style={{ width: 42, height: 34, padding: 2, border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }} />
+                    ) : c.tipo === 'select' ? (
+                      <select key={c.name} name={c.name} className="form-select" style={{ flex: 1, minWidth: 140, height: 34 }}
+                        defaultValue={(item[c.name] as string) || ''} required={c.obrigatorio}>
+                        <option value="">{c.vazioLabel ?? '—'}</option>
+                        {(c.opcoes ?? []).map((o) => (
+                          <option key={o.value} value={o.value}>{o.label}</option>
+                        ))}
+                      </select>
                     ) : (
                       <input key={c.name} name={c.name} type="text" className="form-input" style={{ flex: 1, minWidth: 120, height: 34 }}
                         defaultValue={(item[c.name] as string) || ''} placeholder={c.placeholder} required={c.obrigatorio} />
@@ -164,6 +183,22 @@ export default function CadastroManager({
                   {item['placa'] != null && item['placa'] !== '' && (
                     <span className="badge badge-info" style={{ fontSize: '0.7rem' }}>{item['placa'] as string}</span>
                   )}
+                  {/* Campos de seleção viram etiqueta com o rótulo escolhido */}
+                  {campos
+                    .filter((c) => c.tipo === 'select')
+                    .map((c) => {
+                      const valor = (item[c.name] as string) || '';
+                      const escolhida = (c.opcoes ?? []).find((o) => o.value === valor);
+                      return (
+                        <span
+                          key={c.name}
+                          className={`badge ${escolhida ? 'badge-primary' : 'badge-warning'}`}
+                          style={{ fontSize: '0.7rem' }}
+                        >
+                          {escolhida?.label ?? c.vazioLabel ?? '—'}
+                        </span>
+                      );
+                    })}
                   {!item.ativo && <span className="badge badge-warning" style={{ fontSize: '0.7rem' }}>inativo</span>}
 
                   <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>

@@ -3,11 +3,13 @@ import CadastroManager from '@/components/CadastroManager';
 import {
   getAtendentes, criarAtendente, atualizarAtendente, alternarAtendenteAtivo, deletarAtendente,
 } from '@/actions/atendentes';
+import { getSetores } from '@/actions/setores';
 
 export const dynamic = 'force-dynamic';
 
 export default async function CadastrosProspeccaoPage() {
-  const atendentes = await getAtendentes();
+  const [atendentes, setores] = await Promise.all([getAtendentes(), getSetores()]);
+  const opcoesSetor = setores.map((s) => ({ value: s.id, label: s.nome }));
 
   return (
     <div>
@@ -27,8 +29,11 @@ export default async function CadastrosProspeccaoPage() {
 
       <CadastroManager
         titulo="Funcionários"
-        descricao="Quem faz a prospecção de clientes. Este cadastro é o mesmo usado nas Coletas."
-        campos={[{ name: 'nome', label: 'Nome', obrigatorio: true, placeholder: 'Ex: Allana' }]}
+        descricao="Cadastro único, usado também nas Coletas e no checklist dos setores. O setor define em qual checklist a pessoa aparece como possível responsável — deixe em branco para quem circula por vários."
+        campos={[
+          { name: 'nome', label: 'Nome', obrigatorio: true, placeholder: 'Ex: Allana', largura: 2 },
+          { name: 'setorId', label: 'Setor', tipo: 'select', opcoes: opcoesSetor, vazioLabel: 'Todos os setores' },
+        ]}
         itens={atendentes}
         onCriar={criarAtendente}
         onAtualizar={atualizarAtendente}

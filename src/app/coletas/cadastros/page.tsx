@@ -18,6 +18,7 @@ import {
   getVeiculos, criarVeiculo, atualizarVeiculo, alternarVeiculoAtivo, deletarVeiculo,
 } from '@/actions/veiculos';
 import RotasFixasManager from '@/components/RotasFixasManager';
+import { getSetores } from '@/actions/setores';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +26,7 @@ export default async function CadastrosColetaPage() {
   const adminMode = await isAdmin();
   if (!adminMode) redirect('/admin/login');
 
-  const [coletores, atendentes, clientes, protegida, rotasFixas, rotas, veiculos] = await Promise.all([
+  const [coletores, atendentes, clientes, protegida, rotasFixas, rotas, veiculos, setores] = await Promise.all([
     getColetores(),
     getAtendentes(),
     getClientes(),
@@ -33,7 +34,10 @@ export default async function CadastrosColetaPage() {
     getRotasFixas(),
     getRotas(),
     getVeiculos(),
+    getSetores(),
   ]);
+
+  const opcoesSetor = setores.map((s) => ({ value: s.id, label: s.nome }));
 
   const rotasView = rotasFixas.map((r) => ({
     id: r.id,
@@ -124,8 +128,11 @@ export default async function CadastrosColetaPage() {
 
       <CadastroManager
         titulo="Funcionários"
-        descricao="Quem inclui as coletas na lista do dia."
-        campos={[{ name: 'nome', label: 'Nome', obrigatorio: true, placeholder: 'Ex: Mariane' }]}
+        descricao="Quem inclui as coletas na lista do dia. É o mesmo cadastro usado na Prospecção e no checklist dos setores — o setor define em qual checklist a pessoa aparece como possível responsável."
+        campos={[
+          { name: 'nome', label: 'Nome', obrigatorio: true, placeholder: 'Ex: Mariane', largura: 2 },
+          { name: 'setorId', label: 'Setor', tipo: 'select', opcoes: opcoesSetor, vazioLabel: 'Todos os setores' },
+        ]}
         itens={atendentes}
         onCriar={criarAtendente}
         onAtualizar={atualizarAtendente}
