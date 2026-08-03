@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { selecionarColetor, sairColetor } from '@/actions/coletorSessao';
 import { abrirTurno, encerrarTurno } from '@/actions/turnos';
-import { atualizarStatusColeta } from '@/actions/coletas';
 
 type Periodo = 'MANHA' | 'TARDE' | 'RETORNO';
 type Status = 'AGUARDANDO' | 'COLETADO' | 'CANCELADO';
@@ -143,16 +142,6 @@ export default function ColetorMotoristaApp({ coletores, veiculos, coletorAtual,
       router.refresh();
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Erro ao liberar a rota.');
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleCheguei(coletaId: string, novoStatus: Status) {
-    setLoading(true);
-    try {
-      await atualizarStatusColeta(coletaId, novoStatus);
-      router.refresh();
     } finally {
       setLoading(false);
     }
@@ -329,6 +318,11 @@ export default function ColetorMotoristaApp({ coletores, veiculos, coletorAtual,
   }
 
   // ── Passo 3: rota do dia ──
+  //
+  // Somente leitura: substitui a folha impressa, sempre atualizada. Não tem
+  // botão de "Cheguei" — os coletores relataram que parar para marcar no meio
+  // da rota não funciona na prática. A marcação continua no escritório, em
+  // /coletas. (Decisão da usuária em ago/2026, a partir do retorno da equipe.)
   return (
     <div style={{ maxWidth: 480, margin: '0 auto' }}>
       <div className="page-header">
@@ -370,27 +364,6 @@ export default function ColetorMotoristaApp({ coletores, veiculos, coletorAtual,
                       {c.clienteCodigo && <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> ({c.clienteCodigo})</span>}
                     </div>
                     {c.observacao && <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>{c.observacao}</div>}
-
-                    <div style={{ marginTop: 8 }}>
-                      {c.status === 'AGUARDANDO' ? (
-                        <button
-                          className="btn btn-success"
-                          style={{ width: '100%' }}
-                          disabled={loading}
-                          onClick={() => handleCheguei(c.id, 'COLETADO')}
-                        >
-                          ✓ Cheguei
-                        </button>
-                      ) : (
-                        <button
-                          className="btn btn-secondary btn-sm"
-                          disabled={loading}
-                          onClick={() => handleCheguei(c.id, 'AGUARDANDO')}
-                        >
-                          ↩ Desfazer
-                        </button>
-                      )}
-                    </div>
                   </div>
                 ))}
               </div>
