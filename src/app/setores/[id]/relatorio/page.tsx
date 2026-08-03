@@ -6,7 +6,8 @@ import { getAtendentes } from '@/actions/atendentes';
 import { getFaixasPremiacao } from '@/actions/premiacao';
 import PrintButton from '@/components/PrintButton';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
+import { isAdmin } from '@/actions/admin';
 
 export default async function RelatorioMensal({ 
   params, 
@@ -15,9 +16,16 @@ export default async function RelatorioMensal({
   params: Promise<{ id: string }>,
   searchParams: Promise<{ mes?: string, ano?: string }>
 }) {
+  // Somente o administrador. Este relatório nomeia pessoas e mostra a fatia do
+  // prêmio de cada uma — é informação de remuneração, não pode ficar acessível
+  // a quem tiver o link.
+  if (!(await isAdmin())) {
+    redirect('/admin/login');
+  }
+
   const resolvedParams = await params;
   const resolvedSearchParams = await searchParams;
-  
+
   const setor = await prisma.setor.findUnique({
     where: { id: resolvedParams.id },
   });

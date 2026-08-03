@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { calcularConformidade } from '@/lib/conformidade';
+import { isAdmin } from '@/actions/admin';
 
 // Helper to get current month/year
 function getCurrentMonthYear() {
@@ -10,6 +11,11 @@ function getCurrentMonthYear() {
 
 /** GET /api/relatorio?mes=6&ano=2026 (mes/ano opcionais; padrão é o mês corrente) */
 export async function GET(request: Request) {
+  // Desempenho de todos os setores — só para o administrador.
+  if (!(await isAdmin())) {
+    return new NextResponse('Não autorizado', { status: 403 });
+  }
+
   const params = new URL(request.url).searchParams;
   const { month: mesAtual, year: anoAtual } = getCurrentMonthYear();
   const month = params.has('mes') ? parseInt(params.get('mes')!, 10) : mesAtual;

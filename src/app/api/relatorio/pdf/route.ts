@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { calcularConformidade } from '@/lib/conformidade';
 import { normalizarQuebrasDeLinha } from '@/lib/texto';
+import { isAdmin } from '@/actions/admin';
 import PDFDocument from 'pdfkit';
 
 function getCurrentMonthYear() {
@@ -11,6 +12,11 @@ function getCurrentMonthYear() {
 
 /** GET /api/relatorio/pdf */
 export async function GET() {
+  // Desempenho de todos os setores — só para o administrador.
+  if (!(await isAdmin())) {
+    return new NextResponse('Não autorizado', { status: 403 });
+  }
+
   const { month, year } = getCurrentMonthYear();
 
   // Reuse logic from the JSON endpoint
