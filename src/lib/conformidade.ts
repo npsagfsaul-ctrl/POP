@@ -293,6 +293,38 @@ export interface ResumoPorPessoa {
 
 export const NOME_SEM_RESPONSAVEL = 'Sem responsável indicado';
 
+// ─── FAIXAS DE PRÊMIO ───
+//
+// A perda é ESCALONADA de propósito: numa regra de tudo-ou-nada, quem cruza o
+// limite no dia 10 fica sem nada a preservar nos outros 20 dias do mês.
+// Em faixas, sempre sobra algo a perder — o esforço continua valendo até o fim.
+//
+// O sistema não conhece valores em dinheiro: devolve só a FATIA do prêmio que
+// a pessoa mantém. O valor é aplicado por quem faz o fechamento.
+
+export interface FaixasPremiacao {
+  /** Até este peso acumulado, mantém o prêmio inteiro. */
+  limiteIntegral: number;
+  /** Até este peso, mantém 75%. */
+  limite75: number;
+  /** Até este peso, mantém 50%. Acima disso, perde tudo. */
+  limite50: number;
+}
+
+export const FAIXAS_PADRAO: FaixasPremiacao = {
+  limiteIntegral: 2,
+  limite75: 5,
+  limite50: 9,
+};
+
+/** Fatia do prêmio que a pessoa mantém, dado o peso acumulado em pendências. */
+export function calcularFatiaPremio(pesoAcumulado: number, faixas: FaixasPremiacao): number {
+  if (pesoAcumulado <= faixas.limiteIntegral) return 100;
+  if (pesoAcumulado <= faixas.limite75) return 75;
+  if (pesoAcumulado <= faixas.limite50) return 50;
+  return 0;
+}
+
 /**
  * Agrupa as pendências do mês por funcionário, a partir do extrato dia a dia
  * que `calcularConformidade` já produz — herdando de graça todas as regras de

@@ -1,8 +1,9 @@
 import { prisma } from '@/lib/prisma';
 import { getPopsBySetor } from '@/actions/pops';
 import { getRegistrosMensais } from '@/actions/checklist';
-import { calcularConformidade, calcularPendenciasPorPessoa } from '@/lib/conformidade';
+import { calcularConformidade, calcularPendenciasPorPessoa, calcularFatiaPremio } from '@/lib/conformidade';
 import { getAtendentes } from '@/actions/atendentes';
+import { getFaixasPremiacao } from '@/actions/premiacao';
 import PrintButton from '@/components/PrintButton';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -84,7 +85,7 @@ export default async function RelatorioMensal({
   // Pendências por funcionário (contagem, não porcentagem). Busca o cadastro
   // completo, sem filtrar por ativo, para quem foi desativado no meio do mês
   // continuar aparecendo com o que já tinha registrado.
-  const atendentes = await getAtendentes();
+  const [atendentes, faixasPremio] = await Promise.all([getAtendentes(), getFaixasPremiacao()]);
   const pendenciasPorPessoa = calcularPendenciasPorPessoa(diasLedger, atendentes);
   const totalPendenciasMes = pendenciasPorPessoa.reduce((acc, p) => acc + p.totalPendencias, 0);
   // Meses anteriores ao recurso não têm responsável em nenhuma pendência. Nesse
@@ -310,6 +311,7 @@ export default async function RelatorioMensal({
                     <th className="px-6 py-4 font-bold uppercase text-[11px] tracking-widest text-center">Pendências</th>
                     <th className="px-6 py-4 font-bold uppercase text-[11px] tracking-widest text-center">Em quantos dias</th>
                     <th className="px-6 py-4 font-bold uppercase text-[11px] tracking-widest text-center">Peso total</th>
+                    <th className="px-6 py-4 font-bold uppercase text-[11px] tracking-widest text-center">Mantém do prêmio</th>
                     <th className="px-6 py-4 font-bold uppercase text-[11px] tracking-widest">Onde aconteceu</th>
                   </tr>
                 </thead>
@@ -332,6 +334,18 @@ export default async function RelatorioMensal({
                       <td className="px-6 py-3 text-center font-bold text-rose-600">{p.totalPendencias}</td>
                       <td className="px-6 py-3 text-center text-slate-600">{p.diasDistintos}</td>
                       <td className="px-6 py-3 text-center font-bold text-slate-600">{p.pesoTotal}</td>
+                      <td className="px-6 py-3 text-center">
+                        {p.atendenteId === null ? (
+                          <span className="text-slate-400">—</span>
+                        ) : (
+                          (() => {
+                            const fatia = calcularFatiaPremio(p.pesoTotal, faixasPremio);
+                            const cor = fatia === 100 ? 'text-emerald-600'
+                              : fatia >= 50 ? 'text-amber-600' : 'text-rose-600';
+                            return <span className={`font-bold ${cor}`}>{fatia}%</span>;
+                          })()
+                        )}
+                      </td>
                       <td className="px-6 py-3 text-sm text-slate-600">
                         {p.pendencias
                           .map((x) => `dia ${x.dia} — ${x.popTitulo} (peso ${x.peso})`)
@@ -344,7 +358,7 @@ export default async function RelatorioMensal({
                   <tr className="bg-slate-50 font-bold">
                     <td className="px-6 py-3 text-main">Total do mês</td>
                     <td className="px-6 py-3 text-center text-rose-600">{totalPendenciasMes}</td>
-                    <td className="px-6 py-3" colSpan={3}></td>
+                    <td className="px-6 py-3" colSpan={4}></td>
                   </tr>
                 </tfoot>
               </table>
