@@ -171,6 +171,103 @@ export default function ColetasDoDia({ data, coletas, coletores, atendentes, cli
   const semCadastro = coletores.length === 0 || clientes.length === 0;
   const btnMini: React.CSSProperties = { padding: '2px 8px', fontSize: '0.72rem' };
 
+  // As fixas se repetem todo dia — são contexto, não novidade. Ficam recolhidas
+  // por padrão e, quando abertas, em linha (não em cartão), senão 44 delas
+  // devolvem o problema de rolagem que motivou esta mudança.
+  const [fixasAbertas, setFixasAbertas] = useState<Record<string, boolean>>({});
+  const [linhaAberta, setLinhaAberta] = useState<string | null>(null);
+
+  const botoesDe = (c: ColetaItem) => (
+    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+      {c.status === 'AGUARDANDO' ? (
+        <>
+          <button className="btn btn-success btn-sm" style={btnMini} disabled={loading} onClick={() => handleStatus(c, 'COLETADO')}>✓ Coletado</button>
+          <button className="btn btn-danger btn-sm" style={btnMini} disabled={loading} onClick={() => handleStatus(c, 'CANCELADO')}>Cancelar</button>
+        </>
+      ) : (
+        <button className="btn btn-secondary btn-sm" style={btnMini} disabled={loading} onClick={() => handleStatus(c, 'AGUARDANDO')}>↩ Desfazer</button>
+      )}
+      <button className="btn btn-secondary btn-sm" style={btnMini} onClick={() => abrirEditar(c)}>Editar</button>
+      <button className="btn btn-danger btn-sm" style={btnMini} disabled={loading} onClick={() => handleExcluir(c)}>Excluir</button>
+    </div>
+  );
+
+  /** Linha compacta — usada nas fixas. Abre no clique para ver endereço e agir. */
+  const renderLinha = (c: ColetaItem) => {
+    const cfg = STATUS_CFG[c.status];
+    const riscado = c.naoTeveColeta || c.status === 'CANCELADO';
+    const aberta = linhaAberta === c.id;
+    return (
+      <div key={c.id} style={{ borderBottom: '1px solid var(--border)' }}>
+        <div
+          onClick={() => setLinhaAberta(aberta ? null : c.id)}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 2px', cursor: 'pointer' }}
+        >
+          <span style={{ width: 8, height: 8, borderRadius: '50%', background: cfg.dot, flexShrink: 0 }} />
+          <span style={{ fontSize: '0.82rem', fontWeight: 600, textDecoration: riscado ? 'line-through' : 'none', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {c.clienteNome}
+            {c.clienteCodigo && <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> ({c.clienteCodigo})</span>}
+          </span>
+          {c.status === 'COLETADO' && c.horaColeta && (
+            <span style={{ fontSize: '0.68rem', color: 'var(--success)' }}>{c.horaColeta}</span>
+          )}
+          {c.naoTeveColeta && <span className="badge badge-danger" style={{ fontSize: '0.6rem' }}>sem coleta</span>}
+          <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>{aberta ? '▾' : '▸'}</span>
+        </div>
+        {aberta && (
+          <div style={{ padding: '0 2px 8px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {c.observacao && <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>{c.observacao}</div>}
+            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+              {c.coletorNome}{c.rotaNome ? ` · ${c.rotaNome}` : ''}
+            </div>
+            {botoesDe(c)}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  /** Cartão completo — usado nas extras, que são poucas e cada uma importa. */
+  const renderCartao = (c: ColetaItem) => {
+    const cfg = STATUS_CFG[c.status];
+    const riscado = c.naoTeveColeta || c.status === 'CANCELADO';
+    return (
+      <div
+        key={c.id}
+        style={{
+          borderLeft: `4px solid ${c.coletorCor}`,
+          background: cfg.bg,
+          borderRadius: 'var(--radius-sm)',
+          padding: '8px 10px',
+          opacity: c.status === 'CANCELADO' ? 0.75 : 1,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 2 }}>
+          <span style={{ fontWeight: 700, fontSize: '0.85rem', color: c.coletorCor }}>{c.coletorNome}</span>
+          {c.rotaNome && <span className="badge badge-primary" style={{ fontSize: '0.65rem' }}>{c.rotaNome}</span>}
+          <span className={`badge ${cfg.badge}`} style={{ fontSize: '0.65rem' }}>
+            {STATUS_COLETA_LABEL[c.status]}
+            {c.status === 'COLETADO' && c.horaColeta ? ` ${c.horaColeta}` : ''}
+          </span>
+          {c.naoTeveColeta && <span className="badge badge-danger" style={{ fontSize: '0.65rem' }}>não teve coleta</span>}
+        </div>
+        <div style={{ fontSize: '0.875rem', fontWeight: 600, textDecoration: riscado ? 'line-through' : 'none' }}>
+          {c.clienteNome}
+          {c.clienteCodigo && <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> ({c.clienteCodigo})</span>}
+        </div>
+        {c.observacao && (
+          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>{c.observacao}</div>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+            {c.atendenteNome ? `por ${c.atendenteNome} às ${c.criadaEm}` : `cadastrada às ${c.criadaEm}`}
+          </span>
+          {botoesDe(c)}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div>
       {/* Navegação de data */}
@@ -225,61 +322,62 @@ export default function ColetasDoDia({ data, coletas, coletores, atendentes, cli
               {doPeriodo.length === 0 ? (
                 <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', padding: '8px 0' }}>Nenhuma coleta.</p>
               ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {doPeriodo.map((c) => {
-                    const cfg = STATUS_CFG[c.status];
-                    const riscado = c.naoTeveColeta || c.status === 'CANCELADO';
-                    return (
-                      <div
-                        key={c.id}
-                        style={{
-                          borderLeft: `4px solid ${c.coletorCor}`,
-                          background: cfg.bg,
-                          borderRadius: 'var(--radius-sm)',
-                          padding: '8px 10px',
-                          opacity: c.status === 'CANCELADO' ? 0.75 : 1,
-                        }}
-                      >
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 2 }}>
-                          <span style={{ fontWeight: 700, fontSize: '0.85rem', color: c.coletorCor }}>{c.coletorNome}</span>
-                          <span className={`badge ${c.tipo === 'FIXA' ? 'badge-info' : 'badge-warning'}`} style={{ fontSize: '0.65rem' }}>
-                            {c.tipo === 'FIXA' ? 'Fixa' : 'Extra'}
-                          </span>
-                          {c.rotaNome && <span className="badge badge-primary" style={{ fontSize: '0.65rem' }}>{c.rotaNome}</span>}
-                          <span className={`badge ${cfg.badge}`} style={{ fontSize: '0.65rem' }}>
-                            {STATUS_COLETA_LABEL[c.status]}
-                            {c.status === 'COLETADO' && c.horaColeta ? ` ${c.horaColeta}` : ''}
-                          </span>
-                          {c.naoTeveColeta && <span className="badge badge-danger" style={{ fontSize: '0.65rem' }}>não teve coleta</span>}
-                        </div>
-                        <div style={{ fontSize: '0.875rem', fontWeight: 600, textDecoration: riscado ? 'line-through' : 'none' }}>
-                          {c.clienteNome}
-                          {c.clienteCodigo && <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> ({c.clienteCodigo})</span>}
-                        </div>
-                        {c.observacao && (
-                          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>{c.observacao}</div>
-                        )}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
-                          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-                            {c.atendenteNome ? `por ${c.atendenteNome} às ${c.criadaEm}` : `cadastrada às ${c.criadaEm}`}
-                          </span>
-                          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                            {c.status === 'AGUARDANDO' ? (
-                              <>
-                                <button className="btn btn-success btn-sm" style={btnMini} disabled={loading} onClick={() => handleStatus(c, 'COLETADO')}>✓ Coletado</button>
-                                <button className="btn btn-danger btn-sm" style={btnMini} disabled={loading} onClick={() => handleStatus(c, 'CANCELADO')}>Cancelar</button>
-                              </>
-                            ) : (
-                              <button className="btn btn-secondary btn-sm" style={btnMini} disabled={loading} onClick={() => handleStatus(c, 'AGUARDANDO')}>↩ Desfazer</button>
+                (() => {
+                  const fixas = doPeriodo.filter((c) => c.tipo === 'FIXA');
+                  const extras = doPeriodo.filter((c) => c.tipo !== 'FIXA');
+                  // Fixa fora do normal continua à vista mesmo com o grupo
+                  // recolhido — é justamente o que precisa de atenção.
+                  const comOcorrencia = fixas.filter((c) => c.naoTeveColeta || c.status === 'CANCELADO');
+                  const aberto = !!fixasAbertas[key];
+                  const nomesColetores = [...new Set(fixas.map((c) => c.coletorNome))];
+
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {fixas.length > 0 && (
+                        <div>
+                          <div
+                            onClick={() => setFixasAbertas((p) => ({ ...p, [key]: !aberto }))}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
+                              padding: '6px 8px', borderRadius: 'var(--radius-sm)',
+                              background: 'var(--surface-2)', border: '1px solid var(--border)',
+                            }}
+                          >
+                            <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{aberto ? '▾' : '▸'}</span>
+                            <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>
+                              {fixas.length} {fixas.length === 1 ? 'fixa' : 'fixas'}
+                            </span>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {nomesColetores.join(', ')}
+                            </span>
+                            {comOcorrencia.length > 0 && (
+                              <span className="badge badge-danger" style={{ fontSize: '0.62rem' }}>
+                                {comOcorrencia.length} c/ ocorrência
+                              </span>
                             )}
-                            <button className="btn btn-secondary btn-sm" style={btnMini} onClick={() => abrirEditar(c)}>Editar</button>
-                            <button className="btn btn-danger btn-sm" style={btnMini} disabled={loading} onClick={() => handleExcluir(c)}>Excluir</button>
+                          </div>
+
+                          {/* Recolhido, só as que fugiram do normal aparecem */}
+                          {!aberto && comOcorrencia.length > 0 && (
+                            <div style={{ marginTop: 4 }}>{comOcorrencia.map(renderLinha)}</div>
+                          )}
+                          {aberto && <div style={{ marginTop: 4 }}>{fixas.map(renderLinha)}</div>}
+                        </div>
+                      )}
+
+                      {extras.length > 0 && (
+                        <div>
+                          <div style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 6 }}>
+                            EXTRAS ({extras.length})
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {extras.map(renderCartao)}
                           </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                      )}
+                    </div>
+                  );
+                })()
               )}
             </div>
           );
