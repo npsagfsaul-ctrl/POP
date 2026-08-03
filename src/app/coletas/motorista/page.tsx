@@ -6,14 +6,11 @@ import { getColetorAtual } from '@/actions/coletorSessao';
 import { getTurnoAberto } from '@/actions/turnos';
 import { getMinhasColetasHoje } from '@/actions/coletas';
 import ColetorMotoristaApp from '@/components/ColetorMotoristaApp';
+import { hojeISOSaoPaulo } from '@/lib/data';
 
 export const dynamic = 'force-dynamic';
 
-function hojeISO() {
-  const d = new Date();
-  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
-  return local.toISOString().slice(0, 10);
-}
+const hojeISO = hojeISOSaoPaulo;
 
 function horaBR(d: Date) {
   return new Date(d).toLocaleTimeString('pt-BR', {

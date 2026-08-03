@@ -22,7 +22,11 @@ export async function salvarChecklist(formData: FormData) {
 
   // Collect responses from form data
   const respostas: Record<string, boolean> = {};
-  
+  // Quem foi apontado como responsável por cada pendência. Montado do zero a
+  // cada save (igual `respostas`), para que desmarcar um POP não deixe uma
+  // atribuição órfã que ressuscitaria se o POP falhar de novo num edit futuro.
+  const responsaveis: Record<string, string> = {};
+
   const popsDoSetor = await prisma.pop.findMany({
     where: { setorId },
     select: { id: true, titulo: true }
@@ -39,7 +43,14 @@ export async function salvarChecklist(formData: FormData) {
       const popId = key.replace('pop_', '');
       if (value === 'on' || value === 'true') {
         respostas[popId] = false; // Tem ocorrência (marcado)
-        
+
+        // Responsável é opcional: "Não identificado" envia vazio e não entra
+        // no JSON — a pendência aparece no relatório como "sem responsável".
+        const responsavelId = ((formData.get(`resp_pop_${popId}`) as string) || '').trim();
+        if (responsavelId) {
+          responsaveis[popId] = responsavelId;
+        }
+
         const desc = formData.get(`desc_pop_${popId}`) as string;
         if (desc && desc.trim()) {
            const pop = popsDoSetor.find(p => p.id === popId);
@@ -69,7 +80,7 @@ export async function salvarChecklist(formData: FormData) {
   if (registroExistente) {
     await prisma.registroDiario.update({
       where: { id: registroExistente.id },
-      data: { respostas, observacoes: observacoesFinal || '' }
+      data: { respostas, responsaveis, observacoes: observacoesFinal || '' }
     });
   } else {
     await prisma.registroDiario.create({
@@ -77,6 +88,7 @@ export async function salvarChecklist(formData: FormData) {
         setorId,
         data,
         respostas,
+        responsaveis,
         observacoes: observacoesFinal || ''
       }
     });

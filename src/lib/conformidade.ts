@@ -13,9 +13,17 @@
 // - Dia útil COM checklist: conformidade = pesoAtingido / pesoTotalDoDia.
 // - Dia útil SEM checklist (e com pelo menos 1 POP exigível): conta como 0%.
 //
+// - Num dia preenchido, só é exigível o POP que estava no formulário na hora
+//   em que ele foi salvo (isto é, cuja chave existe em `respostas`). Assim um
+//   POP cadastrado à tarde não vira pendência num checklist salvo de manhã.
+// - Registro criado só para o comentário do admin (`respostas: {}`) NÃO é um
+//   checklist preenchido.
+//
 // Métrica oficial da meta/bônus: `percentualPerfeitos` (dias 100% ÷ dias
 // úteis) — qualquer pendência, por menor que seja, tira o dia de "perfeito".
 // `media` (ponderada pelo peso) é só informativa/secundária.
+
+import { inicioDeHojeSaoPaulo } from './data';
 
 export interface PopPeso {
   id: string;
@@ -27,6 +35,8 @@ export interface PopPeso {
 export interface RegistroConformidade {
   data: Date | string;
   respostas: Record<string, boolean> | unknown;
+  /** { popId: atendenteId } — quem causou a pendência daquele POP naquele dia. */
+  responsaveis?: Record<string, string> | unknown;
 }
 
 /** Dia útil (passado) sem checklist preenchido conta como este valor de conformidade. */
@@ -39,6 +49,8 @@ export interface PendenciaDia {
   id: string;
   titulo: string;
   peso: number;
+  /** Funcionário apontado como responsável, ou null se não foi indicado. */
+  responsavelId: string | null;
 }
 
 export interface DiaConformidade {
@@ -108,8 +120,10 @@ export function calcularConformidade(
   });
 
   const diasNoMes = new Date(ano, mes, 0).getDate();
-  const limite = new Date(hoje);
-  limite.setHours(0, 0, 0, 0);
+  // "Hoje" precisa ser o dia de Brasília, não o do servidor (que roda em UTC).
+  // Sem isso, a partir das 21h daqui o dia seguinte entrava como dia útil
+  // sem checklist = 0%, e a nota do setor caía toda noite.
+  const limite = inicioDeHojeSaoPaulo(hoje);
 
   const setorCreatedAtMs = setorCreatedAt ? new Date(setorCreatedAt).getTime() : null;
 
@@ -134,31 +148,57 @@ export function calcularConformidade(
 
     diasUteis++;
 
+    const reg = registrosPorDia.get(dia);
+    const respostas = (reg?.respostas ?? null) as Record<string, boolean> | null;
+    const responsaveis = (reg?.responsaveis ?? null) as Record<string, string> | null;
+
+    // `salvarComentarioAdmin` cria um registro com `respostas: {}` só para
+    // guardar o comentário. Isso não é um checklist preenchido — sem esta
+    // checagem o dia mudava de "não preenchido" para "preenchido com todos os
+    // POPs em pendência", apontando a causa errada no Fechamento do Mês.
+    const preenchido = !!respostas && Object.keys(respostas).length > 0;
+
     // Apenas POPs que já existiam até o fim deste dia entram no cálculo do dia
     // (evita que um POP criado no meio do mês penalize dias anteriores à sua criação).
-    const popsDoDia = pops.filter((pop) => new Date(pop.createdAt).getTime() <= fimDia.getTime());
+    const popsExistentes = pops.filter(
+      (pop) => new Date(pop.createdAt).getTime() <= fimDia.getTime(),
+    );
+
+    // Num dia preenchido, exigível é só o POP que estava no formulário quando
+    // ele foi salvo — ou seja, cuja chave existe em `respostas`. A ausência da
+    // chave significa que o POP foi cadastrado depois do preenchimento, e ele
+    // não pode virar pendência (nem inflar o peso total) retroativamente.
+    const popsDoDia =
+      preenchido
+        ? popsExistentes.filter((pop) =>
+            Object.prototype.hasOwnProperty.call(respostas, pop.id),
+          )
+        : popsExistentes;
+
     const pesoTotalDoDia = popsDoDia.reduce((acc, p) => acc + p.peso, 0);
 
-    const reg = registrosPorDia.get(dia);
-    const preenchido = !!reg;
     let pesoAtingido = 0;
     const pendencias: PendenciaDia[] = [];
     let conformidadeDia: number;
 
     if (preenchido) {
-      const respostas = reg!.respostas as Record<string, boolean>;
       popsDoDia.forEach((pop) => {
-        if (respostas && respostas[pop.id] === true) {
+        if (respostas![pop.id] === true) {
           pesoAtingido += pop.peso;
         } else if (pesoTotalDoDia > 0) {
-          pendencias.push({ id: pop.id, titulo: pop.titulo, peso: pop.peso });
+          pendencias.push({
+            id: pop.id,
+            titulo: pop.titulo,
+            peso: pop.peso,
+            responsavelId: responsaveis?.[pop.id] || null,
+          });
         }
       });
       conformidadeDia = pesoTotalDoDia > 0 ? (pesoAtingido / pesoTotalDoDia) * 100 : 100;
       diasPreenchidos++;
     } else {
-      // Nenhum POP ainda exigível neste dia (setor criado mas sem POPs cadastrados
-      // ainda) — não há o que falhar, conta como neutro (100%).
+      // Dia sem checklist: 0%. Exceção — se nenhum POP era exigível ainda
+      // (setor criado mas sem POPs), não há o que falhar: conta como neutro.
       conformidadeDia = pesoTotalDoDia > 0 ? VALOR_DIA_SEM_CHECKLIST : 100;
     }
 
@@ -210,4 +250,97 @@ export function calcularConformidade(
     perdaPorPendencia: Math.round(perdaPorPendencia),
     dias,
   };
+}
+
+// ─── PENDÊNCIAS POR FUNCIONÁRIO ───
+//
+// Acompanhamento individual por CONTAGEM de pendências, não por porcentagem.
+// Porcentagem individual seria enganosa: o sistema não registra presença, então
+// quem faltou/folgou/tirou férias terminaria o mês em 100% simplesmente por não
+// poder ser marcado. Contagem não sofre disso.
+//
+// A nota do setor (métrica oficial do bônus) não é afetada por nada daqui.
+
+export interface PendenciaAtribuida {
+  dia: number;
+  data: string; // YYYY-MM-DD
+  popId: string;
+  popTitulo: string;
+  peso: number;
+}
+
+export interface ResumoPorPessoa {
+  /** null quando a pendência não teve responsável indicado. */
+  atendenteId: string | null;
+  nome: string;
+  /** true quando o id não existe mais no cadastro de funcionários. */
+  removido: boolean;
+  totalPendencias: number;
+  pesoTotal: number;
+  pendencias: PendenciaAtribuida[];
+}
+
+export const NOME_SEM_RESPONSAVEL = 'Sem responsável indicado';
+
+/**
+ * Agrupa as pendências do mês por funcionário, a partir do extrato dia a dia
+ * que `calcularConformidade` já produz — herdando de graça todas as regras de
+ * justiça (pula domingo, dia futuro, dias anteriores à criação do setor, e o
+ * filtro de POP por dia) sem duplicar o laço.
+ *
+ * Retorna apenas quem teve pelo menos uma pendência (o cadastro de Atendente é
+ * global, então listar todo mundo traria gente de outros setores), mais dois
+ * baldes para nada sumir da conta: "sem responsável indicado" e funcionários
+ * que foram excluídos do cadastro depois de já terem pendências registradas.
+ */
+export function calcularPendenciasPorPessoa(
+  dias: DiaConformidade[],
+  atendentes: { id: string; nome: string }[],
+): ResumoPorPessoa[] {
+  const nomePorId = new Map(atendentes.map((a) => [a.id, a.nome]));
+  const grupos = new Map<string, ResumoPorPessoa>();
+
+  for (const d of dias) {
+    for (const p of d.pendencias) {
+      const id = p.responsavelId || null;
+      const chave = id ?? '__sem_responsavel__';
+
+      let grupo = grupos.get(chave);
+      if (!grupo) {
+        const nomeCadastrado = id ? nomePorId.get(id) : undefined;
+        grupo = {
+          atendenteId: id,
+          nome: id
+            ? // O JSON não tem chave estrangeira: se o funcionário foi excluído
+              // do cadastro, a pendência não pode simplesmente sumir da conta.
+              (nomeCadastrado ?? `Funcionário removido (${id.slice(0, 8)})`)
+            : NOME_SEM_RESPONSAVEL,
+          removido: !!id && nomeCadastrado === undefined,
+          totalPendencias: 0,
+          pesoTotal: 0,
+          pendencias: [],
+        };
+        grupos.set(chave, grupo);
+      }
+
+      grupo.totalPendencias++;
+      grupo.pesoTotal += p.peso;
+      grupo.pendencias.push({
+        dia: d.dia,
+        data: d.data,
+        popId: p.id,
+        popTitulo: p.titulo,
+        peso: p.peso,
+      });
+    }
+  }
+
+  return [...grupos.values()].sort((a, b) => {
+    // O balde "sem responsável" não é uma pessoa — fica sempre por último.
+    if (a.atendenteId === null) return 1;
+    if (b.atendenteId === null) return -1;
+    if (b.totalPendencias !== a.totalPendencias) return b.totalPendencias - a.totalPendencias;
+    if (b.pesoTotal !== a.pesoTotal) return b.pesoTotal - a.pesoTotal;
+    return a.nome.localeCompare(b.nome);
+  });
 }

@@ -11,12 +11,19 @@ interface Pop {
   instrucaoTrabalho: string;
 }
 
+interface Atendente {
+  id: string;
+  nome: string;
+}
+
 interface ChecklistFormProps {
   setorId: string;
   pops: Pop[];
   dataInicial: string;
   respostasIniciais: Record<string, boolean>;
+  responsaveisIniciais?: Record<string, string>;
   observacoesInicial?: string;
+  atendentes?: Atendente[];
 }
 
 export default function ChecklistForm({
@@ -24,7 +31,9 @@ export default function ChecklistForm({
   pops,
   dataInicial,
   respostasIniciais,
+  responsaveisIniciais,
   observacoesInicial,
+  atendentes = [],
 }: ChecklistFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -75,6 +84,11 @@ export default function ChecklistForm({
     return initDesc;
   });
 
+  // Quem foi apontado como responsável por cada ocorrência.
+  const [responsaveis, setResponsaveis] = useState<Record<string, string>>(
+    () => responsaveisIniciais ?? {},
+  );
+
   const [obsGlobal, setObsGlobal] = useState(() => {
     let text = observacoesInicial || '';
     pops.forEach(pop => {
@@ -120,6 +134,10 @@ export default function ChecklistForm({
 
   const handleDescricaoChange = (popId: string, val: string) => {
     setDescricoes(prev => ({ ...prev, [popId]: val }));
+  };
+
+  const handleResponsavelChange = (popId: string, val: string) => {
+    setResponsaveis(prev => ({ ...prev, [popId]: val }));
   };
 
   return (
@@ -210,7 +228,7 @@ export default function ChecklistForm({
                   </div>
                 </details>
 
-                {/* Textarea para descrição se houver ocorrência */}
+                {/* Descrição + responsável, revelados só quando há ocorrência */}
                 {ocorrencias[pop.id] && (
                   <div style={{ marginTop: 12 }}>
                     <label htmlFor={`desc_pop_${pop.id}`} className="form-label" style={{ color: 'var(--danger, #dc2626)', fontWeight: 600 }}>
@@ -226,6 +244,31 @@ export default function ChecklistForm({
                       style={{ border: '1px solid var(--danger, #dc2626)', minHeight: 80 }}
                       disabled={semOcorrencia}
                     />
+
+                    {atendentes.length > 0 && (
+                      <div style={{ marginTop: 10 }}>
+                        <label htmlFor={`resp_pop_${pop.id}`} className="form-label" style={{ fontWeight: 600 }}>
+                          Quem foi o responsável?
+                        </label>
+                        <select
+                          id={`resp_pop_${pop.id}`}
+                          name={`resp_pop_${pop.id}`}
+                          value={responsaveis[pop.id] || ''}
+                          onChange={(e) => handleResponsavelChange(pop.id, e.target.value)}
+                          className="form-select"
+                          style={{ maxWidth: 280 }}
+                          disabled={semOcorrencia}
+                        >
+                          <option value="">— Não identificado</option>
+                          {atendentes.map((a) => (
+                            <option key={a.id} value={a.id}>{a.nome}</option>
+                          ))}
+                        </select>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                          Serve para acompanhar quem precisa de treinamento. Não muda a nota do setor.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

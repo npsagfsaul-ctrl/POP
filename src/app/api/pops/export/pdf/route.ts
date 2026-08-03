@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { isAdmin } from '@/actions/admin';
 import { normalizarQuebrasDeLinha } from '@/lib/texto';
+import { hojeISOSaoPaulo } from '@/lib/data';
 import PDFDocument from 'pdfkit';
 
 /** GET /api/pops/export/pdf?setorId=XXX — PDF com os POPs cadastrados de um setor */
@@ -59,7 +60,7 @@ export async function GET(request: Request) {
   await finished;
 
   const pdfBuffer = Buffer.concat(chunks);
-  const hoje = new Date().toISOString().slice(0, 10);
+  const hoje = hojeISOSaoPaulo();
   const nomeArquivo = `pops_${setor.nome.replace(/[^a-zA-Z0-9]+/g, '_')}_${hoje}.pdf`;
 
   return new NextResponse(pdfBuffer, {

@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { cookies } from 'next/headers';
 import ChecklistForm from '@/components/ChecklistForm';
 import { getRegistroPorData } from '@/actions/checklist';
+import { getAtendentes } from '@/actions/atendentes';
+import { hojeISOSaoPaulo } from '@/lib/data';
 
 export default async function ChecklistDiario({ 
   params,
@@ -18,7 +20,9 @@ export default async function ChecklistDiario({
   const setor = await getSetorById(resolvedParams.id);
   const pops = await getPopsBySetor(resolvedParams.id);
   
-  const hoje = new Date().toISOString().split('T')[0];
+  // Data de Brasília — com o UTC do servidor, depois das 21h daqui o
+  // checklist abria já no dia seguinte.
+  const hoje = hojeISOSaoPaulo();
   const dataSelecionada = resolvedSearchParams.data || hoje;
 
   if (!setor) {
@@ -28,7 +32,9 @@ export default async function ChecklistDiario({
   // Buscar registro existente para a data se houver
   const registroExistente = await getRegistroPorData(setor.id, dataSelecionada);
   const respostasIniciais = registroExistente ? (registroExistente.respostas as Record<string, boolean>) : {};
+  const responsaveisIniciais = registroExistente ? (registroExistente.responsaveis as Record<string, string>) : {};
   const observacoesInicial = registroExistente ? (registroExistente.observacoes as string) : '';
+  const atendentes = await getAtendentes(true);
 
   if (setor.senha) {
     const cookieStore = await cookies();
@@ -69,12 +75,14 @@ export default async function ChecklistDiario({
         </div>
       </div>
 
-      <ChecklistForm 
-        setorId={setor.id} 
-        pops={pops} 
-        dataInicial={dataSelecionada} 
+      <ChecklistForm
+        setorId={setor.id}
+        pops={pops}
+        dataInicial={dataSelecionada}
         respostasIniciais={respostasIniciais}
+        responsaveisIniciais={responsaveisIniciais}
         observacoesInicial={observacoesInicial}
+        atendentes={atendentes.map((a) => ({ id: a.id, nome: a.nome }))}
       />
     </div>
   );

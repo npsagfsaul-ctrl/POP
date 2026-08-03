@@ -1,7 +1,8 @@
 import { prisma } from '@/lib/prisma';
 import { getPopsBySetor } from '@/actions/pops';
 import { getRegistrosMensais } from '@/actions/checklist';
-import { calcularConformidade } from '@/lib/conformidade';
+import { calcularConformidade, calcularPendenciasPorPessoa } from '@/lib/conformidade';
+import { getAtendentes } from '@/actions/atendentes';
 import PrintButton from '@/components/PrintButton';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -78,6 +79,13 @@ export default async function RelatorioMensal({
     diasComPendencia,
     dias: diasLedger,
   } = calcularConformidade(pops, registros, mes, ano, hoje, setor.createdAt);
+
+  // Pendências por funcionário (contagem, não porcentagem). Busca o cadastro
+  // completo, sem filtrar por ativo, para quem foi desativado no meio do mês
+  // continuar aparecendo com o que já tinha registrado.
+  const atendentes = await getAtendentes();
+  const pendenciasPorPessoa = calcularPendenciasPorPessoa(diasLedger, atendentes);
+  const totalPendenciasMes = pendenciasPorPessoa.reduce((acc, p) => acc + p.totalPendencias, 0);
 
   // Ordenar por menor percentual para destacar problemas
   const criticalPops = [...statsPorPop].sort((a, b) => a.percentual - b.percentual);
@@ -256,6 +264,74 @@ export default async function RelatorioMensal({
         <p className="text-xs text-slate-400 mt-2">
           Este extrato reflete os POPs atualmente cadastrados; POPs excluídos não aparecem no histórico.
         </p>
+      </div>
+
+      {/* Pendências por Funcionário — contagem, não porcentagem individual */}
+      <div className="mb-10">
+        <h2 className="text-2xl font-bold mb-2 flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+          </svg>
+          Pendências por Funcionário
+        </h2>
+        <p className="text-sm text-slate-500 mb-6">
+          Quantas pendências foram apontadas para cada pessoa no mês. Serve para identificar quem
+          precisa de treinamento — <strong>não altera a nota do setor</strong> e não é uma nota individual.
+        </p>
+
+        {pendenciasPorPessoa.length === 0 ? (
+          <div className="card text-center py-8 text-muted">
+            Nenhuma pendência registrada neste mês.
+          </div>
+        ) : (
+          <div className="card overflow-hidden p-0 border-none shadow-lg">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-900 text-white">
+                    <th className="px-6 py-4 font-bold uppercase text-[11px] tracking-widest">Funcionário</th>
+                    <th className="px-6 py-4 font-bold uppercase text-[11px] tracking-widest text-center">Pendências</th>
+                    <th className="px-6 py-4 font-bold uppercase text-[11px] tracking-widest text-center">Peso total</th>
+                    <th className="px-6 py-4 font-bold uppercase text-[11px] tracking-widest">Onde aconteceu</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {pendenciasPorPessoa.map((p) => (
+                    <tr key={p.atendenteId ?? 'sem-responsavel'} className="hover:bg-slate-50/80 transition-colors align-top">
+                      <td className="px-6 py-3 font-medium text-main">
+                        {p.nome}
+                        {p.atendenteId === null && (
+                          <span className="block text-[11px] text-amber-600 font-normal">
+                            ninguém foi indicado no checklist
+                          </span>
+                        )}
+                        {p.removido && (
+                          <span className="block text-[11px] text-rose-600 font-normal">
+                            excluído do cadastro
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-6 py-3 text-center font-bold text-rose-600">{p.totalPendencias}</td>
+                      <td className="px-6 py-3 text-center font-bold text-slate-600">{p.pesoTotal}</td>
+                      <td className="px-6 py-3 text-sm text-slate-600">
+                        {p.pendencias
+                          .map((x) => `dia ${x.dia} — ${x.popTitulo} (peso ${x.peso})`)
+                          .join('; ')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-slate-50 font-bold">
+                    <td className="px-6 py-3 text-main">Total do mês</td>
+                    <td className="px-6 py-3 text-center text-rose-600">{totalPendenciasMes}</td>
+                    <td className="px-6 py-3" colSpan={2}></td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="bg-slate-900 text-white rounded-3xl p-8 shadow-xl relative overflow-hidden">

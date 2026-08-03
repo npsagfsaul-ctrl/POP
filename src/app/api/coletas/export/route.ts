@@ -6,6 +6,7 @@ import { getColetasMensais } from '@/actions/coletas';
 import { normalizarQuebrasDeLinha } from '@/lib/texto';
 import { STATUS_COLETA_LABEL, StatusColetaTexto } from '@/lib/coletasStatus';
 import ExcelJS from 'exceljs';
+import { hojeISOSaoPaulo } from '@/lib/data';
 
 const PERIODO_LABEL: Record<string, string> = { MANHA: 'Manhã', TARDE: 'Tarde', RETORNO: 'Retorno' };
 const TIPO_LABEL: Record<string, string> = { FIXA: 'Fixa', EXTRA: 'Extra' };
@@ -49,7 +50,7 @@ export async function GET(request: Request) {
 
   const params = new URL(request.url).searchParams;
   const tipo = params.get('tipo') || 'coletas';
-  const hoje = new Date().toISOString().slice(0, 10);
+  const hoje = hojeISOSaoPaulo();
 
   if (tipo === 'clientes') {
     const clientes = await prisma.cliente.findMany({ orderBy: { nome: 'asc' } });

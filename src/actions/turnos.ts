@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { hojeISOSaoPaulo } from '@/lib/data';
 
 function parseData(dataString: string) {
   const data = new Date(dataString);
@@ -9,11 +10,7 @@ function parseData(dataString: string) {
   return data;
 }
 
-function hojeISO() {
-  const d = new Date();
-  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
-  return local.toISOString().slice(0, 10);
-}
+const hojeISO = hojeISOSaoPaulo;
 
 interface ChecklistItem {
   ok: boolean;

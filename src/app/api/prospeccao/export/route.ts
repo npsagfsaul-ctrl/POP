@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { normalizarQuebrasDeLinha } from '@/lib/texto';
 import { STATUS_PROSPECCAO_LABEL, StatusProspeccaoTexto } from '@/lib/prospeccaoStatus';
+import { hojeISOSaoPaulo } from '@/lib/data';
 
 function csvLinha(valores: (string | null | undefined)[]) {
   return valores
@@ -21,7 +22,7 @@ export async function GET() {
     orderBy: { data: 'desc' },
   });
 
-  const hoje = new Date().toISOString().slice(0, 10);
+  const hoje = hojeISOSaoPaulo();
   const linhas = [
     csvLinha(['Data', 'Cliente', 'Telefone', 'O que Vende', 'Setor', 'Funcionário', 'Status']),
     ...prospeccoes.map((p) =>

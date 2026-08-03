@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { isAdmin } from '@/actions/admin';
 import { normalizarQuebrasDeLinha } from '@/lib/texto';
+import { hojeISOSaoPaulo } from '@/lib/data';
 import ExcelJS from 'exceljs';
 
 function dataBR(d: Date) {
@@ -66,7 +67,7 @@ export async function GET(request: Request) {
   });
 
   const buffer = await workbook.xlsx.writeBuffer();
-  const hoje = new Date().toISOString().slice(0, 10);
+  const hoje = hojeISOSaoPaulo();
   const nomeArquivo = `pops_${setor.nome.replace(/[^a-zA-Z0-9]+/g, '_')}_${hoje}.xlsx`;
 
   return new NextResponse(buffer, {

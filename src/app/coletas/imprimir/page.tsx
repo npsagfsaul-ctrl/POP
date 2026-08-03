@@ -4,14 +4,11 @@ import { getColetasPorData } from '@/actions/coletas';
 import { coletasLiberado } from '@/actions/coletasAcesso';
 import ColetasPasswordPrompt from '@/components/ColetasPasswordPrompt';
 import PrintButton from '@/components/PrintButton';
+import { hojeISOSaoPaulo } from '@/lib/data';
 
 export const dynamic = 'force-dynamic';
 
-function hojeISO() {
-  const d = new Date();
-  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
-  return local.toISOString().slice(0, 10);
-}
+const hojeISO = hojeISOSaoPaulo;
 
 function formatarData(dataStr: string) {
   const [y, m, d] = dataStr.split('-').map(Number);

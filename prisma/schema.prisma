@@ -47,6 +47,12 @@ model RegistroDiario {
   // Em vez de criar milhares de linhas numa tabela filha, salvamos tudo num único campo de texto estruturado.
   // Exemplo: { "pop_id_1": true, "pop_id_2": false }
   respostas Json @default("{}")
+
+  // Quem causou a pendência de cada POP naquele dia: { "pop_id": "atendente_id" }.
+  // Só tem entrada para POP marcado como ocorrência; POP sem responsável
+  // indicado simplesmente não aparece aqui.
+  responsaveis Json @default("{}")
+
   observacoes String?
 
   comentarioAdmin String?

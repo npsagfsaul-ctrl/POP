@@ -3,14 +3,11 @@ import Link from 'next/link';
 import { getTurnosPorData } from '@/actions/turnos';
 import { coletasLiberado } from '@/actions/coletasAcesso';
 import ColetasPasswordPrompt from '@/components/ColetasPasswordPrompt';
+import { hojeISOSaoPaulo } from '@/lib/data';
 
 export const dynamic = 'force-dynamic';
 
-function hojeISO() {
-  const d = new Date();
-  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
-  return local.toISOString().slice(0, 10);
-}
+const hojeISO = hojeISOSaoPaulo;
 
 function shiftData(dataStr: string, delta: number) {
   const [y, m, d] = dataStr.split('-').map(Number);
