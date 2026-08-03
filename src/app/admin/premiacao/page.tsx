@@ -92,17 +92,45 @@ export default async function PremiacaoPage({
           O setor precisa bater a meta de 80% para o prêmio existir. Quando ele não bate,
           <strong> ninguém do time recebe</strong> — o desconto individual só entra depois disso.
         </p>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {setores.map((s) => (
-            <span
-              key={s.id}
-              className={`badge ${s.bateuMeta ? 'badge-success' : 'badge-danger'}`}
-              style={{ fontSize: '0.75rem', padding: '6px 10px' }}
-            >
-              {s.nome}: {s.percentual}%
-            </span>
-          ))}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {setores.map((s) => {
+            const c = s.concentracao;
+            const principal = c.porPessoa[0];
+            return (
+              <div
+                key={s.id}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+                  padding: '8px 12px', borderRadius: 'var(--radius-sm)',
+                  border: '1px solid var(--border)', background: 'var(--surface)',
+                }}
+              >
+                <span className={`badge ${s.bateuMeta ? 'badge-success' : 'badge-danger'}`} style={{ fontSize: '0.75rem' }}>
+                  {s.percentual}%
+                </span>
+                <span style={{ fontWeight: 600, fontSize: '0.875rem' }}>{s.nome}</span>
+
+                {c.diasPerdidos > 0 ? (
+                  <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+                    perdeu {c.diasPerdidos} dia(s)
+                    {principal
+                      ? ` — em ${principal.diasSozinho}, ${principal.nome} foi a única responsável`
+                      : c.diasSemResponsavel === c.diasPerdidos
+                        ? ' — sem responsável apontado'
+                        : ''}
+                  </span>
+                ) : (
+                  <span style={{ fontSize: '0.8125rem', color: 'var(--success)' }}>nenhum dia perdido</span>
+                )}
+              </div>
+            );
+          })}
         </div>
+        <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 12, marginBottom: 0 }}>
+          Quando a maior parte dos dias perdidos vem de uma pessoa só, o problema é individual e não
+          do time — a decisão de poupar ou não o setor continua sendo sua. Meses anteriores à criação
+          do campo de responsável aparecem como &quot;sem responsável apontado&quot;.
+        </p>
       </div>
 
       {totalSemResponsavel > 0 && (

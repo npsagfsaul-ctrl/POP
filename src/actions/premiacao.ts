@@ -6,8 +6,12 @@ import {
   calcularConformidade,
   calcularPendenciasPorPessoa,
   calcularFatiaPremio,
+  simularReguas,
+  analisarConcentracao,
   FAIXAS_PADRAO,
   type FaixasPremiacao,
+  type ResultadoRegua,
+  type Concentracao,
 } from '@/lib/conformidade';
 import { getAtendentes } from './atendentes';
 
@@ -86,7 +90,57 @@ export interface PessoaPremiacao {
 export interface ResumoPremiacao {
   faixas: FaixasPremiacao;
   pessoas: PessoaPremiacao[];
-  setores: { id: string; nome: string; percentual: number; bateuMeta: boolean; semResponsavel: number }[];
+  setores: {
+    id: string;
+    nome: string;
+    percentual: number;
+    bateuMeta: boolean;
+    semResponsavel: number;
+    concentracao: Concentracao;
+  }[];
+}
+
+/** Busca todos os setores com os registros do mês — base comum das duas telas. */
+async function carregarMes(mes: number, ano: number) {
+  const inicio = new Date(`${ano}-${String(mes).padStart(2, '0')}-01T00:00:00Z`);
+  const proxMes = mes === 12 ? 1 : mes + 1;
+  const proxAno = mes === 12 ? ano + 1 : ano;
+  const fim = new Date(`${proxAno}-${String(proxMes).padStart(2, '0')}-01T00:00:00Z`);
+
+  const [setores, registros] = await Promise.all([
+    prisma.setor.findMany({ include: { pops: true }, orderBy: { nome: 'asc' } }),
+    prisma.registroDiario.findMany({ where: { data: { gte: inicio, lt: fim } } }),
+  ]);
+
+  return { setores, registros };
+}
+
+export interface SimulacaoSetor {
+  id: string;
+  nome: string;
+  diasUteis: number;
+  reguas: ResultadoRegua[];
+}
+
+/**
+ * Roda o mesmo mês sob cada régua candidata, para todos os setores.
+ * É só comparação — nenhuma nota é alterada por esta função.
+ */
+export async function getSimulacaoReguas(mes: number, ano: number): Promise<SimulacaoSetor[]> {
+  const { setores, registros } = await carregarMes(mes, ano);
+
+  return setores.map((setor) => {
+    const doSetor = registros.filter((r) => r.setorId === setor.id);
+    const { dias, diasUteis } = calcularConformidade(
+      setor.pops, doSetor, mes, ano, new Date(), setor.createdAt,
+    );
+    return {
+      id: setor.id,
+      nome: setor.nome,
+      diasUteis,
+      reguas: simularReguas(dias),
+    };
+  });
 }
 
 /**
@@ -95,19 +149,11 @@ export interface ResumoPremiacao {
  * gestão não precisar abrir sete relatórios.
  */
 export async function getResumoPremiacao(mes: number, ano: number): Promise<ResumoPremiacao> {
-  const [faixas, atendentes, setores] = await Promise.all([
+  const [faixas, atendentes, { setores, registros }] = await Promise.all([
     getFaixasPremiacao(),
     getAtendentes(),
-    prisma.setor.findMany({ include: { pops: true }, orderBy: { nome: 'asc' } }),
+    carregarMes(mes, ano),
   ]);
-
-  const inicio = new Date(`${ano}-${String(mes).padStart(2, '0')}-01T00:00:00Z`);
-  const proxMes = mes === 12 ? 1 : mes + 1;
-  const proxAno = mes === 12 ? ano + 1 : ano;
-  const fim = new Date(`${proxAno}-${String(proxMes).padStart(2, '0')}-01T00:00:00Z`);
-  const registros = await prisma.registroDiario.findMany({
-    where: { data: { gte: inicio, lt: fim } },
-  });
 
   const pessoas: PessoaPremiacao[] = [];
   const resumoSetores: ResumoPremiacao['setores'] = [];
@@ -125,6 +171,7 @@ export async function getResumoPremiacao(mes: number, ano: number): Promise<Resu
       percentual: percentualPerfeitos,
       bateuMeta,
       semResponsavel: grupos.find((g) => g.atendenteId === null)?.totalPendencias ?? 0,
+      concentracao: analisarConcentracao(dias, atendentes),
     });
 
     for (const g of grupos) {

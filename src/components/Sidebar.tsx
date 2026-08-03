@@ -172,6 +172,11 @@ export default function Sidebar({ isAdmin, ocorrenciasAbertas = 0 }: SidebarProp
               Fechamento do Prêmio
             </Link>
 
+            <Link href="/admin/simulador" className={`sidebar-link ${isActive('/admin/simulador') ? 'active' : ''}`}>
+              <IconClipboard />
+              Comparar réguas
+            </Link>
+
             <Link href="/setores/novo" className={`sidebar-link ${isActive('/setores/novo') ? 'active' : ''}`}>
               <IconPlus />
               Novo Setor

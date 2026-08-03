@@ -325,6 +325,158 @@ export function calcularFatiaPremio(pesoAcumulado: number, faixas: FaixasPremiac
   return 0;
 }
 
+// ─── COMPARAÇÃO DE RÉGUAS ───
+//
+// Ferramenta de decisão: mostra o MESMO mês sob réguas diferentes, sem alterar
+// nada. A régua oficial hoje é zero tolerância (`percentualPerfeitos`), em que
+// uma pendência de peso 1 derruba o dia inteiro — é o que faz o erro
+// concentrado de uma pessoa arrastar o time todo.
+
+export type ChaveRegua = 'zero' | 'tolerancia90' | 'tolerancia80' | 'media';
+
+export interface ResultadoRegua {
+  chave: ChaveRegua;
+  nome: string;
+  descricao: string;
+  nota: number;
+  bateu: boolean;
+  /** Dias que a régua considera aprovados (não se aplica à média ponderada). */
+  diasAprovados: number | null;
+}
+
+/** Nota exata do dia (0–100), sem arredondamento. Dia sem POP exigível é neutro. */
+function notaExataDoDia(d: DiaConformidade): number {
+  if (d.pesoTotalDoDia <= 0) return 100;
+  return (d.pesoAtingido / d.pesoTotalDoDia) * 100;
+}
+
+/**
+ * Roda o mesmo mês sob cada régua candidata. Lê apenas o extrato dia a dia que
+ * `calcularConformidade` já produz, então herda todas as regras de justiça
+ * (domingo, dia futuro, criação do setor, POP por dia, POP desativado).
+ *
+ * Usa `pesoAtingido / pesoTotalDoDia` e não `conformidadeDia`, que é
+ * arredondado — senão um dia de 89,6% contaria como 90% na faixa de tolerância.
+ */
+export function simularReguas(
+  dias: DiaConformidade[],
+  meta: number = META_CONFORMIDADE,
+): ResultadoRegua[] {
+  const total = dias.length;
+  if (total === 0) {
+    return [];
+  }
+
+  const notas = dias.map(notaExataDoDia);
+
+  const contaAcima = (limite: number) => notas.filter((n) => n >= limite).length;
+  const pct = (qtd: number) => Math.round((qtd / total) * 100);
+
+  const perfeitos = contaAcima(100);
+  const t90 = contaAcima(90);
+  const t80 = contaAcima(80);
+  const media = Math.round(notas.reduce((a, n) => a + n, 0) / total);
+
+  return [
+    {
+      chave: 'zero',
+      nome: 'Zero tolerância',
+      descricao: 'Régua atual. O dia só vale se não teve nenhuma pendência.',
+      nota: pct(perfeitos),
+      bateu: pct(perfeitos) >= meta,
+      diasAprovados: perfeitos,
+    },
+    {
+      chave: 'tolerancia90',
+      nome: 'Tolerância 90%',
+      descricao: 'O dia vale se pelo menos 90% do peso do dia foi cumprido.',
+      nota: pct(t90),
+      bateu: pct(t90) >= meta,
+      diasAprovados: t90,
+    },
+    {
+      chave: 'tolerancia80',
+      nome: 'Tolerância 80%',
+      descricao: 'O dia vale se pelo menos 80% do peso do dia foi cumprido.',
+      nota: pct(t80),
+      bateu: pct(t80) >= meta,
+      diasAprovados: t80,
+    },
+    {
+      chave: 'media',
+      nome: 'Média por peso',
+      descricao: 'Média das notas diárias. É a régua mais tolerante das quatro.',
+      nota: media,
+      bateu: media >= meta,
+      diasAprovados: null,
+    },
+  ];
+}
+
+// ─── CONCENTRAÇÃO ───
+
+export interface Concentracao {
+  /** Dias úteis que ficaram abaixo de 100%. */
+  diasPerdidos: number;
+  /** Desses, quantos tiveram uma única pessoa como responsável por tudo. */
+  diasComResponsavelUnico: number;
+  /** Dias perdidos sem nenhum responsável apontado (inclui dia não preenchido). */
+  diasSemResponsavel: number;
+  porPessoa: { atendenteId: string; nome: string; diasSozinho: number }[];
+}
+
+/**
+ * Responde "o setor perdeu 6 dias, 5 deles só a Maria" — o número que sustenta
+ * a decisão de poupar ou não o time quando o erro é concentrado numa pessoa.
+ *
+ * Só conta como concentrado o dia em que TODAS as pendências foram atribuídas
+ * à mesma pessoa. Dia com dois responsáveis não é problema de um indivíduo.
+ */
+export function analisarConcentracao(
+  dias: DiaConformidade[],
+  atendentes: { id: string; nome: string }[],
+): Concentracao {
+  const nomePorId = new Map(atendentes.map((a) => [a.id, a.nome]));
+  const diasSozinhoPorId = new Map<string, number>();
+
+  let diasPerdidos = 0;
+  let diasComResponsavelUnico = 0;
+  let diasSemResponsavel = 0;
+
+  for (const d of dias) {
+    const perdeu = d.pesoTotalDoDia > 0 && d.pesoAtingido < d.pesoTotalDoDia;
+    if (!perdeu) continue;
+    diasPerdidos++;
+
+    // Dia não preenchido não tem pendências listadas, logo não tem responsável.
+    if (d.pendencias.length === 0) {
+      diasSemResponsavel++;
+      continue;
+    }
+
+    const responsaveis = new Set(d.pendencias.map((p) => p.responsavelId));
+    if (responsaveis.size === 1) {
+      const [unico] = [...responsaveis];
+      if (unico) {
+        diasComResponsavelUnico++;
+        diasSozinhoPorId.set(unico, (diasSozinhoPorId.get(unico) ?? 0) + 1);
+      } else {
+        diasSemResponsavel++;
+      }
+    }
+  }
+
+  const porPessoa = [...diasSozinhoPorId.entries()]
+    .map(([atendenteId, diasSozinho]) => ({
+      atendenteId,
+      nome: nomePorId.get(atendenteId) ?? `Funcionário removido (${atendenteId.slice(0, 8)})`,
+      diasSozinho,
+    }))
+    .sort((a, b) => b.diasSozinho - a.diasSozinho || a.nome.localeCompare(b.nome));
+
+  return { diasPerdidos, diasComResponsavelUnico, diasSemResponsavel, porPessoa };
+}
+
 /**
  * Agrupa as pendências do mês por funcionário, a partir do extrato dia a dia
  * que `calcularConformidade` já produz — herdando de graça todas as regras de
