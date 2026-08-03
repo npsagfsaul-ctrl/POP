@@ -317,12 +317,29 @@ export const FAIXAS_PADRAO: FaixasPremiacao = {
   limite50: 9,
 };
 
-/** Fatia do prêmio que a pessoa mantém, dado o peso acumulado em pendências. */
+/** Fatia do prêmio pelas faixas, olhando só o peso acumulado. */
 export function calcularFatiaPremio(pesoAcumulado: number, faixas: FaixasPremiacao): number {
   if (pesoAcumulado <= faixas.limiteIntegral) return 100;
   if (pesoAcumulado <= faixas.limite75) return 75;
   if (pesoAcumulado <= faixas.limite50) return 50;
   return 0;
+}
+
+/**
+ * Fatia final da pessoa, já considerando o resultado do setor.
+ *
+ * Regra: **se o setor bateu a meta, o time inteiro recebe integral** — ninguém
+ * é descontado num mês em que o time entregou. A conta individual só entra
+ * quando o setor ficou abaixo da meta, que é o único momento em que alguém
+ * que não errou estaria pagando pelo erro de outro.
+ */
+export function calcularFatiaFinal(
+  pesoAcumulado: number,
+  faixas: FaixasPremiacao,
+  setorBateuMeta: boolean,
+): number {
+  if (setorBateuMeta) return 100;
+  return calcularFatiaPremio(pesoAcumulado, faixas);
 }
 
 // ─── COMPARAÇÃO DE RÉGUAS ───

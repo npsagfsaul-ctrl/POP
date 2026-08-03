@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache';
 import {
   calcularConformidade,
   calcularPendenciasPorPessoa,
-  calcularFatiaPremio,
+  calcularFatiaFinal,
   simularReguas,
   analisarConcentracao,
   FAIXAS_PADRAO,
@@ -188,7 +188,7 @@ export async function getResumoPremiacao(mes: number, ano: number): Promise<Resu
         totalPendencias: g.totalPendencias,
         pesoTotal: g.pesoTotal,
         diasDistintos: g.diasDistintos,
-        fatiaPremio: calcularFatiaPremio(g.pesoTotal, faixas),
+        fatiaPremio: calcularFatiaFinal(g.pesoTotal, faixas, bateuMeta),
       });
     }
   }

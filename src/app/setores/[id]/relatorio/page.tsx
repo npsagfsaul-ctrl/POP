@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { getPopsBySetor } from '@/actions/pops';
 import { getRegistrosMensais } from '@/actions/checklist';
-import { calcularConformidade, calcularPendenciasPorPessoa, calcularFatiaPremio } from '@/lib/conformidade';
+import { calcularConformidade, calcularPendenciasPorPessoa, calcularFatiaFinal } from '@/lib/conformidade';
 import { getAtendentes } from '@/actions/atendentes';
 import { getFaixasPremiacao } from '@/actions/premiacao';
 import PrintButton from '@/components/PrintButton';
@@ -339,10 +339,17 @@ export default async function RelatorioMensal({
                           <span className="text-slate-400">—</span>
                         ) : (
                           (() => {
-                            const fatia = calcularFatiaPremio(p.pesoTotal, faixasPremio);
+                            const fatia = calcularFatiaFinal(p.pesoTotal, faixasPremio, bateuMeta);
                             const cor = fatia === 100 ? 'text-emerald-600'
                               : fatia >= 50 ? 'text-amber-600' : 'text-rose-600';
-                            return <span className={`font-bold ${cor}`}>{fatia}%</span>;
+                            return (
+                              <>
+                                <span className={`font-bold ${cor}`}>{fatia}%</span>
+                                {bateuMeta && (
+                                  <span className="block text-[10px] text-slate-400">setor bateu a meta</span>
+                                )}
+                              </>
+                            );
                           })()
                         )}
                       </td>

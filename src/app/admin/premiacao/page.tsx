@@ -2,6 +2,7 @@ import { isAdmin } from '@/actions/admin';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { getResumoPremiacao, definirFaixasPremiacao } from '@/actions/premiacao';
+import { META_CONFORMIDADE } from '@/lib/conformidade';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,8 +62,10 @@ export default async function PremiacaoPage({
       <div className="card" style={{ marginBottom: 20 }}>
         <div className="card-title">Faixas de desconto</div>
         <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: -4, marginBottom: 12 }}>
-          Quanto do prêmio cada pessoa mantém, conforme o <strong>peso acumulado</strong> das pendências
-          apontadas para ela no mês. O sistema não calcula valores — ele diz a fatia, e você aplica
+          Estas faixas só entram em ação <strong>quando o setor fica abaixo da meta</strong>. Se o setor
+          bateu os {META_CONFORMIDADE}%, o time inteiro recebe integral, sem desconto nenhum. Abaixo da
+          meta, cada pessoa mantém a fatia correspondente ao <strong>peso acumulado</strong> das
+          pendências apontadas para ela. O sistema não calcula valores — ele diz a fatia, e você aplica
           sobre o valor do prêmio.
         </p>
         <form action={definirFaixasPremiacao} style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
@@ -89,8 +92,8 @@ export default async function PremiacaoPage({
       <div className="card" style={{ marginBottom: 20 }}>
         <div className="card-title">Setores no mês</div>
         <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: -4, marginBottom: 12 }}>
-          O setor precisa bater a meta de 80% para o prêmio existir. Quando ele não bate,
-          <strong> ninguém do time recebe</strong> — o desconto individual só entra depois disso.
+          Setor <strong>na meta</strong>: todo o time recebe integral. Setor <strong>abaixo da meta</strong>:
+          aí sim entra a conta individual, para quem quase não errou não pagar pelo erro dos outros.
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {setores.map((s) => {
