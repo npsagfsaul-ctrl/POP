@@ -9,6 +9,24 @@ export const STATUS_COLETA_LABEL: Record<StatusColetaTexto, string> = {
   CANCELADO: 'Cancelada',
 };
 
+// Até que horas o cliente pode pedir uma coleta extra em cada período.
+// Definido com a operação: manhã até 09:00, tarde até 13:00.
+// Os coletores entram às 08:00 — então a folha da manhã sempre sai antes do
+// corte, e a extra que chega nessa janela só alcança o coletor pelo celular.
+export const CORTE_PEDIDOS: Record<string, string> = {
+  MANHA: '09:00',
+  TARDE: '13:00',
+  RETORNO: '',
+};
+
+/** true se o horário de corte daquele período já passou (na data de hoje). */
+export function corteJaPassou(periodo: string, agora: Date, ehHoje: boolean): boolean {
+  const corte = CORTE_PEDIDOS[periodo];
+  if (!corte || !ehHoje) return false;
+  const [h, m] = corte.split(':').map(Number);
+  return agora.getHours() > h || (agora.getHours() === h && agora.getMinutes() >= m);
+}
+
 export const DIAS_SEMANA_LABEL: Record<number, string> = {
   1: 'Seg',
   2: 'Ter',

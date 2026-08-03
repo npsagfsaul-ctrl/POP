@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { criarColeta, atualizarColeta, atualizarStatusColeta, deletarColeta } from '@/actions/coletas';
-import { STATUS_COLETA_LABEL, StatusColetaTexto } from '@/lib/coletasStatus';
+import { STATUS_COLETA_LABEL, StatusColetaTexto, CORTE_PEDIDOS, corteJaPassou } from '@/lib/coletasStatus';
 
 type Periodo = 'MANHA' | 'TARDE' | 'RETORNO';
 type Tipo = 'FIXA' | 'EXTRA';
@@ -78,6 +78,20 @@ export default function ColetasDoDia({ data, coletas, coletores, atendentes, cli
   const [erro, setErro] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Calculado no cliente (e não na renderização do servidor) porque depende da
+  // hora atual — no servidor daria diferença entre o HTML enviado e o montado.
+  const [fechado, setFechado] = useState<Record<string, boolean>>({});
+  useEffect(() => {
+    const agora = new Date();
+    const hoje = `${agora.getFullYear()}-${String(agora.getMonth() + 1).padStart(2, '0')}-${String(agora.getDate()).padStart(2, '0')}`;
+    const ehHoje = data === hoje;
+    setFechado({
+      MANHA: corteJaPassou('MANHA', agora, ehHoje),
+      TARDE: corteJaPassou('TARDE', agora, ehHoje),
+      RETORNO: false,
+    });
+  }, [data]);
+
   const irParaData = (novaData: string) => router.push(`/coletas?data=${novaData}`);
 
   const abrirAdicionar = (periodo: Periodo) => {
@@ -102,6 +116,18 @@ export default function ColetasDoDia({ data, coletas, coletores, atendentes, cli
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
+
+    // Extra lançada depois do corte pode não alcançar o coletor a tempo — avisa,
+    // mas não bloqueia, porque exceção acontece.
+    const periodoEscolhido = fd.get('periodo') as Periodo;
+    if (!editando && fechado[periodoEscolhido]) {
+      const ok = confirm(
+        `O horário de pedidos da ${PERIODOS.find((p) => p.key === periodoEscolhido)?.label} era até ${CORTE_PEDIDOS[periodoEscolhido]}.\n\n` +
+        'O coletor já saiu com a folha impressa. Ele só vai ver esta coleta pelo celular, em "Sou coletor".\n\nLançar mesmo assim?',
+      );
+      if (!ok) return;
+    }
+
     setLoading(true);
     setErro(null);
     try {
@@ -181,13 +207,20 @@ export default function ColetasDoDia({ data, coletas, coletores, atendentes, cli
           const doPeriodo = coletas.filter((c) => c.periodo === key);
           return (
             <div key={key} className="card" style={{ display: 'flex', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
                 <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>
                   {label}
                   <span className="badge badge-primary" style={{ marginLeft: 6, fontSize: '0.7rem' }}>{doPeriodo.length}</span>
                 </div>
                 <button className="btn btn-primary btn-sm" disabled={semCadastro} onClick={() => abrirAdicionar(key)}>+ Coleta</button>
               </div>
+              {CORTE_PEDIDOS[key] && (
+                <div style={{ fontSize: '0.72rem', marginBottom: 10, color: fechado[key] ? 'var(--danger)' : 'var(--text-muted)' }}>
+                  {fechado[key]
+                    ? `Fechado — pedidos eram até ${CORTE_PEDIDOS[key]}`
+                    : `Pedidos até ${CORTE_PEDIDOS[key]}`}
+                </div>
+              )}
 
               {doPeriodo.length === 0 ? (
                 <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', padding: '8px 0' }}>Nenhuma coleta.</p>
