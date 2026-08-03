@@ -1,7 +1,7 @@
 'use client';
 
 import { deletePop } from '@/actions/pops';
-import { useTransition } from 'react';
+import { useState, useTransition } from 'react';
 
 interface DeletePopButtonProps {
   popId: string;
@@ -11,14 +11,29 @@ interface DeletePopButtonProps {
 
 export default function DeletePopButton({ popId, setorId, popTitulo }: DeletePopButtonProps) {
   const [isPending, startTransition] = useTransition();
+  const [erro, setErro] = useState<string | null>(null);
 
   const handleDelete = () => {
     if (confirm(`Tem certeza que deseja excluir o POP "${popTitulo}"? Esta ação não pode ser desfeita.`)) {
+      setErro(null);
       startTransition(async () => {
-        await deletePop(popId, setorId);
+        try {
+          await deletePop(popId, setorId);
+        } catch (e) {
+          // POP já usado em checklist: excluir mudaria meses fechados.
+          setErro(e instanceof Error ? e.message : 'Não foi possível excluir.');
+        }
       });
     }
   };
+
+  if (erro) {
+    return (
+      <span style={{ fontSize: '0.75rem', color: 'var(--danger, #dc2626)', maxWidth: 340, display: 'inline-block' }}>
+        {erro}
+      </span>
+    );
+  }
 
   return (
     <button 

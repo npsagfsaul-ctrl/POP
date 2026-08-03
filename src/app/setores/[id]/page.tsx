@@ -6,6 +6,7 @@ import CalendarioDashboard from '@/components/CalendarioDashboard';
 import PasswordPrompt from '@/components/PasswordPrompt';
 import DeleteSetorButton from '@/components/DeleteSetorButton';
 import DeletePopButton from '@/components/DeletePopButton';
+import PopAtivoButton from '@/components/PopAtivoButton';
 import { getPopsBySetor } from '@/actions/pops';
 import { getRegistrosMensais } from '@/actions/checklist';
 import { calcularConformidade } from '@/lib/conformidade';
@@ -43,7 +44,9 @@ export default async function VisualizarSetor({
     }
   }
 
-  const pops = await getPopsBySetor(resolvedParams.id);
+  // Inclui POPs aposentados: contam nos dias em que valiam e precisam
+  // continuar visíveis na lista para poderem ser reativados.
+  const pops = await getPopsBySetor(resolvedParams.id, true);
 
   const hoje = new Date();
   const mesAtual = resolvedSearchParams.mes ? parseInt(resolvedSearchParams.mes) : hoje.getMonth() + 1;
@@ -212,7 +215,7 @@ export default async function VisualizarSetor({
               )}
             </div>
 
-            {pops.filter(pop => registros.some(reg => (reg.respostas as Record<string, boolean>)?.[pop.id] !== undefined)).map((pop) => (
+            {pops.filter(pop => pop.desativadoEm !== null || registros.some(reg => (reg.respostas as Record<string, boolean>)?.[pop.id] !== undefined)).map((pop) => (
               <div key={pop.id} style={{
                 padding: '14px 0',
                 borderBottom: '1px solid var(--border)',
@@ -229,6 +232,11 @@ export default async function VisualizarSetor({
                     <span className="badge badge-primary" style={{ fontSize: '0.6875rem' }}>
                       Peso {pop.peso}
                     </span>
+                    {pop.desativadoEm && (
+                      <span className="badge badge-warning" style={{ fontSize: '0.6875rem' }}>
+                        desativado
+                      </span>
+                    )}
                   </div>
                   <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
                     <strong style={{ color: 'var(--text-main)' }}>Avaliar:</strong> {pop.orientacaoAvaliacao}
@@ -243,6 +251,12 @@ export default async function VisualizarSetor({
                       </svg>
                       Editar
                     </Link>
+                    <PopAtivoButton
+                      popId={pop.id}
+                      setorId={resolvedParams.id}
+                      popTitulo={pop.titulo}
+                      ativo={pop.desativadoEm === null}
+                    />
                     <DeletePopButton popId={pop.id} setorId={resolvedParams.id} popTitulo={pop.titulo} />
                   </div>
                 )}

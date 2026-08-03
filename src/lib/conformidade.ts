@@ -30,6 +30,8 @@ export interface PopPeso {
   peso: number;
   titulo: string;
   createdAt: Date | string;
+  /** Quando o POP foi aposentado. null/ausente = ainda vale. */
+  desativadoEm?: Date | string | null;
 }
 
 export interface RegistroConformidade {
@@ -160,9 +162,14 @@ export function calcularConformidade(
 
     // Apenas POPs que já existiam até o fim deste dia entram no cálculo do dia
     // (evita que um POP criado no meio do mês penalize dias anteriores à sua criação).
-    const popsExistentes = pops.filter(
-      (pop) => new Date(pop.createdAt).getTime() <= fimDia.getTime(),
-    );
+    // POP desativado deixa de ser cobrado a partir do DIA SEGUINTE ao da
+    // desativação — assim os dias em que ele ainda valia continuam valendo, e
+    // meses já fechados não são reescritos ao aposentar um procedimento.
+    const popsExistentes = pops.filter((pop) => {
+      if (new Date(pop.createdAt).getTime() > fimDia.getTime()) return false;
+      if (!pop.desativadoEm) return true;
+      return new Date(pop.desativadoEm).getTime() > dataDia.getTime();
+    });
 
     // Num dia preenchido, exigível é só o POP que estava no formulário quando
     // ele foi salvo — ou seja, cuja chave existe em `respostas`. A ausência da

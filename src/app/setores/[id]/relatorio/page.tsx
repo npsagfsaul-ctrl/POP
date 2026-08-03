@@ -29,7 +29,8 @@ export default async function RelatorioMensal({
   const mes = resolvedSearchParams.mes ? parseInt(resolvedSearchParams.mes) : hoje.getMonth() + 1;
   const ano = resolvedSearchParams.ano ? parseInt(resolvedSearchParams.ano) : hoje.getFullYear();
   
-  const pops = await getPopsBySetor(resolvedParams.id);
+  // Inclui POPs aposentados: eles ainda contam nos dias em que valiam.
+  const pops = await getPopsBySetor(resolvedParams.id, true);
   const registros = await getRegistrosMensais(resolvedParams.id, mes, ano);
 
   const nomeMeses = [
