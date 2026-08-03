@@ -86,6 +86,10 @@ export default async function RelatorioMensal({
   const atendentes = await getAtendentes();
   const pendenciasPorPessoa = calcularPendenciasPorPessoa(diasLedger, atendentes);
   const totalPendenciasMes = pendenciasPorPessoa.reduce((acc, p) => acc + p.totalPendencias, 0);
+  // Meses anteriores ao recurso não têm responsável em nenhuma pendência. Nesse
+  // caso não faz sentido mostrar uma tabela de cobrança — vira só um aviso.
+  const nenhumResponsavelIndicado =
+    pendenciasPorPessoa.length > 0 && pendenciasPorPessoa.every((p) => p.atendenteId === null);
 
   // Ordenar por menor percentual para destacar problemas
   const criticalPops = [...statsPorPop].sort((a, b) => a.percentual - b.percentual);
@@ -277,11 +281,23 @@ export default async function RelatorioMensal({
         <p className="text-sm text-slate-500 mb-6">
           Quantas pendências foram apontadas para cada pessoa no mês. Serve para identificar quem
           precisa de treinamento — <strong>não altera a nota do setor</strong> e não é uma nota individual.
+          A nota do setor conta <strong>dias</strong> (um dia com três pendências custa um dia só), enquanto
+          aqui contamos <strong>pendências</strong>. Por isso a soma abaixo costuma ser maior que os dias
+          perdidos no mês — a coluna &quot;em quantos dias&quot; mostra os dois lados.
         </p>
 
         {pendenciasPorPessoa.length === 0 ? (
           <div className="card text-center py-8 text-muted">
             Nenhuma pendência registrada neste mês.
+          </div>
+        ) : nenhumResponsavelIndicado ? (
+          <div className="card bg-amber-50 border-amber-100">
+            <p className="text-sm text-amber-900">
+              Este mês teve <strong>{totalPendenciasMes} pendência(s)</strong>, mas nenhuma tem
+              responsável indicado — provavelmente é anterior à criação deste acompanhamento.
+              A partir do momento em que o checklist passou a perguntar &quot;quem foi o responsável?&quot;,
+              as pendências novas aparecem aqui separadas por pessoa.
+            </p>
           </div>
         ) : (
           <div className="card overflow-hidden p-0 border-none shadow-lg">
@@ -291,6 +307,7 @@ export default async function RelatorioMensal({
                   <tr className="bg-slate-900 text-white">
                     <th className="px-6 py-4 font-bold uppercase text-[11px] tracking-widest">Funcionário</th>
                     <th className="px-6 py-4 font-bold uppercase text-[11px] tracking-widest text-center">Pendências</th>
+                    <th className="px-6 py-4 font-bold uppercase text-[11px] tracking-widest text-center">Em quantos dias</th>
                     <th className="px-6 py-4 font-bold uppercase text-[11px] tracking-widest text-center">Peso total</th>
                     <th className="px-6 py-4 font-bold uppercase text-[11px] tracking-widest">Onde aconteceu</th>
                   </tr>
@@ -312,6 +329,7 @@ export default async function RelatorioMensal({
                         )}
                       </td>
                       <td className="px-6 py-3 text-center font-bold text-rose-600">{p.totalPendencias}</td>
+                      <td className="px-6 py-3 text-center text-slate-600">{p.diasDistintos}</td>
                       <td className="px-6 py-3 text-center font-bold text-slate-600">{p.pesoTotal}</td>
                       <td className="px-6 py-3 text-sm text-slate-600">
                         {p.pendencias
@@ -325,7 +343,7 @@ export default async function RelatorioMensal({
                   <tr className="bg-slate-50 font-bold">
                     <td className="px-6 py-3 text-main">Total do mês</td>
                     <td className="px-6 py-3 text-center text-rose-600">{totalPendenciasMes}</td>
-                    <td className="px-6 py-3" colSpan={2}></td>
+                    <td className="px-6 py-3" colSpan={3}></td>
                   </tr>
                 </tfoot>
               </table>

@@ -277,6 +277,10 @@ export interface ResumoPorPessoa {
   removido: boolean;
   totalPendencias: number;
   pesoTotal: number;
+  /** Em quantos dias distintos essas pendências aconteceram. Distingue
+   * "um dia ruim" de "erro espalhado pelo mês" — a nota do setor conta DIAS,
+   * então sem isso os dois números não se conversam. */
+  diasDistintos: number;
   pendencias: PendenciaAtribuida[];
 }
 
@@ -318,6 +322,7 @@ export function calcularPendenciasPorPessoa(
           removido: !!id && nomeCadastrado === undefined,
           totalPendencias: 0,
           pesoTotal: 0,
+          diasDistintos: 0,
           pendencias: [],
         };
         grupos.set(chave, grupo);
@@ -333,6 +338,10 @@ export function calcularPendenciasPorPessoa(
         peso: p.peso,
       });
     }
+  }
+
+  for (const g of grupos.values()) {
+    g.diasDistintos = new Set(g.pendencias.map((p) => p.data)).size;
   }
 
   return [...grupos.values()].sort((a, b) => {
