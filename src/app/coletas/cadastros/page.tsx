@@ -11,7 +11,7 @@ import {
 import {
   getClientes, criarCliente, atualizarCliente, alternarClienteAtivo, deletarCliente,
 } from '@/actions/clientes';
-import { temSenhaColetas, definirSenhaColetas } from '@/actions/coletasAcesso';
+import { temSenhaColetas, definirSenhaColetas, getSetorColetas, definirSetorColetas } from '@/actions/coletasAcesso';
 import { getRotasFixas } from '@/actions/rotasFixas';
 import { getRotas, criarRota, atualizarRota, alternarRotaAtivo, deletarRota } from '@/actions/rotas';
 import {
@@ -37,6 +37,7 @@ export default async function CadastrosColetaPage() {
     getSetores(),
   ]);
 
+  const setorColetas = await getSetorColetas();
   const opcoesSetor = setores.map((s) => ({ value: s.id, label: s.nome }));
 
   const rotasView = rotasFixas.map((r) => ({
@@ -83,6 +84,28 @@ export default async function CadastrosColetaPage() {
           <a href="/api/coletas/export?tipo=clientes" className="btn btn-secondary btn-sm">⬇ Clientes</a>
           <a href="/api/coletas/export?tipo=coletores" className="btn btn-secondary btn-sm">⬇ Coletores</a>
         </div>
+      </div>
+
+      {/* Quem aparece no campo "Funcionário" ao lançar uma coleta */}
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div className="card-title">Setor responsável pelas coletas</div>
+        <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: -4, marginBottom: 12 }}>
+          Define quais funcionários aparecem no campo <strong>Funcionário</strong> ao lançar uma coleta.
+          Sem escolher nada, o seletor lista a empresa inteira. Quem está sem setor no cadastro
+          continua aparecendo em qualquer opção, para cobrir quem circula entre setores.
+        </p>
+        <form action={definirSetorColetas} style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <label className="form-label" style={{ fontSize: '0.75rem' }}>Setor</label>
+            <select name="setorId" className="form-select" defaultValue={setorColetas ?? ''}>
+              <option value="">Todos os setores</option>
+              {opcoesSetor.map((s) => (
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
+            </select>
+          </div>
+          <button type="submit" className="btn btn-primary btn-sm" style={{ height: 38 }}>Salvar</button>
+        </form>
       </div>
 
       {/* Senha de acesso às Coletas */}

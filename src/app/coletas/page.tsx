@@ -2,9 +2,9 @@ import { isAdmin } from '@/actions/admin';
 import Link from 'next/link';
 import { getColetasPorData } from '@/actions/coletas';
 import { getColetores } from '@/actions/coletores';
-import { getAtendentes } from '@/actions/atendentes';
+import { getAtendentes, getAtendentesPorSetor } from '@/actions/atendentes';
 import { getClientes } from '@/actions/clientes';
-import { coletasLiberado } from '@/actions/coletasAcesso';
+import { coletasLiberado, getSetorColetas } from '@/actions/coletasAcesso';
 import ColetasDoDia from '@/components/ColetasDoDia';
 import ColetasPasswordPrompt from '@/components/ColetasPasswordPrompt';
 import { hojeISOSaoPaulo } from '@/lib/data';
@@ -28,10 +28,14 @@ export default async function ColetasPage({
   const sp = await searchParams;
   const dataStr = sp.data || hojeISO();
 
+  // Só os funcionários do setor responsável pelas coletas aparecem no seletor.
+  // Sem setor configurado, mostra todos (comportamento anterior).
+  const setorColetas = await getSetorColetas();
+
   const [coletas, coletores, atendentes, clientes] = await Promise.all([
     getColetasPorData(dataStr),
     getColetores(true),
-    getAtendentes(true),
+    setorColetas ? getAtendentesPorSetor(setorColetas) : getAtendentes(true),
     getClientes(true),
   ]);
 

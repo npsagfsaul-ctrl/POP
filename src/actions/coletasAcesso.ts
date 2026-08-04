@@ -5,6 +5,30 @@ import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 
 const CHAVE_SENHA = 'coletas_senha';
+const CHAVE_SETOR = 'coletas_setor_id';
+
+/**
+ * Setor cujos funcionários aparecem no campo "Funcionário" das Coletas.
+ * Sem isso, o seletor lista a empresa inteira — e quem lança coleta é de um
+ * setor só. Guardado em Config (e não fixo no código) para sobreviver a
+ * renomear o setor. `null` = mostra todos, que era o comportamento anterior.
+ */
+export async function getSetorColetas(): Promise<string | null> {
+  const c = await prisma.config.findUnique({ where: { chave: CHAVE_SETOR } });
+  const valor = c?.valor?.trim();
+  return valor ? valor : null;
+}
+
+export async function definirSetorColetas(formData: FormData) {
+  const setorId = ((formData.get('setorId') as string) || '').trim();
+  await prisma.config.upsert({
+    where: { chave: CHAVE_SETOR },
+    update: { valor: setorId },
+    create: { chave: CHAVE_SETOR, valor: setorId },
+  });
+  revalidatePath('/coletas/cadastros');
+  revalidatePath('/coletas');
+}
 
 export async function getColetasSenha() {
   const c = await prisma.config.findUnique({ where: { chave: CHAVE_SENHA } });
