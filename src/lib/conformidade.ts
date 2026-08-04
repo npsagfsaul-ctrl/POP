@@ -38,7 +38,12 @@ export interface RegistroConformidade {
   data: Date | string;
   respostas: Record<string, boolean> | unknown;
   /** { popId: atendenteId } — quem causou a pendência daquele POP naquele dia. */
-  responsaveis?: Record<string, string> | unknown;
+  /**
+   * { popId: [atendenteId, ...] } — quem errou aquele POP naquele dia.
+   * Registros antigos guardavam um único id como texto; a leitura aceita os
+   * dois formatos, então nada precisou ser migrado.
+   */
+  responsaveis?: Record<string, string | string[]> | unknown;
 }
 
 /** Dia útil (passado) sem checklist preenchido conta como este valor de conformidade. */
@@ -52,7 +57,15 @@ export interface PendenciaDia {
   titulo: string;
   peso: number;
   /** Funcionário apontado como responsável, ou null se não foi indicado. */
-  responsavelId: string | null;
+  /**
+   * Todos os apontados por esta pendência. Vazio quando ninguém foi indicado.
+   *
+   * Mais de um nome é permitido: se duas pessoas deixaram o mesmo POP passar,
+   * as duas erraram. O SETOR perde o dia uma vez só (a pendência é do POP),
+   * mas cada pessoa carrega o peso cheio no próprio registro — dividir o peso
+   * faria com que apontar mais gente aliviasse a conta de todo mundo.
+   */
+  responsaveisIds: string[];
 }
 
 export interface DiaConformidade {
@@ -92,6 +105,18 @@ export interface ResultadoConformidade {
   perdaPorPendencia: number;
   /** Detalhamento dia a dia (auditoria), só dos dias efetivamente contados. */
   dias: DiaConformidade[];
+}
+
+/**
+ * Aceita os dois formatos gravados em `responsaveis`: o antigo, com um único id
+ * como texto, e o atual, com lista. Evita ter que migrar registros já salvos.
+ */
+function normalizarResponsaveis(valor: unknown): string[] {
+  if (typeof valor === 'string') return valor.trim() ? [valor.trim()] : [];
+  if (Array.isArray(valor)) {
+    return [...new Set(valor.filter((v): v is string => typeof v === 'string' && v.trim() !== ''))];
+  }
+  return [];
 }
 
 /** Meia-noite local do dia informado. */
@@ -150,7 +175,7 @@ export function calcularConformidade(
 
     const reg = registrosPorDia.get(dia);
     const respostas = (reg?.respostas ?? null) as Record<string, boolean> | null;
-    const responsaveis = (reg?.responsaveis ?? null) as Record<string, string> | null;
+    const responsaveis = (reg?.responsaveis ?? null) as Record<string, string | string[]> | null;
 
     // `salvarComentarioAdmin` cria um registro com `respostas: {}` só para
     // guardar o comentário. Isso não é um checklist preenchido — sem esta
@@ -204,7 +229,7 @@ export function calcularConformidade(
             id: pop.id,
             titulo: pop.titulo,
             peso: pop.peso,
-            responsavelId: responsaveis?.[pop.id] || null,
+            responsaveisIds: normalizarResponsaveis(responsaveis?.[pop.id]),
           });
         }
       });
@@ -482,15 +507,18 @@ export function analisarConcentracao(
       continue;
     }
 
-    const responsaveis = new Set(d.pendencias.map((p) => p.responsavelId));
+    // Junta todos os apontados do dia: o dia só é "de uma pessoa" quando o
+    // conjunto inteiro se resume a ela, mesmo que alguma pendência tenha
+    // sido dividida entre dois nomes.
+    const responsaveis = new Set(d.pendencias.flatMap((p) => p.responsaveisIds));
+    if (responsaveis.size === 0) {
+      diasSemResponsavel++;
+      continue;
+    }
     if (responsaveis.size === 1) {
       const [unico] = [...responsaveis];
-      if (unico) {
-        diasComResponsavelUnico++;
-        diasSozinhoPorId.set(unico, (diasSozinhoPorId.get(unico) ?? 0) + 1);
-      } else {
-        diasSemResponsavel++;
-      }
+      diasComResponsavelUnico++;
+      diasSozinhoPorId.set(unico, (diasSozinhoPorId.get(unico) ?? 0) + 1);
     }
   }
 
@@ -525,7 +553,12 @@ export function calcularPendenciasPorPessoa(
 
   for (const d of dias) {
     for (const p of d.pendencias) {
-      const id = p.responsavelId || null;
+      // Uma pendência pode ter mais de um apontado: cada um carrega o peso
+      // cheio. Por isso a soma das pessoas passa a ser MAIOR que o total de
+      // pendências do setor — e isso é intencional, não erro de conta.
+      const alvos: (string | null)[] = p.responsaveisIds.length > 0 ? p.responsaveisIds : [null];
+
+      for (const id of alvos) {
       const chave = id ?? '__sem_responsavel__';
 
       let grupo = grupos.get(chave);
@@ -547,15 +580,16 @@ export function calcularPendenciasPorPessoa(
         grupos.set(chave, grupo);
       }
 
-      grupo.totalPendencias++;
-      grupo.pesoTotal += p.peso;
-      grupo.pendencias.push({
-        dia: d.dia,
-        data: d.data,
-        popId: p.id,
-        popTitulo: p.titulo,
-        peso: p.peso,
-      });
+        grupo.totalPendencias++;
+        grupo.pesoTotal += p.peso;
+        grupo.pendencias.push({
+          dia: d.dia,
+          data: d.data,
+          popId: p.id,
+          popTitulo: p.titulo,
+          peso: p.peso,
+        });
+      }
     }
   }
 

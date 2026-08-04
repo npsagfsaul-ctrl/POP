@@ -21,7 +21,7 @@ interface ChecklistFormProps {
   pops: Pop[];
   dataInicial: string;
   respostasIniciais: Record<string, boolean>;
-  responsaveisIniciais?: Record<string, string>;
+  responsaveisIniciais?: Record<string, string | string[]>;
   observacoesInicial?: string;
   atendentes?: Atendente[];
 }
@@ -85,9 +85,14 @@ export default function ChecklistForm({
   });
 
   // Quem foi apontado como responsável por cada ocorrência.
-  const [responsaveis, setResponsaveis] = useState<Record<string, string>>(
-    () => responsaveisIniciais ?? {},
-  );
+  // Registros antigos guardavam um id só; os novos guardam lista.
+  const [responsaveis, setResponsaveis] = useState<Record<string, string[]>>(() => {
+    const inicial: Record<string, string[]> = {};
+    Object.entries(responsaveisIniciais ?? {}).forEach(([popId, valor]) => {
+      inicial[popId] = typeof valor === 'string' ? [valor] : (valor ?? []);
+    });
+    return inicial;
+  });
 
   const [obsGlobal, setObsGlobal] = useState(() => {
     let text = observacoesInicial || '';
@@ -136,8 +141,16 @@ export default function ChecklistForm({
     setDescricoes(prev => ({ ...prev, [popId]: val }));
   };
 
-  const handleResponsavelChange = (popId: string, val: string) => {
-    setResponsaveis(prev => ({ ...prev, [popId]: val }));
+  const handleResponsavelToggle = (popId: string, atendenteId: string, marcado: boolean) => {
+    setResponsaveis(prev => {
+      const atuais = prev[popId] ?? [];
+      return {
+        ...prev,
+        [popId]: marcado
+          ? [...new Set([...atuais, atendenteId])]
+          : atuais.filter(id => id !== atendenteId),
+      };
+    });
   };
 
   return (
@@ -247,25 +260,42 @@ export default function ChecklistForm({
 
                     {atendentes.length > 0 && (
                       <div style={{ marginTop: 10 }}>
-                        <label htmlFor={`resp_pop_${pop.id}`} className="form-label" style={{ fontWeight: 600 }}>
+                        <span className="form-label" style={{ fontWeight: 600, display: 'block' }}>
                           Quem foi o responsável?
-                        </label>
-                        <select
-                          id={`resp_pop_${pop.id}`}
-                          name={`resp_pop_${pop.id}`}
-                          value={responsaveis[pop.id] || ''}
-                          onChange={(e) => handleResponsavelChange(pop.id, e.target.value)}
-                          className="form-select"
-                          style={{ maxWidth: 280 }}
-                          disabled={semOcorrencia}
-                        >
-                          <option value="">— Não identificado</option>
-                          {atendentes.map((a) => (
-                            <option key={a.id} value={a.id}>{a.nome}</option>
-                          ))}
-                        </select>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 4 }}>
-                          Serve para acompanhar quem precisa de treinamento. Não muda a nota do setor.
+                        </span>
+                        {/* Caixas em vez de menu: dá para marcar mais de uma
+                            pessoa quando o mesmo POP passou por mais de uma. */}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', marginTop: 4 }}>
+                          {atendentes.map((a) => {
+                            const marcado = (responsaveis[pop.id] ?? []).includes(a.id);
+                            return (
+                              <label
+                                key={a.id}
+                                style={{
+                                  display: 'flex', alignItems: 'center', gap: 6,
+                                  fontSize: '0.875rem',
+                                  cursor: semOcorrencia ? 'default' : 'pointer',
+                                  opacity: semOcorrencia ? 0.6 : 1,
+                                }}
+                              >
+                                <input
+                                  type="checkbox"
+                                  name={`resp_pop_${pop.id}`}
+                                  value={a.id}
+                                  checked={marcado}
+                                  onChange={(e) => handleResponsavelToggle(pop.id, a.id, e.target.checked)}
+                                  disabled={semOcorrencia}
+                                  style={{ width: 16, height: 16, accentColor: 'var(--primary)' }}
+                                />
+                                {a.nome}
+                              </label>
+                            );
+                          })}
+                        </div>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 6 }}>
+                          {(responsaveis[pop.id] ?? []).length === 0
+                            ? 'Nenhum marcado — a pendência fica sem responsável.'
+                            : 'Pode marcar mais de um. Cada pessoa carrega o peso no registro dela; a nota do setor conta a falha uma vez só.'}
                         </p>
                       </div>
                     )}

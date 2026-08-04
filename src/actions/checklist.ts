@@ -25,7 +25,7 @@ export async function salvarChecklist(formData: FormData) {
   // Quem foi apontado como responsável por cada pendência. Montado do zero a
   // cada save (igual `respostas`), para que desmarcar um POP não deixe uma
   // atribuição órfã que ressuscitaria se o POP falhar de novo num edit futuro.
-  const responsaveis: Record<string, string> = {};
+  const responsaveis: Record<string, string[]> = {};
 
   const popsDoSetor = await prisma.pop.findMany({
     where: { setorId },
@@ -44,11 +44,15 @@ export async function salvarChecklist(formData: FormData) {
       if (value === 'on' || value === 'true') {
         respostas[popId] = false; // Tem ocorrência (marcado)
 
-        // Responsável é opcional: "Não identificado" envia vazio e não entra
-        // no JSON — a pendência aparece no relatório como "sem responsável".
-        const responsavelId = ((formData.get(`resp_pop_${popId}`) as string) || '').trim();
-        if (responsavelId) {
-          responsaveis[popId] = responsavelId;
+        // Pode ter mais de um responsável pelo mesmo POP — quando duas pessoas
+        // deixaram passar, as duas erraram. Nenhum marcado = pendência sem
+        // responsável, que aparece no relatório num balde próprio.
+        const ids = formData
+          .getAll(`resp_pop_${popId}`)
+          .map((v) => String(v).trim())
+          .filter((v) => v !== '');
+        if (ids.length > 0) {
+          responsaveis[popId] = [...new Set(ids)];
         }
 
         const desc = formData.get(`desc_pop_${popId}`) as string;

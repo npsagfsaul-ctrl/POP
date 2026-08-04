@@ -32,7 +32,7 @@ export default async function ChecklistDiario({
   // Buscar registro existente para a data se houver
   const registroExistente = await getRegistroPorData(setor.id, dataSelecionada);
   const respostasIniciais = registroExistente ? (registroExistente.respostas as Record<string, boolean>) : {};
-  const responsaveisIniciais = registroExistente ? (registroExistente.responsaveis as Record<string, string>) : {};
+  const responsaveisIniciais = registroExistente ? (registroExistente.responsaveis as Record<string, string | string[]>) : {};
   const observacoesInicial = registroExistente ? (registroExistente.observacoes as string) : '';
   // Só os funcionários deste setor (mais os sem setor definido).
   const atendentes = await getAtendentesPorSetor(setor.id);

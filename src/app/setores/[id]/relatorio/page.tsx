@@ -95,7 +95,9 @@ export default async function RelatorioMensal({
   // continuar aparecendo com o que já tinha registrado.
   const [atendentes, faixasPremio] = await Promise.all([getAtendentes(), getFaixasPremiacao()]);
   const pendenciasPorPessoa = calcularPendenciasPorPessoa(diasLedger, atendentes);
-  const totalPendenciasMes = pendenciasPorPessoa.reduce((acc, p) => acc + p.totalPendencias, 0);
+  // Conta as pendências do EXTRATO, não a soma das pessoas: com mais de um
+  // apontado na mesma pendência, somar por pessoa contaria a falha duas vezes.
+  const totalPendenciasMes = diasLedger.reduce((acc, d) => acc + d.pendencias.length, 0);
   // Meses anteriores ao recurso não têm responsável em nenhuma pendência. Nesse
   // caso não faz sentido mostrar uma tabela de cobrança — vira só um aviso.
   const nenhumResponsavelIndicado =
@@ -293,7 +295,9 @@ export default async function RelatorioMensal({
           precisa de treinamento — <strong>não altera a nota do setor</strong> e não é uma nota individual.
           A nota do setor conta <strong>dias</strong> (um dia com três pendências custa um dia só), enquanto
           aqui contamos <strong>pendências</strong>. Por isso a soma abaixo costuma ser maior que os dias
-          perdidos no mês — a coluna &quot;em quantos dias&quot; mostra os dois lados.
+          perdidos no mês — a coluna &quot;em quantos dias&quot; mostra os dois lados. Uma mesma pendência
+          pode ter <strong>mais de um responsável</strong>: nesse caso cada um carrega o peso cheio aqui,
+          e a nota do setor continua contando aquela falha uma vez só.
         </p>
 
         {pendenciasPorPessoa.length === 0 ? (
