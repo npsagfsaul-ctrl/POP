@@ -347,10 +347,15 @@ export interface FaixasPremiacao {
   limite50: number;
 }
 
+// Calibrado sobre os 251 POPs reais da AGF (peso total 952, média 3,8).
+// Quase metade deles tem peso 5, então o erro típico custa 5 — com os limites
+// anteriores (2/5/9), dois deslizes no mês zeravam o prêmio, e um único erro
+// no POP de peso 10 zerava sozinho. Aqui: até 2 erros típicos não custam nada,
+// 7 ou mais zeram.
 export const FAIXAS_PADRAO: FaixasPremiacao = {
-  limiteIntegral: 2,
-  limite75: 5,
-  limite50: 9,
+  limiteIntegral: 10,
+  limite75: 20,
+  limite50: 30,
 };
 
 /** Fatia do prêmio pelas faixas, olhando só o peso acumulado. */
