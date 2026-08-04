@@ -208,7 +208,9 @@ export default async function VisualizarSetor({
                 </span>
               </span>
 
-              {adminMode && pops.length > 0 && (
+              {/* POP é procedimento de trabalho: quem tem acesso ao setor baixa
+                  os próprios, sem precisar pedir para o admin. */}
+              {pops.length > 0 && (
                 <span style={{ display: 'flex', gap: 8 }}>
                   <a href={`/api/pops/export?setorId=${setor.id}`} className="btn btn-secondary btn-sm">
                     ⬇ Excel
