@@ -148,8 +148,6 @@ export function calcularConformidade(
     // Setor ainda não existia neste dia: nem entra na conta.
     if (setorCreatedAtMs !== null && fimDia.getTime() < setorCreatedAtMs) continue;
 
-    diasUteis++;
-
     const reg = registrosPorDia.get(dia);
     const respostas = (reg?.respostas ?? null) as Record<string, boolean> | null;
     const responsaveis = (reg?.responsaveis ?? null) as Record<string, string> | null;
@@ -159,6 +157,15 @@ export function calcularConformidade(
     // checagem o dia mudava de "não preenchido" para "preenchido com todos os
     // POPs em pendência", apontando a causa errada no Fechamento do Mês.
     const preenchido = !!respostas && Object.keys(respostas).length > 0;
+
+    // O dia de HOJE só entra na conta depois de preenchido. Sem isso, o dia
+    // corrente contava como perdido desde a meia-noite e a nota aparecia pior
+    // que a realidade durante todo o expediente, recuperando só no fim.
+    // Dias passados sem checklist continuam contando como 0% normalmente.
+    const ehHoje = dataDia.getTime() === limite.getTime();
+    if (ehHoje && !preenchido) continue;
+
+    diasUteis++;
 
     // Apenas POPs que já existiam até o fim deste dia entram no cálculo do dia
     // (evita que um POP criado no meio do mês penalize dias anteriores à sua criação).
