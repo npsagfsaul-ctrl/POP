@@ -57,6 +57,31 @@ export async function updatePop(id: string, formData: FormData) {
 }
 
 /**
+ * Salva o peso de vários POPs de uma vez.
+ *
+ * Revisar peso a peso pelo formulário completo é inviável (a AGF tem 251 POPs),
+ * e sem uma revisão em lote a régua de pesos nunca fica consistente.
+ */
+export async function atualizarPesosEmLote(setorId: string, pesos: Record<string, number>) {
+  const entradas = Object.entries(pesos)
+    // O peso entra em divisão no cálculo — 0 ou texto quebrariam a conta do dia.
+    .map(([id, peso]) => [id, Math.min(10, Math.max(1, Math.trunc(Number(peso))))] as const)
+    .filter(([, peso]) => Number.isFinite(peso));
+
+  if (entradas.length === 0) return;
+
+  await prisma.$transaction(
+    entradas.map(([id, peso]) =>
+      prisma.pop.update({ where: { id }, data: { peso } }),
+    ),
+  );
+
+  revalidatePath(`/setores/${setorId}`);
+  revalidatePath(`/setores/${setorId}/pesos`);
+  revalidatePath(`/setores/${setorId}/relatorio`);
+}
+
+/**
  * Aposenta (ou reativa) um POP. Preferível a excluir: o POP some do checklist
  * do dia seguinte em diante, mas continua contando nos dias em que ainda valia,
  * então nenhum mês já fechado tem a nota recalculada.
