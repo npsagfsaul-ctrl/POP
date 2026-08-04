@@ -56,8 +56,13 @@ export default async function VisualizarSetor({
 
   // Calcular métricas (dias úteis até hoje, a partir da criação do setor; dia útil sem checklist = 0%)
   // Métrica oficial da meta: percentualPerfeitos (dias 100% ÷ dias úteis).
-  const { media: mediaConformidade, diasUteis, diasAbaixo100, percentualPerfeitos, bateuMeta } =
+  const { media: mediaConformidade, diasUteis, diasAbaixo100, percentualPerfeitos, bateuMeta, dias: diasLedger } =
     calcularConformidade(pops, registros, mesAtual, anoAtual, hoje, setor.createdAt);
+
+  // O calendário mostra exatamente estas notas — não recalcula por conta própria,
+  // senão volta a divergir do card de conformidade quando um POP é cadastrado.
+  const conformidadePorDia: Record<number, number> = {};
+  diasLedger.forEach((d) => { conformidadePorDia[d.dia] = d.conformidadeDia; });
 
   return (
     <div>
@@ -181,7 +186,6 @@ export default async function VisualizarSetor({
         <>
           <CalendarioDashboard
             setorId={resolvedParams.id}
-            pops={pops}
             registros={registros.map(r => ({
               ...r,
               respostas: r.respostas as Record<string, boolean>
@@ -191,6 +195,7 @@ export default async function VisualizarSetor({
             adminMode={adminMode}
             mediaMensal={percentualPerfeitos}
             diasConsiderados={diasUteis}
+            conformidadePorDia={conformidadePorDia}
           />
 
           {/* POPs List */}

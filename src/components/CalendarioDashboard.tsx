@@ -4,11 +4,6 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { salvarComentarioAdmin, marcarAlertaComoLido } from '@/actions/checklist';
 
-interface Pop {
-  id: string;
-  peso: number;
-}
-
 interface Registro {
   id: string;
   data: Date;
@@ -19,7 +14,6 @@ interface Registro {
 
 interface CalendarioProps {
   setorId: string;
-  pops: Pop[];
   registros: Registro[];
   mes: number;
   ano: number;
@@ -28,15 +22,22 @@ interface CalendarioProps {
   mediaMensal?: number;
   /** Dias úteis considerados no cálculo da média. */
   diasConsiderados?: number;
+  /**
+   * Nota de cada dia (nº do dia → 0–100), vinda de `calcularConformidade`.
+   *
+   * O calendário NÃO calcula isso por conta própria. Antes ele somava o peso de
+   * todos os POPs atuais e comparava com o que havia sido cumprido no dia — então
+   * cadastrar um POP novo derrubava todos os dias já fechados, e o calendário
+   * passava a contradizer o card "Dias Abaixo de 100%".
+   */
+  conformidadePorDia?: Record<number, number>;
 }
 
-export default function CalendarioDashboard({ setorId, pops, registros, mes, ano, adminMode = false, mediaMensal, diasConsiderados }: CalendarioProps) {
+export default function CalendarioDashboard({ setorId, registros, mes, ano, adminMode = false, mediaMensal, diasConsiderados, conformidadePorDia }: CalendarioProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedDia, setSelectedDia] = useState<number | null>(null);
   const [comentarioTexto, setComentarioTexto] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-
-  const pesoTotal = pops.reduce((acc, pop) => acc + pop.peso, 0);
 
   const registrosPorDia = new Map<number, Registro>();
   registros.forEach(registro => {
@@ -44,14 +45,8 @@ export default function CalendarioDashboard({ setorId, pops, registros, mes, ano
     registrosPorDia.set(dia, registro);
   });
 
-  const getConformidade = (registro: Registro) => {
-    const respostas = registro.respostas;
-    let pesoAtingido = 0;
-    pops.forEach(pop => {
-      if (respostas && respostas[pop.id] === true) pesoAtingido += pop.peso;
-    });
-    return pesoTotal > 0 ? (pesoAtingido / pesoTotal) * 100 : 0;
-  };
+  /** Nota do dia. Vem pronta do servidor — o calendário não recalcula nada. */
+  const getConformidade = (dia: number): number | undefined => conformidadePorDia?.[dia];
 
   const diasNoMes = new Date(ano, mes, 0).getDate();
   const primeiroDiaSemana = new Date(ano, mes - 1, 1).getDay();
@@ -69,21 +64,9 @@ export default function CalendarioDashboard({ setorId, pops, registros, mes, ano
     'Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'
   ];
 
-  // Calcular média mensal
-  let soma = 0;
-  let diasContados = 0;
-  registrosPorDia.forEach((registro, dia) => {
-    const dataObjeto = new Date(ano, mes - 1, dia);
-    if (dataObjeto.getDay() !== 0) {
-      soma += getConformidade(registro);
-      diasContados++;
-    }
-  });
-  const mediaLocal = diasContados > 0 ? Math.round(soma / diasContados) : 0;
-
-  // Prefere a média vinda do servidor (regra: dias úteis até hoje, dia vazio = 80%).
-  const media = mediaMensal !== undefined ? mediaMensal : mediaLocal;
-  const temMedia = mediaMensal !== undefined ? (diasConsiderados ?? 0) > 0 : diasContados > 0;
+  // A média é sempre a do servidor — a mesma regra usada no card e no relatório.
+  const media = mediaMensal ?? 0;
+  const temMedia = (diasConsiderados ?? 0) > 0;
 
   const handleOpenModal = (e: React.MouseEvent, dia: number) => {
     e.preventDefault();
@@ -180,7 +163,7 @@ export default function CalendarioDashboard({ setorId, pops, registros, mes, ano
 
         {dias.map(dia => {
           const registro = registrosPorDia.get(dia);
-          const conformidade = registro ? getConformidade(registro) : undefined;
+          const conformidade = registro ? getConformidade(dia) : undefined;
           const dataString = `${ano}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
           const dataObjeto = new Date(`${dataString}T00:00:00`);
           const hoje = new Date();
