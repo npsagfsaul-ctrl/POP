@@ -116,10 +116,21 @@ export default async function VisualizarSetor({
             </div>
             <div>
               <div className="stat-label">Conformidade (dias perfeitos)</div>
-              <div className="stat-value" style={{ color: bateuMeta ? 'var(--success)' : 'var(--danger)' }}>
-                {percentualPerfeitos}%
-              </div>
-              <div className="stat-sub">méd. ponderada {mediaConformidade}% · Seg–Sáb</div>
+              {diasUteis === 0 ? (
+                <>
+                  {/* Sem nenhum dia a cobrar ainda (setor novo, ou mês recém-começado).
+                      Exibir "0%" aqui faria um setor sem histórico parecer fracasso. */}
+                  <div className="stat-value" style={{ color: 'var(--text-muted)' }}>—</div>
+                  <div className="stat-sub">nenhum dia a cobrar ainda</div>
+                </>
+              ) : (
+                <>
+                  <div className="stat-value" style={{ color: bateuMeta ? 'var(--success)' : 'var(--danger)' }}>
+                    {percentualPerfeitos}%
+                  </div>
+                  <div className="stat-sub">méd. ponderada {mediaConformidade}% · Seg–Sáb</div>
+                </>
+              )}
             </div>
           </div>
 

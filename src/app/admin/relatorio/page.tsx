@@ -33,7 +33,7 @@ export default async function RelatorioGeral({
 
     // Dias úteis até hoje, a partir da criação do setor; dia útil sem checklist = 0%.
     // Métrica oficial da meta: percentualPerfeitos (dias 100% ÷ dias úteis).
-    const { media: mediaConformidade, diasPreenchidos, percentualPerfeitos, bateuMeta } = calcularConformidade(
+    const { media: mediaConformidade, diasPreenchidos, diasUteis, percentualPerfeitos, bateuMeta } = calcularConformidade(
       pops,
       registros,
       mesAtual,
@@ -48,6 +48,9 @@ export default async function RelatorioGeral({
       percentualPerfeitos,
       bateuMeta,
       diasContados: diasPreenchidos,
+      // Setor recém-criado, ou sem nenhum dia a cobrar ainda: não tem nota.
+      // Sem isso ele aparece com "0%" em vermelho, como se tivesse falhado.
+      semDados: diasUteis === 0,
     };
   }));
 
@@ -116,12 +119,23 @@ export default async function RelatorioGeral({
                 <td style={{ padding: '16px 8px', textAlign: 'center' }}>{setor.pops.length}</td>
                 <td style={{ padding: '16px 8px', textAlign: 'center' }}>{setor.diasContados}</td>
                 <td style={{ padding: '16px 8px', textAlign: 'center' }}>
-                  <span className={`badge ${setor.bateuMeta ? 'badge-success' : 'badge-danger'}`}>
-                    {setor.percentualPerfeitos}%
-                  </span>
-                  <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: 2 }}>
-                    méd. pond. {setor.mediaConformidade}%
-                  </div>
+                  {setor.semDados ? (
+                    <>
+                      <span className="badge badge-warning">sem dados</span>
+                      <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                        nenhum dia a cobrar ainda
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <span className={`badge ${setor.bateuMeta ? 'badge-success' : 'badge-danger'}`}>
+                        {setor.percentualPerfeitos}%
+                      </span>
+                      <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                        méd. pond. {setor.mediaConformidade}%
+                      </div>
+                    </>
+                  )}
                 </td>
                 <td style={{ padding: '16px 8px', textAlign: 'center' }}>
                   <Link href={`/setores/${setor.id}`} className="btn btn-secondary btn-sm">
