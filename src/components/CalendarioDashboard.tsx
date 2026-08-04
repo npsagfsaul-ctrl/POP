@@ -163,13 +163,19 @@ export default function CalendarioDashboard({ setorId, registros, mes, ano, admi
 
         {dias.map(dia => {
           const registro = registrosPorDia.get(dia);
-          const conformidade = registro ? getConformidade(dia) : undefined;
+          // A nota vem do extrato, e NÃO de haver um registro salvo: um dia que
+          // ninguém preencheu vale 0% e precisa aparecer como 0%. Antes, sem
+          // registro o calendário caía direto no traço, e um dia zerado parecia
+          // "sem dado" — foi por isso que o card acusava 2 dias abaixo de 100%
+          // e o calendário só deixava um à vista.
+          const conformidade = getConformidade(dia);
           const dataString = `${ano}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
           const dataObjeto = new Date(`${dataString}T00:00:00`);
           const hoje = new Date();
           hoje.setHours(0, 0, 0, 0);
 
           const isFuturo = dataObjeto > hoje;
+          const isHoje = dataObjeto.getTime() === hoje.getTime();
           const isDomingo = dataObjeto.getDay() === 0;
           const registrado = conformidade !== undefined;
           const temAlerta = !!registro?.alertaAdmin;
@@ -187,9 +193,15 @@ export default function CalendarioDashboard({ setorId, registros, mes, ano, admi
           } else if (registrado) {
             cls = conformidade! === 100 ? 'success' : conformidade! >= 80 ? 'warning' : 'danger';
             statusText = `${Math.round(conformidade!)}%`;
+          } else if (isHoje) {
+            // Hoje sem checklist ainda não é falha — só não aconteceu. Fica
+            // neutro até ser preenchido, quando passa a valer como qualquer dia.
+            cls = 'future';
+            statusText = 'hoje';
           } else {
-            cls = 'danger';
-            statusText = '—';
+            // Fora do período contado (ex.: antes da criação do setor).
+            cls = 'future';
+            statusText = '';
           }
 
           const inner = (
