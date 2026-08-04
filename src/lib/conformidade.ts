@@ -231,7 +231,11 @@ export function calcularConformidade(
       preenchido,
       pesoTotalDoDia,
       pesoAtingido,
-      conformidadeDia: Math.round(conformidadeDia),
+      // "100%" só quando o dia é REALMENTE perfeito. Sem o teto em 99, um dia
+      // de 99,6% arredondava para 100 e aparecia verde no calendário enquanto
+      // o card o contava em "Dias Abaixo de 100%" — as duas telas se
+      // contradizendo de novo. Mesma proteção já usada na média do mês.
+      conformidadeDia: conformidadeDia >= 100 ? 100 : Math.min(99, Math.round(conformidadeDia)),
       pendencias,
     });
   }
