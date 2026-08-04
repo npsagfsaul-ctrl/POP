@@ -4,6 +4,7 @@ import { isAdmin } from '@/actions/admin';
 import { podeVerSetor } from '@/actions/setorAcesso';
 import { normalizarQuebrasDeLinha } from '@/lib/texto';
 import { hojeISOSaoPaulo } from '@/lib/data';
+import { ordenarPops } from '@/lib/pops';
 import PDFDocument from 'pdfkit';
 
 /**
@@ -45,10 +46,7 @@ export async function GET(request: Request) {
     // Cada setor começa numa página nova, para poder entregar separado.
     if (s > 0) doc.addPage();
 
-    const pops = await prisma.pop.findMany({
-      where: { setorId: setor.id },
-      orderBy: { createdAt: 'asc' },
-    });
+    const pops = ordenarPops(await prisma.pop.findMany({ where: { setorId: setor.id } }));
     const ativos = pops.filter((p) => !p.desativadoEm);
 
     doc.fontSize(20).fillColor('#111').text('Relatório de POPs Cadastrados', { align: 'center' });
@@ -65,12 +63,14 @@ export async function GET(request: Request) {
       continue;
     }
 
-    pops.forEach((pop, i) => {
+    pops.forEach((pop) => {
       if (doc.y > 700) doc.addPage();
 
+      // Sem numeração automática: o número já vem no título, escrito pela
+      // usuária. Antes saía "21. 21. Conferir malote".
       const desativado = !!pop.desativadoEm;
       doc.fontSize(13).fillColor(desativado ? '#999' : '#111')
-        .text(`${i + 1}. ${normalizarQuebrasDeLinha(pop.titulo)}${desativado ? '  (desativado)' : ''}`);
+        .text(`${normalizarQuebrasDeLinha(pop.titulo)}${desativado ? '  (desativado)' : ''}`);
       doc.fontSize(10).fillColor('#555').text(`Peso: ${pop.peso}`);
       doc.fontSize(10).fillColor('#333').text('Orientação de Avaliação: ', { continued: true })
         .fillColor('#555').text(normalizarQuebrasDeLinha(pop.orientacaoAvaliacao));

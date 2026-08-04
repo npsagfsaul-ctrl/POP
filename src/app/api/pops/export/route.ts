@@ -4,6 +4,7 @@ import { isAdmin } from '@/actions/admin';
 import { podeVerSetor } from '@/actions/setorAcesso';
 import { normalizarQuebrasDeLinha } from '@/lib/texto';
 import { hojeISOSaoPaulo } from '@/lib/data';
+import { ordenarPops } from '@/lib/pops';
 import ExcelJS from 'exceljs';
 
 function dataBR(d: Date) {
@@ -61,10 +62,7 @@ export async function GET(request: Request) {
   const usados = new Set<string>();
 
   for (const setor of setores) {
-    const pops = await prisma.pop.findMany({
-      where: { setorId: setor!.id },
-      orderBy: { createdAt: 'asc' },
-    });
+    const pops = ordenarPops(await prisma.pop.findMany({ where: { setorId: setor!.id } }));
 
     const sheet = workbook.addWorksheet(
       todos ? nomeDeAba(setor!.nome, usados) : 'POPs',
