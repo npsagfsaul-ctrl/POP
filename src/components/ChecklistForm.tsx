@@ -24,6 +24,8 @@ interface ChecklistFormProps {
   responsaveisIniciais?: Record<string, string | string[]>;
   observacoesInicial?: string;
   atendentes?: Atendente[];
+  /** Primeira data (YYYY-MM-DD) que ainda aceita edição — meses fechados ficam fora. */
+  dataMinima?: string;
 }
 
 export default function ChecklistForm({
@@ -34,6 +36,7 @@ export default function ChecklistForm({
   responsaveisIniciais,
   observacoesInicial,
   atendentes = [],
+  dataMinima,
 }: ChecklistFormProps) {
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -172,11 +175,17 @@ export default function ChecklistForm({
               onChange={handleDataChange}
               className="form-input"
               style={{ maxWidth: 200 }}
+              min={dataMinima}
               required
             />
             {isDomingoSelecionado && (
               <p style={{ color: 'var(--danger, #dc2626)', fontSize: '0.8125rem', marginTop: 6 }}>
                 ⚠ Domingos não contam para a meta — escolha outro dia.
+              </p>
+            )}
+            {dataMinima && dataChecklist < dataMinima && (
+              <p style={{ color: 'var(--danger, #dc2626)', fontSize: '0.8125rem', marginTop: 6 }}>
+                ⚠ Mês já fechado — não é mais possível preencher esta data.
               </p>
             )}
           </div>

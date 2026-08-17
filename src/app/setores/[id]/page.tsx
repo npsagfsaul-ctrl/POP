@@ -10,6 +10,7 @@ import PopAtivoButton from '@/components/PopAtivoButton';
 import { getPopsBySetor } from '@/actions/pops';
 import { getRegistrosMensais } from '@/actions/checklist';
 import { calcularConformidade } from '@/lib/conformidade';
+import { hojeISOSaoPaulo, inicioPeriodoEditavel } from '@/lib/data';
 import prisma from '@/lib/prisma';
 
 
@@ -63,6 +64,17 @@ export default async function VisualizarSetor({
   // senão volta a divergir do card de conformidade quando um POP é cadastrado.
   const conformidadePorDia: Record<number, number> = {};
   diasLedger.forEach((d) => { conformidadePorDia[d.dia] = d.conformidadeDia; });
+
+  // Dias úteis que ninguém preencheu. Valem 0% e derrubam a nota do mês, mas
+  // até agora o sistema sabia disso e não escrevia em lugar nenhum — só dava
+  // para descobrir caçando os quadradinhos vermelhos no calendário.
+  const diasEmBranco = diasLedger.filter((d) => !d.preenchido).map((d) => d.dia);
+  const listaDiasEmBranco = diasEmBranco.length === 1
+    ? String(diasEmBranco[0])
+    : `${diasEmBranco.slice(0, -1).join(', ')} e ${diasEmBranco[diasEmBranco.length - 1]}`;
+
+  const dataMinimaEdicao = inicioPeriodoEditavel(hojeISOSaoPaulo());
+  const mesAindaAberto = `${anoAtual}-${String(mesAtual).padStart(2, '0')}-01` >= dataMinimaEdicao;
 
   return (
     <div>
@@ -195,6 +207,20 @@ export default async function VisualizarSetor({
         </div>
       ) : (
         <>
+          {diasEmBranco.length > 0 && (
+            <div className="alert alert-warning" style={{ marginTop: 24 }}>
+              📌 <strong>
+                {diasEmBranco.length === 1
+                  ? '1 dia em branco'
+                  : `${diasEmBranco.length} dias em branco`}
+              </strong>{' '}
+              neste mês: {listaDiasEmBranco}.{' '}
+              {mesAindaAberto
+                ? 'Cada um deles conta como 0% — clique no dia no calendário para preencher.'
+                : 'Mês fechado: esses dias contam como 0% e não podem mais ser preenchidos.'}
+            </div>
+          )}
+
           <CalendarioDashboard
             setorId={resolvedParams.id}
             registros={registros.map(r => ({
@@ -207,6 +233,7 @@ export default async function VisualizarSetor({
             mediaMensal={percentualPerfeitos}
             diasConsiderados={diasUteis}
             conformidadePorDia={conformidadePorDia}
+            dataMinimaEdicao={dataMinimaEdicao}
           />
 
           {/* POPs List */}

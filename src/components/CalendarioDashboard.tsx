@@ -31,9 +31,14 @@ interface CalendarioProps {
    * passava a contradizer o card "Dias Abaixo de 100%".
    */
   conformidadePorDia?: Record<number, number>;
+  /**
+   * Primeira data (YYYY-MM-DD) que ainda aceita edição. Dias anteriores são de
+   * um mês já fechado: continuam à mostra com a nota, mas deixam de ser clicáveis.
+   */
+  dataMinimaEdicao?: string;
 }
 
-export default function CalendarioDashboard({ setorId, registros, mes, ano, adminMode = false, mediaMensal, diasConsiderados, conformidadePorDia }: CalendarioProps) {
+export default function CalendarioDashboard({ setorId, registros, mes, ano, adminMode = false, mediaMensal, diasConsiderados, conformidadePorDia, dataMinimaEdicao }: CalendarioProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedDia, setSelectedDia] = useState<number | null>(null);
   const [comentarioTexto, setComentarioTexto] = useState('');
@@ -241,9 +246,19 @@ export default function CalendarioDashboard({ setorId, registros, mes, ano, admi
             </div>
           );
 
-          if (isFuturo || isDomingo) {
+          // Dia de mês fechado: mostra a nota, mas não leva mais ao checklist.
+          const bloqueado = !!dataMinimaEdicao && dataString < dataMinimaEdicao;
+
+          if (isFuturo || isDomingo || bloqueado) {
             return (
-              <div key={dia} className={`cal-day ${cls}`}>{inner}</div>
+              <div
+                key={dia}
+                className={`cal-day ${cls}`}
+                title={bloqueado ? 'Mês fechado — não é mais possível editar' : undefined}
+                style={bloqueado ? { cursor: 'not-allowed' } : undefined}
+              >
+                {inner}
+              </div>
             );
           }
 

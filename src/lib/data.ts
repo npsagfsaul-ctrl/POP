@@ -24,3 +24,33 @@ export function hojeISOSaoPaulo(agora: Date = new Date()): string {
 export function inicioDeHojeSaoPaulo(agora: Date = new Date()): Date {
   return new Date(`${hojeISOSaoPaulo(agora)}T00:00:00`);
 }
+
+/**
+ * Dia do mês em que se encerra o fechamento do mês anterior.
+ * Regra da agência: o mês anterior é validado até o dia 9 do mês seguinte.
+ */
+export const DIA_LIMITE_FECHAMENTO = 9;
+
+/**
+ * Primeiro dia (YYYY-MM-DD) que ainda aceita preencher ou editar checklist.
+ *
+ * Do dia 1 ao 9, o mês anterior segue aberto para o fechamento — os dois meses
+ * aceitam edição. A partir do dia 10, só o mês corrente. Sem isso, qualquer mês
+ * antigo continuava editável e a nota de um mês já pago podia mudar sozinha.
+ */
+export function inicioPeriodoEditavel(hojeISO: string = hojeISOSaoPaulo()): string {
+  const [ano, mes, dia] = hojeISO.split('-').map(Number);
+  const abriu = dia > DIA_LIMITE_FECHAMENTO
+    ? { ano, mes }
+    : { ano: mes === 1 ? ano - 1 : ano, mes: mes === 1 ? 12 : mes - 1 };
+  return `${abriu.ano}-${String(abriu.mes).padStart(2, '0')}-01`;
+}
+
+/** true se a data (YYYY-MM-DD) ainda está dentro do período que aceita edição. */
+export function podeEditarChecklist(
+  dataISO: string,
+  hojeISO: string = hojeISOSaoPaulo(),
+): boolean {
+  // Datas no formato YYYY-MM-DD comparam corretamente como texto.
+  return dataISO >= inicioPeriodoEditavel(hojeISO);
+}

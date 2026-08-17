@@ -6,7 +6,7 @@ import { cookies } from 'next/headers';
 import ChecklistForm from '@/components/ChecklistForm';
 import { getRegistroPorData } from '@/actions/checklist';
 import { getAtendentesPorSetor } from '@/actions/atendentes';
-import { hojeISOSaoPaulo } from '@/lib/data';
+import { hojeISOSaoPaulo, podeEditarChecklist, inicioPeriodoEditavel, DIA_LIMITE_FECHAMENTO } from '@/lib/data';
 
 export default async function ChecklistDiario({ 
   params,
@@ -46,6 +46,30 @@ export default async function ChecklistDiario({
     }
   }
 
+  // Mês fechado: só dá para olhar o painel, não para mexer. A trava de verdade
+  // está no `salvarChecklist`; esta tela existe para a pessoa entender o porquê
+  // em vez de tomar um erro depois de preencher tudo.
+  if (!podeEditarChecklist(dataSelecionada, hoje)) {
+    const [ano, mes, dia] = dataSelecionada.split('-');
+    return (
+      <div className="max-w-4xl mx-auto pb-12">
+        <div className="card" style={{ marginTop: 24 }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: 8 }}>
+            Mês fechado
+          </h2>
+          <p style={{ color: 'var(--text-muted)', marginBottom: 16 }}>
+            O checklist de <strong>{dia}/{mes}/{ano}</strong> não pode mais ser preenchido
+            nem alterado. O mês anterior fica aberto até o dia {DIA_LIMITE_FECHAMENTO};
+            depois disso ele é fechado para que a nota de um mês já apurado não mude.
+          </p>
+          <Link href={`/setores/${setor.id}`} className="btn btn-primary">
+            ← Voltar ao Painel
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   if (pops.length === 0) {
     return (
       <div className="card text-center py-12">
@@ -80,6 +104,7 @@ export default async function ChecklistDiario({
         setorId={setor.id}
         pops={pops}
         dataInicial={dataSelecionada}
+        dataMinima={inicioPeriodoEditavel(hoje)}
         respostasIniciais={respostasIniciais}
         responsaveisIniciais={responsaveisIniciais}
         observacoesInicial={observacoesInicial}

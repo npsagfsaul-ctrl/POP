@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { podeEditarChecklist, DIA_LIMITE_FECHAMENTO } from '@/lib/data';
 
 export async function salvarChecklist(formData: FormData) {
   const setorId = formData.get('setorId') as string;
@@ -18,6 +19,15 @@ export async function salvarChecklist(formData: FormData) {
 
   if (data.getUTCDay() === 0) {
     throw new Error('Não é possível preencher checklist aos domingos (domingos não contam para a meta).');
+  }
+
+  // Mês já fechado não aceita mais alteração — senão a nota de um mês já pago
+  // pode mudar meses depois, sem ninguém perceber. A validação de verdade é
+  // esta (no servidor); o `min` no formulário é só conveniência.
+  if (!podeEditarChecklist(dataString)) {
+    throw new Error(
+      `Este mês já foi fechado e não aceita mais alterações. O mês anterior pode ser preenchido até o dia ${DIA_LIMITE_FECHAMENTO}.`,
+    );
   }
 
   // Collect responses from form data
