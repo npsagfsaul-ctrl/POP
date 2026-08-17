@@ -330,6 +330,10 @@ enum StatusProspeccao {
   NAO_TEM_INTERESSE // não tem interesse
   SEM_PERFIL        // não é um perfil de cliente adequado
   DADOS_INCORRETO   // telefone/dados de contato errados
+  // Fica por último de propósito: no Postgres um valor novo de enum só pode ser
+  // acrescentado ao fim sem recriar o tipo. A ordem de exibição é a de
+  // STATUS_PROSPECCAO_LABEL, não esta.
+  NOVO              // cadastrado, ainda não abordado
 }
 
 model Prospeccao {
@@ -338,7 +342,7 @@ model Prospeccao {
   nomeCliente String
   telefone    String?
   oQueVende   String?
-  status      StatusProspeccao @default(CONTATO)
+  status      StatusProspeccao @default(NOVO)
 
   setorId String
   setor   Setor  @relation(fields: [setorId], references: [id], onDelete: Cascade)

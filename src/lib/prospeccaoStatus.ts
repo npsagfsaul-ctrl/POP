@@ -2,6 +2,7 @@
 // (ProspeccaoManager) quanto na exportação (para o texto bater nos dois lugares).
 
 export type StatusProspeccaoTexto =
+  | 'NOVO'
   | 'CONTATO'
   | 'FECHADO'
   | 'SEM_RETORNO'
@@ -9,7 +10,9 @@ export type StatusProspeccaoTexto =
   | 'SEM_PERFIL'
   | 'DADOS_INCORRETO';
 
+// A ordem daqui é a que aparece nos cartões de resumo, no filtro e no formulário.
 export const STATUS_PROSPECCAO_LABEL: Record<StatusProspeccaoTexto, string> = {
+  NOVO: 'Novo',
   CONTATO: 'Em contato',
   FECHADO: 'Fechado',
   SEM_RETORNO: 'Sem retorno',

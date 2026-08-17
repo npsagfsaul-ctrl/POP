@@ -35,6 +35,7 @@ interface Props {
 }
 
 const STATUS_CONFIG: Record<Status, { label: string; badge: string }> = {
+  NOVO: { label: STATUS_PROSPECCAO_LABEL.NOVO, badge: 'badge-primary' },
   CONTATO: { label: STATUS_PROSPECCAO_LABEL.CONTATO, badge: 'badge-info' },
   FECHADO: { label: STATUS_PROSPECCAO_LABEL.FECHADO, badge: 'badge-success' },
   SEM_RETORNO: { label: STATUS_PROSPECCAO_LABEL.SEM_RETORNO, badge: 'badge-warning' },
@@ -241,7 +242,7 @@ export default function ProspeccaoManager({
                 </div>
                 <div className="form-group">
                   <label className="form-label">Status *</label>
-                  <select name="status" className="form-select" defaultValue={editando?.status ?? 'CONTATO'} required>
+                  <select name="status" className="form-select" defaultValue={editando?.status ?? 'NOVO'} required>
                     {(Object.keys(STATUS_CONFIG) as Status[]).map((s) => (
                       <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>
                     ))}

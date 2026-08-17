@@ -33,7 +33,9 @@ export async function criarProspeccao(formData: FormData) {
   const nomeCliente = (formData.get('nomeCliente') as string)?.trim();
   const telefone = ((formData.get('telefone') as string) || '').trim() || null;
   const oQueVende = ((formData.get('oQueVende') as string) || '').trim() || null;
-  const status = (formData.get('status') as StatusProspeccao) || 'CONTATO';
+  // Cliente recém-cadastrado nasce como "Novo": só vira "Em contato" quando
+  // alguém de fato abordou.
+  const status = (formData.get('status') as StatusProspeccao) || 'NOVO';
   const setorId = formData.get('setorId') as string;
   const atendenteId = formData.get('atendenteId') as string;
 
