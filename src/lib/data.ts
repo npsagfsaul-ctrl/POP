@@ -46,11 +46,22 @@ export function inicioPeriodoEditavel(hojeISO: string = hojeISOSaoPaulo()): stri
   return `${abriu.ano}-${String(abriu.mes).padStart(2, '0')}-01`;
 }
 
-/** true se a data (YYYY-MM-DD) ainda está dentro do período que aceita edição. */
+/** true se a data (YYYY-MM-DD) é de um dia que ainda não aconteceu. */
+export function ehDataFutura(dataISO: string, hojeISO: string = hojeISOSaoPaulo()): boolean {
+  return dataISO > hojeISO;
+}
+
+/**
+ * true se a data (YYYY-MM-DD) aceita preenchimento ou edição.
+ *
+ * Fecha dos dois lados: mês já apurado não muda mais, e dia que ainda não
+ * aconteceu não pode ser dado como conferido.
+ */
 export function podeEditarChecklist(
   dataISO: string,
   hojeISO: string = hojeISOSaoPaulo(),
 ): boolean {
+  if (ehDataFutura(dataISO, hojeISO)) return false;
   // Datas no formato YYYY-MM-DD comparam corretamente como texto.
   return dataISO >= inicioPeriodoEditavel(hojeISO);
 }

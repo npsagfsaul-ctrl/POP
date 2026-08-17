@@ -9,7 +9,7 @@ import DeletePopButton from '@/components/DeletePopButton';
 import PopAtivoButton from '@/components/PopAtivoButton';
 import { getPopsBySetor } from '@/actions/pops';
 import { getRegistrosMensais } from '@/actions/checklist';
-import { calcularConformidade } from '@/lib/conformidade';
+import { calcularConformidade, calcularMargem } from '@/lib/conformidade';
 import { hojeISOSaoPaulo, inicioPeriodoEditavel } from '@/lib/data';
 import prisma from '@/lib/prisma';
 
@@ -73,8 +73,40 @@ export default async function VisualizarSetor({
     ? String(diasEmBranco[0])
     : `${diasEmBranco.slice(0, -1).join(', ')} e ${diasEmBranco[diasEmBranco.length - 1]}`;
 
-  const dataMinimaEdicao = inicioPeriodoEditavel(hojeISOSaoPaulo());
+  const hojeSP = hojeISOSaoPaulo();
+  const dataMinimaEdicao = inicioPeriodoEditavel(hojeSP);
   const mesAindaAberto = `${anoAtual}-${String(mesAtual).padStart(2, '0')}-01` >= dataMinimaEdicao;
+
+  const [anoHoje, mesHoje] = hojeSP.split('-').map(Number);
+  const ehMesCorrente = mesAtual === mesHoje && anoAtual === anoHoje;
+
+  // Margem: quantos dias ainda dá para perder sem sair da meta.
+  //
+  // A meta é medida sobre o mês INTEIRO, não sobre os dias já decorridos — por
+  // isso o total de dias úteis vem de uma segunda passada no próprio motor, com
+  // "hoje" no último dia do mês. Contar dia útil aqui na mão criaria uma segunda
+  // regra do que é dia útil, que é exatamente o tipo de divergência que já deu
+  // problema no calendário.
+  const fimDoMes = new Date(Date.UTC(anoAtual, mesAtual, 0, 12, 0, 0));
+  const { diasUteis: diasUteisMes } = calcularConformidade(
+    pops, registros, mesAtual, anoAtual, fimDoMes, setor.createdAt,
+  );
+  const margem = calcularMargem(diasUteisMes, diasAbaixo100);
+
+  // Mês anterior, só para comparar.
+  const mesAnterior = mesAtual === 1 ? 12 : mesAtual - 1;
+  const anoAnterior = mesAtual === 1 ? anoAtual - 1 : anoAtual;
+  const registrosAnterior = await getRegistrosMensais(resolvedParams.id, mesAnterior, anoAnterior);
+  const anterior = calcularConformidade(
+    pops, registrosAnterior, mesAnterior, anoAnterior, hoje, setor.createdAt,
+  );
+  // Sem dias a cobrar no mês anterior (setor novo) não há o que comparar.
+  const temComparacao = anterior.diasUteis > 0 && diasUteis > 0;
+
+  const nomeMeses = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+  ];
 
   return (
     <div>
@@ -207,6 +239,34 @@ export default async function VisualizarSetor({
         </div>
       ) : (
         <>
+          {ehMesCorrente && diasUteisMes > 0 && (
+            <div
+              className={`alert ${
+                margem.jaPerdeu ? 'alert-danger' : margem.restantes === 0 ? 'alert-warning' : 'alert-success'
+              }`}
+              style={{ marginTop: 24 }}
+            >
+              {margem.jaPerdeu ? (
+                <>
+                  ❌ <strong>{nomeMeses[mesAtual - 1]}: {percentualPerfeitos}%.</strong>{' '}
+                  O limite era de {margem.maxPerdas} {margem.maxPerdas === 1 ? 'dia' : 'dias'} e
+                  já foram {diasAbaixo100} — a meta de 80% não é mais alcançável neste mês.
+                </>
+              ) : margem.restantes === 0 ? (
+                <>
+                  ⚠️ <strong>{nomeMeses[mesAtual - 1]}: {percentualPerfeitos}%.</strong>{' '}
+                  Mais um dia perdido e o setor sai da meta.
+                </>
+              ) : (
+                <>
+                  ✅ <strong>{nomeMeses[mesAtual - 1]}: {percentualPerfeitos}%.</strong>{' '}
+                  Ainda dá para perder {margem.restantes}{' '}
+                  {margem.restantes === 1 ? 'dia' : 'dias'} e continuar dentro da meta.
+                </>
+              )}
+            </div>
+          )}
+
           {diasEmBranco.length > 0 && (
             <div className="alert alert-warning" style={{ marginTop: 24 }}>
               📌 <strong>
@@ -218,6 +278,27 @@ export default async function VisualizarSetor({
               {mesAindaAberto
                 ? 'Cada um deles conta como 0% — clique no dia no calendário para preencher.'
                 : 'Mês fechado: esses dias contam como 0% e não podem mais ser preenchidos.'}
+            </div>
+          )}
+
+          {temComparacao && (
+            <div style={{ marginTop: 12, fontSize: '0.875rem', color: 'var(--text-muted)' }}>
+              {nomeMeses[mesAnterior - 1]}: <strong>{anterior.percentualPerfeitos}%</strong>
+              {' → '}
+              {nomeMeses[mesAtual - 1]}: <strong style={{ color: 'var(--text-main)' }}>{percentualPerfeitos}%</strong>
+              {' '}
+              {percentualPerfeitos > anterior.percentualPerfeitos ? (
+                <span style={{ color: 'var(--success)' }}>
+                  ↑ {percentualPerfeitos - anterior.percentualPerfeitos} pontos
+                </span>
+              ) : percentualPerfeitos < anterior.percentualPerfeitos ? (
+                <span style={{ color: 'var(--danger)' }}>
+                  ↓ {anterior.percentualPerfeitos - percentualPerfeitos} pontos
+                </span>
+              ) : (
+                <span>→ igual</span>
+              )}
+              {ehMesCorrente && ' (mês em andamento)'}
             </div>
           )}
 

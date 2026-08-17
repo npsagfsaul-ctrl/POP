@@ -383,6 +383,45 @@ export function calcularFatiaFinal(
   return calcularFatiaPremio(pesoAcumulado, faixas);
 }
 
+// ─── MARGEM ATÉ A META ───
+
+export interface Margem {
+  /** Máximo de dias que podem ser perdidos no mês inteiro sem sair da meta. */
+  maxPerdas: number;
+  /** Quantos ainda restam, considerando o que já foi perdido. */
+  restantes: number;
+  /** true quando a meta já não é mais alcançável neste mês. */
+  jaPerdeu: boolean;
+}
+
+/**
+ * Quantos dias ainda dá para perder no mês e continuar dentro da meta.
+ *
+ * `diasUteisMes` é o total do mês inteiro (não só até hoje) — é sobre ele que a
+ * meta é medida no fechamento. `diasJaPerdidos` é o `diasAbaixo100` corrente.
+ *
+ * A conta roda a MESMA fórmula do motor (`Math.round` sobre dias perfeitos ÷
+ * dias úteis), em vez de resolver "no papel" com 80%. Como a nota é arredondada,
+ * 79,5% já bate a meta; uma conta direta prometeria um dia a menos do que o
+ * sistema de fato aceita, e a margem passaria a contradizer a própria nota.
+ */
+export function calcularMargem(diasUteisMes: number, diasJaPerdidos: number): Margem {
+  if (diasUteisMes <= 0) return { maxPerdas: 0, restantes: 0, jaPerdeu: false };
+
+  let maxPerdas = 0;
+  for (let perdidos = 0; perdidos <= diasUteisMes; perdidos++) {
+    const pct = Math.round(((diasUteisMes - perdidos) / diasUteisMes) * 100);
+    if (pct >= META_CONFORMIDADE) maxPerdas = perdidos;
+    else break;
+  }
+
+  return {
+    maxPerdas,
+    restantes: Math.max(0, maxPerdas - diasJaPerdidos),
+    jaPerdeu: diasJaPerdidos > maxPerdas,
+  };
+}
+
 // ─── COMPARAÇÃO DE RÉGUAS ───
 //
 // Ferramenta de decisão: mostra o MESMO mês sob réguas diferentes, sem alterar

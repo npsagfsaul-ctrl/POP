@@ -3,7 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
-import { podeEditarChecklist, DIA_LIMITE_FECHAMENTO } from '@/lib/data';
+import { podeEditarChecklist, ehDataFutura, DIA_LIMITE_FECHAMENTO } from '@/lib/data';
 
 export async function salvarChecklist(formData: FormData) {
   const setorId = formData.get('setorId') as string;
@@ -19,6 +19,11 @@ export async function salvarChecklist(formData: FormData) {
 
   if (data.getUTCDay() === 0) {
     throw new Error('Não é possível preencher checklist aos domingos (domingos não contam para a meta).');
+  }
+
+  // Dia que ainda não aconteceu não pode ser dado como conferido.
+  if (ehDataFutura(dataString)) {
+    throw new Error('Não é possível preencher o checklist de um dia que ainda não aconteceu.');
   }
 
   // Mês já fechado não aceita mais alteração — senão a nota de um mês já pago
