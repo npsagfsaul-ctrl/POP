@@ -21,6 +21,7 @@ model Setor {
   ocorrencias Ocorrencia[]
   prospeccoes Prospeccao[]
   atendentes  Atendente[]
+  comunicados Comunicado[]
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 }
@@ -100,8 +101,19 @@ model Comunicado {
   tipo      TipoComunicado @default(AVISO)
   destaque  Boolean        @default(false)
   expiresAt DateTime?      // Data de expiração opcional
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+
+  // Quem publicou. null = administração (era o único caso até aqui).
+  // Preenchido = informativo publicado pelo próprio setor, com a senha dele.
+  setorId String?
+  setor   Setor?  @relation(fields: [setorId], references: [id], onDelete: Cascade)
+
+  // Imagem opcional, guardada como data URI já comprimido no navegador.
+  // Não há disco no Vercel (serverless), então o banco é o lugar — por isso o
+  // tamanho é limitado na hora de publicar.
+  imagem String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Lembrete {

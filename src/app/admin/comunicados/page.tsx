@@ -24,7 +24,9 @@ export default async function ComunicadosAdminPage() {
   const adminMode = await isAdmin();
   if (!adminMode) redirect('/admin/login');
 
-  const comunicados = await getComunicados();
+  // Inclui os já expirados: sumiram do mural, mas o admin ainda precisa
+  // conseguir apagar de vez.
+  const comunicados = await getComunicados(true);
 
   return (
     <div>
@@ -65,6 +67,7 @@ export default async function ComunicadosAdminPage() {
               <thead>
                 <tr>
                   <th>Tipo</th>
+                  <th>Autor</th>
                   <th>Título</th>
                   <th>Destaque</th>
                   <th>Expira em</th>
@@ -77,6 +80,11 @@ export default async function ComunicadosAdminPage() {
                   <tr key={c.id}>
                     <td>
                       <span className={`badge ${tipoBadge[c.tipo]}`}>{tipoLabel[c.tipo]}</span>
+                    </td>
+                    <td>
+                      {c.setor
+                        ? <span className="badge badge-primary">🏷️ {c.setor.nome}</span>
+                        : <span style={{ color: 'var(--text-muted)', fontSize: '0.8125rem' }}>Administração</span>}
                     </td>
                     <td style={{ fontWeight: 500 }}>{c.titulo}</td>
                     <td>{c.destaque ? '📌 Sim' : '—'}</td>

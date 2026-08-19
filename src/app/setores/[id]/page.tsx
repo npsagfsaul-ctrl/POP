@@ -7,6 +7,8 @@ import PasswordPrompt from '@/components/PasswordPrompt';
 import DeleteSetorButton from '@/components/DeleteSetorButton';
 import DeletePopButton from '@/components/DeletePopButton';
 import PopAtivoButton from '@/components/PopAtivoButton';
+import PublicarInformativo from '@/components/PublicarInformativo';
+import { podeEscreverNoSetor } from '@/actions/setorAcesso';
 import { getPopsBySetor } from '@/actions/pops';
 import { getRegistrosMensais } from '@/actions/checklist';
 import { calcularConformidade, calcularMargem } from '@/lib/conformidade';
@@ -44,6 +46,10 @@ export default async function VisualizarSetor({
       return <PasswordPrompt setorId={setor.id} setorNome={setor.nome} />;
     }
   }
+
+  // Publicar no mural exige a senha do setor (ou ser admin): setor sem senha
+  // não publica, porque o mural é visto pela agência inteira.
+  const podePublicar = await podeEscreverNoSetor(resolvedParams.id);
 
   // Inclui POPs aposentados: contam nos dias em que valiam e precisam
   // continuar visíveis na lista para poderem ser reativados.
@@ -219,6 +225,11 @@ export default async function VisualizarSetor({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Informativo do setor para o mural — só para quem entrou com a senha */}
+      {podePublicar && (
+        <PublicarInformativo setorId={setor.id} setorNome={setor.nome} />
       )}
 
       {/* Calendar or empty state */}

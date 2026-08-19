@@ -25,3 +25,17 @@ export async function podeVerSetor(setorId: string): Promise<boolean> {
   const cookieStore = await cookies();
   return cookieStore.has(`auth_setor_${setorId}`);
 }
+
+/**
+ * Quem pode PUBLICAR em nome deste setor: o admin, ou quem entrou com a senha.
+ *
+ * Mais restrito que `podeVerSetor` de propósito: lá, setor sem senha é aberto a
+ * qualquer um — o que serve para ler POP, mas não para publicar no mural, que
+ * a agência inteira enxerga. Setor sem senha simplesmente não publica.
+ */
+export async function podeEscreverNoSetor(setorId: string): Promise<boolean> {
+  if (await isAdmin()) return true;
+
+  const cookieStore = await cookies();
+  return cookieStore.has(`auth_setor_${setorId}`);
+}
