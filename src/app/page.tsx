@@ -142,10 +142,10 @@ export default async function Home() {
                 <Link href="/admin/comunicados/novo" className="btn btn-primary btn-sm">
                   + Novo Comunicado
                 </Link>
-                <Link href="/admin/lembretes" className="btn btn-secondary btn-sm">
+                <Link href="/admin/avisos?aba=lembretes" className="btn btn-secondary btn-sm">
                   + Gerenciar Lembretes
                 </Link>
-                <Link href="/admin/ocorrencias" className="btn btn-secondary btn-sm">
+                <Link href="/admin/avisos?aba=ocorrencias" className="btn btn-secondary btn-sm">
                   ⚠️ Ver Ocorrências
                 </Link>
               </div>
