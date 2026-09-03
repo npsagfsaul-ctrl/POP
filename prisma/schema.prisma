@@ -22,6 +22,7 @@ model Setor {
   prospeccoes Prospeccao[]
   atendentes  Atendente[]
   comunicados Comunicado[]
+  agenda      ItemAgenda[]
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 }
@@ -147,6 +148,63 @@ model Ocorrencia {
   setor     Setor            @relation(fields: [setorId], references: [id], onDelete: Cascade)
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
+}
+
+// ─── AGENDA DO SETOR ───
+//
+// Processos com data marcada que o setor precisa lembrar de fazer: "validar o
+// proter toda segunda", "fechar o caixa dia 5", "aquele processo a cada 4
+// meses".
+//
+// NÃO é POP e NÃO entra na conta dos 80%, de propósito. A nota mede dias
+// ("quantos dias saíram limpos"), e uma tarefa trimestral não é um dia, é um
+// prazo: ela cairia em 1 dia entre ~85 dias úteis, então a coisa mais fácil de
+// esquecer do setor entraria com o menor peso possível na nota. O que cobra
+// aqui é o atraso ficar à vista, não a nota.
+
+enum FrequenciaAgenda {
+  SEMANAL // num dia da semana
+  MENSAL  // num dia do mês, a cada N meses (N = intervaloMeses)
+}
+
+model ItemAgenda {
+  id         String           @id @default(cuid())
+  titulo     String
+  observacao String?
+  frequencia FrequenciaAgenda
+
+  diaSemana Int? // 0=dom … 6=sáb — só para SEMANAL
+  diaMes    Int? // 1–31 — só para MENSAL (cai no último dia se o mês for curto)
+
+  // A cada quantos meses repete, e a partir de qual mês contar.
+  // Só divisores de 12 (1, 2, 3, 4, 6, 12): assim o ciclo fecha dentro do ano
+  // e não vai escorregando de ano em ano.
+  intervaloMeses Int  @default(1)
+  mesBase        Int? // 1–12, âncora do intervalo
+
+  ativo Boolean @default(true)
+
+  setorId String
+  setor   Setor  @relation(fields: [setorId], references: [id], onDelete: Cascade)
+
+  feitos AgendaFeito[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([setorId])
+}
+
+/// Uma ocorrência concluída. A ausência de linha é o que caracteriza o atraso.
+model AgendaFeito {
+  id     String     @id @default(cuid())
+  itemId String
+  item   ItemAgenda @relation(fields: [itemId], references: [id], onDelete: Cascade)
+
+  data      DateTime @db.Date // o dia em que a ocorrência era devida
+  createdAt DateTime @default(now())
+
+  @@unique([itemId, data])
 }
 
 // ─── COLETAS DO DIA ───

@@ -9,6 +9,8 @@ import DeletePopButton from '@/components/DeletePopButton';
 import PopAtivoButton from '@/components/PopAtivoButton';
 import PublicarInformativo from '@/components/PublicarInformativo';
 import { podeEscreverNoSetor } from '@/actions/setorAcesso';
+import { getAgendaDoSetor } from '@/actions/agenda';
+import { ocorrenciasAtrasadas, agruparAtrasos, chaveFeito } from '@/lib/agenda';
 import { getPopsBySetor } from '@/actions/pops';
 import { getRegistrosMensais } from '@/actions/checklist';
 import { calcularConformidade, calcularMargem } from '@/lib/conformidade';
@@ -85,6 +87,17 @@ export default async function VisualizarSetor({
 
   const [anoHoje, mesHoje] = hojeSP.split('-').map(Number);
   const ehMesCorrente = mesAtual === mesHoje && anoAtual === anoHoje;
+
+  // Agenda do setor: não entra na nota, mas o atraso precisa aparecer aqui —
+  // é o que a faz ser cobrada sem contaminar os 80%.
+  const itensAgenda = await getAgendaDoSetor(resolvedParams.id);
+  // Contado por processo, não por ocorrência: um item mensal esquecido por meses
+  // é 1 processo atrasado, senão o aviso diria "14" e assustaria sem motivo.
+  const atrasosAgenda = agruparAtrasos(ocorrenciasAtrasadas(
+    itensAgenda,
+    new Set(itensAgenda.flatMap((i) => i.feitos.map((d) => chaveFeito(i.id, d)))),
+    hojeSP,
+  ));
 
   // Margem: quantos dias ainda dá para perder sem sair da meta.
   //
@@ -224,6 +237,32 @@ export default async function VisualizarSetor({
               <div className="stat-sub">{diasAbaixo100 === 0 ? 'sem pendências!' : 'dias com pendência'}</div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Agenda do setor — processos com data marcada, fora da conta da nota */}
+      {atrasosAgenda.length > 0 ? (
+        <div className="alert alert-warning" style={{ marginTop: 24, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <span>
+            📅 <strong>
+              {atrasosAgenda.length === 1
+                ? '1 processo da agenda atrasado'
+                : `${atrasosAgenda.length} processos da agenda atrasados`}
+            </strong>{' '}
+            — não afeta a nota, mas está esperando.
+          </span>
+          <Link href={`/setores/${setor.id}/agenda`} className="btn btn-secondary btn-sm">
+            Ver agenda
+          </Link>
+        </div>
+      ) : (
+        <div style={{ marginTop: 24 }}>
+          <Link href={`/setores/${setor.id}/agenda`} className="btn btn-secondary btn-sm">
+            📅 Agenda do setor
+            {itensAgenda.length > 0 && (
+              <span style={{ opacity: 0.7, marginLeft: 6 }}>· em dia</span>
+            )}
+          </Link>
         </div>
       )}
 
