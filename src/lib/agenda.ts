@@ -82,9 +82,20 @@ export function ocorrenciasNoMes(item: ItemAgendaCalc, mes: number, ano: number)
 
   if (item.diaMes == null) return [];
   if (!mesEstaNoCiclo(item, mes)) return [];
+
   // Dia 31 num mês de 30 cai no dia 30, senão o processo simplesmente
   // desapareceria nesses meses.
-  const data = iso(ano, mes, Math.min(item.diaMes, total));
+  let dia = Math.min(item.diaMes, total);
+
+  // Domingo não tem expediente, então o processo passa para a segunda — decisão
+  // da gestora. Se essa segunda já cairia no mês seguinte (o dia escolhido é o
+  // último do mês E é domingo), antecipa para o sábado: a ocorrência tem que
+  // continuar dentro do mês, senão ela sai da grade e desaparece da tela.
+  if (diaDaSemana(ano, mes, dia) === 0) {
+    dia = dia + 1 <= total ? dia + 1 : dia - 1;
+  }
+
+  const data = iso(ano, mes, dia);
   return naoVale(data) ? [] : [data];
 }
 

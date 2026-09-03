@@ -173,22 +173,33 @@ export default function AgendaSetor({ setorId, itens, mes, ano, hojeISO, podeEdi
             const doDia = porDia.get(data) ?? [];
             const ehHoje = data === hojeISO;
             const passou = data < hojeISO;
+            // Domingo não tem expediente. A coluna fica (para a grade continuar
+            // igual à do Registro de Atividades, que também marca domingo como
+            // OFF), mas apagada e sem aceitar cadastro.
+            const ehDomingo = new Date(`${data}T00:00:00`).getDay() === 0;
 
             return (
               <div
                 key={dia}
-                onClick={() => abrirNovoEm(data)}
-                title={podeEditar ? `Cadastrar um processo para este dia (${dia})` : undefined}
+                onClick={ehDomingo ? undefined : () => abrirNovoEm(data)}
+                title={
+                  ehDomingo
+                    ? 'Domingo — sem expediente'
+                    : podeEditar ? `Cadastrar um processo para este dia (${dia})` : undefined
+                }
                 style={{
                   minHeight: 84,
                   border: `1px solid ${ehHoje ? 'var(--primary)' : 'var(--border)'}`,
                   borderRadius: 'var(--radius-sm)',
                   padding: 4,
-                  background: ehHoje ? 'var(--primary-light, var(--surface-2))' : 'var(--surface-1, transparent)',
+                  background: ehDomingo
+                    ? 'var(--surface-2)'
+                    : ehHoje ? 'var(--primary-light, var(--surface-2))' : 'var(--surface-1, transparent)',
                   display: 'flex',
                   flexDirection: 'column',
                   gap: 3,
-                  cursor: podeEditar ? 'pointer' : 'default',
+                  cursor: !ehDomingo && podeEditar ? 'pointer' : 'default',
+                  opacity: ehDomingo ? 0.45 : 1,
                 }}
               >
                 <div style={{
@@ -196,10 +207,10 @@ export default function AgendaSetor({ setorId, itens, mes, ano, hojeISO, podeEdi
                   fontWeight: ehHoje ? 700 : 500,
                   color: ehHoje ? 'var(--primary)' : 'var(--text-muted)',
                   display: 'flex',
-                  justifyContent: podeEditar ? 'space-between' : 'flex-end',
+                  justifyContent: podeEditar && !ehDomingo ? 'space-between' : 'flex-end',
                   alignItems: 'center',
                 }}>
-                  {podeEditar && (
+                  {podeEditar && !ehDomingo && (
                     <span style={{ color: 'var(--text-muted)', opacity: 0.5, fontSize: '0.8125rem', lineHeight: 1 }}>+</span>
                   )}
                   <span>{dia}</span>
