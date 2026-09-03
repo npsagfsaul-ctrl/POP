@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -43,6 +43,24 @@ export default function AgendaSetor({ setorId, itens, mes, ano, hojeISO, podeEdi
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [formAberto, setFormAberto] = useState(false);
+  const formRef = useRef<HTMLDivElement>(null);
+
+  // Clicar num dia abre o cadastro já apontando para aquele dia — é o que se
+  // espera de um calendário. Como aqui todo processo é repetido, o dia clicado
+  // é ambíguo ("toda segunda" ou "dia 14 de todo mês"?), então os dois campos
+  // vêm preenchidos e trocar a opção não obriga a escolher de novo.
+  const [inicial, setInicial] = useState<{ diaSemana: number; diaMes: number } | null>(null);
+
+  function abrirNovoEm(data: string) {
+    if (!podeEditar) return;
+    const [a, m, d] = data.split('-').map(Number);
+    setInicial({ diaSemana: new Date(Date.UTC(a, m - 1, d)).getUTCDay(), diaMes: d });
+    setFormAberto(true);
+    // O cadastro fica no card de baixo; sem isso o clique parece não fazer nada.
+    requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }
 
   const feitosSet = new Set(itens.flatMap((i) => i.feitos.map((d) => `${i.id}|${d}`)));
 
@@ -159,6 +177,8 @@ export default function AgendaSetor({ setorId, itens, mes, ano, hojeISO, podeEdi
             return (
               <div
                 key={dia}
+                onClick={() => abrirNovoEm(data)}
+                title={podeEditar ? `Cadastrar um processo para este dia (${dia})` : undefined}
                 style={{
                   minHeight: 84,
                   border: `1px solid ${ehHoje ? 'var(--primary)' : 'var(--border)'}`,
@@ -168,15 +188,21 @@ export default function AgendaSetor({ setorId, itens, mes, ano, hojeISO, podeEdi
                   display: 'flex',
                   flexDirection: 'column',
                   gap: 3,
+                  cursor: podeEditar ? 'pointer' : 'default',
                 }}
               >
                 <div style={{
                   fontSize: '0.75rem',
                   fontWeight: ehHoje ? 700 : 500,
                   color: ehHoje ? 'var(--primary)' : 'var(--text-muted)',
-                  textAlign: 'right',
+                  display: 'flex',
+                  justifyContent: podeEditar ? 'space-between' : 'flex-end',
+                  alignItems: 'center',
                 }}>
-                  {dia}
+                  {podeEditar && (
+                    <span style={{ color: 'var(--text-muted)', opacity: 0.5, fontSize: '0.8125rem', lineHeight: 1 }}>+</span>
+                  )}
+                  <span>{dia}</span>
                 </div>
 
                 {doDia.map((item) => {
@@ -188,7 +214,12 @@ export default function AgendaSetor({ setorId, itens, mes, ano, hojeISO, podeEdi
                       key={item.id}
                       type="button"
                       disabled={!podeEditar || ocupado === chave}
-                      onClick={() => marcar(item.id, data, !feito)}
+                      onClick={(e) => {
+                        // Senão o clique sobe para a célula e abre o cadastro
+                        // em vez de marcar como feito.
+                        e.stopPropagation();
+                        marcar(item.id, data, !feito);
+                      }}
                       title={`${item.titulo} — ${feito ? 'feito' : atrasado ? 'atrasado' : 'a fazer'}${podeEditar ? ' (clique para marcar)' : ''}`}
                       style={{
                         textAlign: 'left',
@@ -225,16 +256,19 @@ export default function AgendaSetor({ setorId, itens, mes, ano, hojeISO, podeEdi
           <span><span style={{ display: 'inline-block', width: 9, height: 9, borderRadius: 2, background: 'var(--success)', marginRight: 5 }} />feito</span>
           <span><span style={{ display: 'inline-block', width: 9, height: 9, borderRadius: 2, background: 'var(--danger)', marginRight: 5 }} />atrasado</span>
           <span><span style={{ display: 'inline-block', width: 9, height: 9, borderRadius: 2, background: 'var(--border)', marginRight: 5 }} />a fazer</span>
-          {podeEditar && <span>· clique no processo para marcar</span>}
+          {podeEditar && <span>· clique no processo para marcar, ou no dia vazio para cadastrar</span>}
         </div>
       </div>
 
       {/* Processos cadastrados */}
-      <div className="card" style={{ marginTop: 16 }}>
+      <div className="card" style={{ marginTop: 16 }} ref={formRef}>
         <div className="card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span>Processos deste setor</span>
           {podeEditar && (
-            <button className="btn btn-primary btn-sm" onClick={() => setFormAberto((v) => !v)}>
+            <button
+              className="btn btn-primary btn-sm"
+              onClick={() => { setInicial(null); setFormAberto((v) => !v); }}
+            >
               {formAberto ? 'Fechar' : '+ Novo processo'}
             </button>
           )}
@@ -242,8 +276,13 @@ export default function AgendaSetor({ setorId, itens, mes, ano, hojeISO, podeEdi
 
         {formAberto && podeEditar && (
           <FormNovoItem
+            // Remonta quando vem de um clique em outro dia, para os campos
+            // recomeçarem apontando para o dia certo.
+            key={inicial ? `${inicial.diaSemana}-${inicial.diaMes}` : 'padrao'}
             setorId={setorId}
-            onPronto={() => { setFormAberto(false); router.refresh(); }}
+            diaSemanaInicial={inicial?.diaSemana}
+            diaMesInicial={inicial?.diaMes}
+            onPronto={() => { setFormAberto(false); setInicial(null); router.refresh(); }}
           />
         )}
 
@@ -312,12 +351,26 @@ export default function AgendaSetor({ setorId, itens, mes, ano, hojeISO, podeEdi
   );
 }
 
-function FormNovoItem({ setorId, onPronto }: { setorId: string; onPronto: () => void }) {
+function FormNovoItem({
+  setorId,
+  onPronto,
+  diaSemanaInicial,
+  diaMesInicial,
+}: {
+  setorId: string;
+  onPronto: () => void;
+  diaSemanaInicial?: number;
+  diaMesInicial?: number;
+}) {
   const [frequencia, setFrequencia] = useState<'SEMANAL' | 'MENSAL'>('SEMANAL');
   const [titulo, setTitulo] = useState('');
   const [observacao, setObservacao] = useState('');
-  const [diaSemana, setDiaSemana] = useState(1);
-  const [diaMes, setDiaMes] = useState(5);
+  // Domingo (0) não é dia de trabalho e nem aparece na lista de opções, então
+  // um clique num domingo cai na segunda.
+  const [diaSemana, setDiaSemana] = useState(
+    diaSemanaInicial && diaSemanaInicial >= 1 && diaSemanaInicial <= 6 ? diaSemanaInicial : 1,
+  );
+  const [diaMes, setDiaMes] = useState(diaMesInicial ?? 5);
   const [intervaloMeses, setIntervaloMeses] = useState(1);
   const [mesBase, setMesBase] = useState(1);
   const [salvando, setSalvando] = useState(false);
