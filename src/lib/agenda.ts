@@ -4,15 +4,17 @@
 // calendário comparada com texto não tem fuso para dar errado, que é a origem
 // do bug que já derrubou a nota dos setores depois das 21h.
 
-export type Frequencia = 'SEMANAL' | 'MENSAL';
+export type Frequencia = 'DIARIA' | 'SEMANAL' | 'MENSAL' | 'MENSAL_SEMANA';
 
 export interface ItemAgendaCalc {
   id: string;
   frequencia: Frequencia;
-  /** 0=dom … 6=sáb. Só para SEMANAL. */
+  /** 0=dom … 6=sáb. SEMANAL e MENSAL_SEMANA. */
   diaSemana?: number | null;
   /** 1–31. Só para MENSAL. Cai no último dia se o mês for mais curto. */
   diaMes?: number | null;
+  /** 1–4 = primeira…quarta, -1 = última. Só para MENSAL_SEMANA. */
+  semanaDoMes?: number | null;
   /** A cada quantos meses repete. 1 = todo mês. */
   intervaloMeses: number;
   /** 1–12: o mês a partir do qual o intervalo conta. */
@@ -69,6 +71,17 @@ export function ocorrenciasNoMes(item: ItemAgendaCalc, mes: number, ano: number)
   const desde = item.criadoEm ?? null;
   const naoVale = (data: string) => !!desde && data < desde;
 
+  // Todo dia de expediente. Domingo fica de fora: a agência não abre.
+  if (item.frequencia === 'DIARIA') {
+    const datas: string[] = [];
+    for (let dia = 1; dia <= total; dia++) {
+      if (diaDaSemana(ano, mes, dia) === 0) continue;
+      const data = iso(ano, mes, dia);
+      if (!naoVale(data)) datas.push(data);
+    }
+    return datas;
+  }
+
   if (item.frequencia === 'SEMANAL') {
     if (item.diaSemana == null) return [];
     const datas: string[] = [];
@@ -78,6 +91,25 @@ export function ocorrenciasNoMes(item: ItemAgendaCalc, mes: number, ano: number)
       if (!naoVale(data)) datas.push(data);
     }
     return datas;
+  }
+
+  // "Primeira segunda", "última sexta". Não precisa do desvio de domingo: o dia
+  // da semana é escolhido, e domingo não é opção.
+  if (item.frequencia === 'MENSAL_SEMANA') {
+    if (item.diaSemana == null || item.semanaDoMes == null) return [];
+    if (!mesEstaNoCiclo(item, mes)) return [];
+
+    const candidatos: number[] = [];
+    for (let dia = 1; dia <= total; dia++) {
+      if (diaDaSemana(ano, mes, dia) === item.diaSemana) candidatos.push(dia);
+    }
+    const indice = item.semanaDoMes === -1 ? candidatos.length - 1 : item.semanaDoMes - 1;
+    // Um mês pode não ter a "quinta segunda" — nesse caso o processo
+    // simplesmente não cai naquele mês.
+    if (indice < 0 || indice >= candidatos.length) return [];
+
+    const data = iso(ano, mes, candidatos[indice]);
+    return naoVale(data) ? [] : [data];
   }
 
   if (item.diaMes == null) return [];
@@ -191,9 +223,24 @@ export function diferencaEmDias(a: string, b: string): number {
 }
 
 /** "Toda segunda", "Dia 5 de todo mês", "Dia 10, a cada 4 meses (jan, mai, set)". */
+const ORDINAIS_SEMANA: Record<number, string> = {
+  1: 'primeira', 2: 'segunda', 3: 'terceira', 4: 'quarta', [-1]: 'última',
+};
+
 export function rotuloFrequencia(item: ItemAgendaCalc): string {
+  if (item.frequencia === 'DIARIA') return 'Todo dia (seg a sáb)';
+
   if (item.frequencia === 'SEMANAL') {
     return item.diaSemana == null ? 'Semanal' : `Toda ${NOMES_DIA_SEMANA[item.diaSemana]}`;
+  }
+
+  if (item.frequencia === 'MENSAL_SEMANA') {
+    if (item.diaSemana == null || item.semanaDoMes == null) return 'Uma vez por mês';
+    const ordinal = ORDINAIS_SEMANA[item.semanaDoMes] ?? 'primeira';
+    const dia = NOMES_DIA_SEMANA[item.diaSemana];
+    const base = `${ordinal.charAt(0).toUpperCase()}${ordinal.slice(1)} ${dia} do mês`;
+    const intervalo = Math.max(1, item.intervaloMeses || 1);
+    return intervalo === 1 ? base : `${base}, a cada ${intervalo} meses`;
   }
 
   const dia = item.diaMes ?? 1;

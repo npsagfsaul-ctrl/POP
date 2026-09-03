@@ -165,6 +165,10 @@ model Ocorrencia {
 enum FrequenciaAgenda {
   SEMANAL // num dia da semana
   MENSAL  // num dia do mês, a cada N meses (N = intervaloMeses)
+  // Acrescentados depois. No Postgres um valor novo de enum só entra no fim
+  // sem recriar o tipo — a ordem de exibição fica na tela, não aqui.
+  DIARIA        // todo dia de expediente (seg–sáb)
+  MENSAL_SEMANA // "primeira segunda", "última sexta" do mês
 }
 
 model ItemAgenda {
@@ -173,8 +177,11 @@ model ItemAgenda {
   observacao String?
   frequencia FrequenciaAgenda
 
-  diaSemana Int? // 0=dom … 6=sáb — só para SEMANAL
+  diaSemana Int? // 0=dom … 6=sáb — SEMANAL e MENSAL_SEMANA
   diaMes    Int? // 1–31 — só para MENSAL (cai no último dia se o mês for curto)
+
+  /// 1–4 = primeira…quarta, -1 = última. Só para MENSAL_SEMANA.
+  semanaDoMes Int?
 
   // A cada quantos meses repete, e a partir de qual mês contar.
   // Só divisores de 12 (1, 2, 3, 4, 6, 12): assim o ciclo fecha dentro do ano

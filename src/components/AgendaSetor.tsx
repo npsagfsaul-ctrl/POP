@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   ocorrenciasNoMes, ocorrenciasAtrasadas, agruparAtrasos, rotuloFrequencia, diasNoMes,
-  INTERVALOS_MESES, ItemAgendaCalc,
+  INTERVALOS_MESES, ItemAgendaCalc, Frequencia,
 } from '@/lib/agenda';
 import {
   criarItemAgenda, alternarFeito, alternarItemAgenda, excluirItemAgenda, marcarVariasFeitas,
@@ -373,7 +373,8 @@ function FormNovoItem({
   diaSemanaInicial?: number;
   diaMesInicial?: number;
 }) {
-  const [frequencia, setFrequencia] = useState<'SEMANAL' | 'MENSAL'>('SEMANAL');
+  const [frequencia, setFrequencia] = useState<Frequencia>('SEMANAL');
+  const [semanaDoMes, setSemanaDoMes] = useState(1);
   const [titulo, setTitulo] = useState('');
   const [observacao, setObservacao] = useState('');
   // Domingo (0) não é dia de trabalho e nem aparece na lista de opções, então
@@ -392,13 +393,15 @@ function FormNovoItem({
     setSalvando(true);
     setErro(null);
     try {
+      const usaMes = frequencia === 'MENSAL' || frequencia === 'MENSAL_SEMANA';
       await criarItemAgenda(setorId, {
         titulo, observacao,
         frequencia,
-        diaSemana: frequencia === 'SEMANAL' ? diaSemana : null,
+        diaSemana: frequencia === 'SEMANAL' || frequencia === 'MENSAL_SEMANA' ? diaSemana : null,
         diaMes: frequencia === 'MENSAL' ? diaMes : null,
-        intervaloMeses: frequencia === 'MENSAL' ? intervaloMeses : 1,
-        mesBase: frequencia === 'MENSAL' ? mesBase : null,
+        semanaDoMes: frequencia === 'MENSAL_SEMANA' ? semanaDoMes : null,
+        intervaloMeses: usaMes ? intervaloMeses : 1,
+        mesBase: usaMes ? mesBase : null,
       });
       onPronto();
     } catch (err) {
@@ -425,16 +428,66 @@ function FormNovoItem({
       <div className="form-group">
         <label className="form-label">Quando</label>
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.875rem', cursor: 'pointer' }}>
-            <input type="radio" checked={frequencia === 'SEMANAL'} onChange={() => setFrequencia('SEMANAL')} />
-            Toda semana
-          </label>
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.875rem', cursor: 'pointer' }}>
-            <input type="radio" checked={frequencia === 'MENSAL'} onChange={() => setFrequencia('MENSAL')} />
-            Num dia do mês
-          </label>
+          {([
+            ['DIARIA', 'Todo dia'],
+            ['SEMANAL', 'Toda semana'],
+            ['MENSAL', 'Num dia do mês'],
+            ['MENSAL_SEMANA', 'Numa semana do mês'],
+          ] as [Frequencia, string][]).map(([valor, rotulo]) => (
+            <label key={valor} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.875rem', cursor: 'pointer' }}>
+              <input type="radio" checked={frequencia === valor} onChange={() => setFrequencia(valor)} />
+              {rotulo}
+            </label>
+          ))}
         </div>
       </div>
+
+      {frequencia === 'DIARIA' && (
+        <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: 12 }}>
+          Aparece de segunda a sábado. Domingo fica de fora, porque não tem expediente.
+        </p>
+      )}
+
+      {frequencia === 'MENSAL_SEMANA' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
+          <div className="form-group">
+            <label className="form-label">Qual semana</label>
+            <select className="form-select" value={semanaDoMes} onChange={(e) => setSemanaDoMes(Number(e.target.value))}>
+              <option value={1}>Primeira</option>
+              <option value={2}>Segunda</option>
+              <option value={3}>Terceira</option>
+              <option value={4}>Quarta</option>
+              <option value={-1}>Última</option>
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Dia da semana</label>
+            <select className="form-select" value={diaSemana} onChange={(e) => setDiaSemana(Number(e.target.value))}>
+              {[1, 2, 3, 4, 5, 6].map((d) => (
+                <option key={d} value={d}>{['', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][d]}</option>
+              ))}
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="form-label">Repete</label>
+            <select className="form-select" value={intervaloMeses} onChange={(e) => setIntervaloMeses(Number(e.target.value))}>
+              {INTERVALOS_MESES.map((n) => (
+                <option key={n} value={n}>
+                  {n === 1 ? 'Todo mês' : n === 12 ? 'Uma vez por ano' : `A cada ${n} meses`}
+                </option>
+              ))}
+            </select>
+          </div>
+          {intervaloMeses > 1 && (
+            <div className="form-group">
+              <label className="form-label">Contando de</label>
+              <select className="form-select" value={mesBase} onChange={(e) => setMesBase(Number(e.target.value))}>
+                {NOMES_MES.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
+              </select>
+            </div>
+          )}
+        </div>
+      )}
 
       {frequencia === 'SEMANAL' ? (
         <div className="form-group">
@@ -445,7 +498,7 @@ function FormNovoItem({
             ))}
           </select>
         </div>
-      ) : (
+      ) : frequencia === 'MENSAL' ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
           <div className="form-group">
             <label className="form-label">Dia do mês</label>
@@ -473,11 +526,15 @@ function FormNovoItem({
             </div>
           )}
         </div>
-      )}
+      ) : null}
 
-      {frequencia === 'MENSAL' && intervaloMeses > 1 && (
-        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: -4, marginBottom: 12 }}>
-          {rotuloFrequencia({ id: 'x', frequencia: 'MENSAL', diaMes, intervaloMeses, mesBase })}
+      {/* Confirmação em português do que foi escolhido — as combinações de
+          semana, dia e intervalo são fáceis de errar sem ver o resultado. */}
+      {frequencia !== 'DIARIA' && (
+        <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: -4, marginBottom: 12 }}>
+          Vai aparecer: <strong>{rotuloFrequencia({
+            id: 'previa', frequencia, diaSemana, diaMes, semanaDoMes, intervaloMeses, mesBase,
+          })}</strong>
         </p>
       )}
 

@@ -39,6 +39,7 @@ export async function getAgendaDoSetor(setorId: string) {
     frequencia: i.frequencia as Frequencia,
     diaSemana: i.diaSemana,
     diaMes: i.diaMes,
+    semanaDoMes: i.semanaDoMes,
     intervaloMeses: i.intervaloMeses,
     mesBase: i.mesBase,
     ativo: i.ativo,
@@ -62,6 +63,7 @@ export interface NovoItemAgenda {
   frequencia: Frequencia;
   diaSemana?: number | null;
   diaMes?: number | null;
+  semanaDoMes?: number | null;
   intervaloMeses?: number;
   mesBase?: number | null;
 }
@@ -74,18 +76,48 @@ export async function criarItemAgenda(setorId: string, dados: NovoItemAgenda) {
   const titulo = dados.titulo?.trim();
   if (!titulo) throw new Error('O nome do processo é obrigatório.');
 
-  if (dados.frequencia === 'SEMANAL') {
+  const comum = {
+    setorId, titulo,
+    observacao: dados.observacao?.trim() || null,
+  };
+
+  if (dados.frequencia === 'DIARIA') {
+    await prisma.itemAgenda.create({
+      data: { ...comum, frequencia: 'DIARIA', intervaloMeses: 1 },
+    });
+  } else if (dados.frequencia === 'SEMANAL') {
     const dia = Number(dados.diaSemana);
     if (!Number.isInteger(dia) || dia < 0 || dia > 6) {
       throw new Error('Escolha o dia da semana.');
     }
     await prisma.itemAgenda.create({
+      data: { ...comum, frequencia: 'SEMANAL', diaSemana: dia, intervaloMeses: 1 },
+    });
+  } else if (dados.frequencia === 'MENSAL_SEMANA') {
+    const dia = Number(dados.diaSemana);
+    if (!Number.isInteger(dia) || dia < 0 || dia > 6) {
+      throw new Error('Escolha o dia da semana.');
+    }
+    const semana = Number(dados.semanaDoMes);
+    if (![1, 2, 3, 4, -1].includes(semana)) {
+      throw new Error('Escolha qual semana do mês.');
+    }
+    const intervalo = Number(dados.intervaloMeses ?? 1);
+    if (!INTERVALOS_MESES.includes(intervalo as (typeof INTERVALOS_MESES)[number])) {
+      throw new Error('Intervalo inválido.');
+    }
+    const mesBase = intervalo === 1 ? 1 : Number(dados.mesBase);
+    if (!Number.isInteger(mesBase) || mesBase < 1 || mesBase > 12) {
+      throw new Error('Escolha o mês a partir do qual a contagem começa.');
+    }
+    await prisma.itemAgenda.create({
       data: {
-        setorId, titulo,
-        observacao: dados.observacao?.trim() || null,
-        frequencia: 'SEMANAL',
+        ...comum,
+        frequencia: 'MENSAL_SEMANA',
         diaSemana: dia,
-        intervaloMeses: 1,
+        semanaDoMes: semana,
+        intervaloMeses: intervalo,
+        mesBase,
       },
     });
   } else {
