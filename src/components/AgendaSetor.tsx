@@ -413,8 +413,10 @@ function FormNovoItem({
 
   return (
     <form onSubmit={salvar} style={{ borderBottom: '1px solid var(--border)', paddingBottom: 16, marginBottom: 16 }}>
+      <div style={{ fontWeight: 600, marginBottom: 14 }}>Novo processo</div>
+
       <div className="form-group">
-        <label className="form-label">O que é *</label>
+        <label className="form-label">O que precisa ser feito? *</label>
         <input
           className="form-input"
           value={titulo}
@@ -426,25 +428,49 @@ function FormNovoItem({
       </div>
 
       <div className="form-group">
-        <label className="form-label">Quando</label>
-        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+        <label className="form-label">Com que frequência?</label>
+        {/* Uma opção por linha, com exemplo. Lado a lado, "num dia do mês" e
+            "numa semana do mês" viravam quase a mesma frase e ninguém
+            distinguia sem testar. */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {([
-            ['DIARIA', 'Todo dia'],
-            ['SEMANAL', 'Toda semana'],
-            ['MENSAL', 'Num dia do mês'],
-            ['MENSAL_SEMANA', 'Numa semana do mês'],
-          ] as [Frequencia, string][]).map(([valor, rotulo]) => (
-            <label key={valor} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.875rem', cursor: 'pointer' }}>
-              <input type="radio" checked={frequencia === valor} onChange={() => setFrequencia(valor)} />
-              {rotulo}
-            </label>
-          ))}
+            ['DIARIA', 'Todo dia', 'de segunda a sábado'],
+            ['SEMANAL', 'Toda semana', 'ex.: toda segunda-feira'],
+            ['MENSAL', 'Uma vez por mês, num dia fixo', 'ex.: todo dia 5'],
+            ['MENSAL_SEMANA', 'Uma vez por mês, num dia da semana', 'ex.: primeira segunda do mês'],
+          ] as [Frequencia, string, string][]).map(([valor, rotulo, exemplo]) => {
+            const marcada = frequencia === valor;
+            return (
+              <label
+                key={valor}
+                style={{
+                  display: 'flex', alignItems: 'baseline', gap: 8, cursor: 'pointer',
+                  padding: '7px 10px', borderRadius: 'var(--radius-sm)',
+                  background: marcada ? 'var(--primary-light, var(--surface-2))' : 'transparent',
+                  border: `1px solid ${marcada ? 'var(--primary)' : 'transparent'}`,
+                }}
+              >
+                <input
+                  type="radio"
+                  checked={marcada}
+                  onChange={() => setFrequencia(valor)}
+                  style={{ flex: 'none' }}
+                />
+                <span style={{ fontSize: '0.875rem', fontWeight: marcada ? 600 : 400 }}>
+                  {rotulo}
+                  <span style={{ fontWeight: 400, color: 'var(--text-muted)', marginLeft: 6, fontSize: '0.8125rem' }}>
+                    — {exemplo}
+                  </span>
+                </span>
+              </label>
+            );
+          })}
         </div>
       </div>
 
       {frequencia === 'DIARIA' && (
-        <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: 12 }}>
-          Aparece de segunda a sábado. Domingo fica de fora, porque não tem expediente.
+        <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: -4, marginBottom: 12 }}>
+          Domingo fica de fora, porque não tem expediente.
         </p>
       )}
 
@@ -531,8 +557,11 @@ function FormNovoItem({
       {/* Confirmação em português do que foi escolhido — as combinações de
           semana, dia e intervalo são fáceis de errar sem ver o resultado. */}
       {frequencia !== 'DIARIA' && (
-        <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: -4, marginBottom: 12 }}>
-          Vai aparecer: <strong>{rotuloFrequencia({
+        <p style={{
+          fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: -4, marginBottom: 14,
+          padding: '8px 10px', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)',
+        }}>
+          No calendário vai cair assim: <strong style={{ color: 'var(--text-main)' }}>{rotuloFrequencia({
             id: 'previa', frequencia, diaSemana, diaMes, semanaDoMes, intervaloMeses, mesBase,
           })}</strong>
         </p>
