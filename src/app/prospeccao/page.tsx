@@ -1,8 +1,7 @@
 import Link from 'next/link';
 import { getSetores } from '@/actions/setores';
 import { getAtendentes } from '@/actions/atendentes';
-import { getProspeccoes, getResumoProspeccao, FiltrosProspeccao } from '@/actions/prospeccao';
-import { EscopoProspeccao, DIAS_SEM_RETORNO_NA_LISTA } from '@/lib/prospeccaoStatus';
+import { getProspeccoes, FiltrosProspeccao } from '@/actions/prospeccao';
 import ProspeccaoManager from '@/components/ProspeccaoManager';
 
 export const dynamic = 'force-dynamic';
@@ -10,31 +9,20 @@ export const dynamic = 'force-dynamic';
 export default async function ProspeccaoPage({
   searchParams,
 }: {
-  searchParams: Promise<{
-    setorId?: string; atendenteId?: string; status?: string; mes?: string; ano?: string;
-  }>;
+  searchParams: Promise<{ setorId?: string; atendenteId?: string; status?: string }>;
 }) {
   const sp = await searchParams;
-
-  // Sem escolha na URL, a lista abre só com o que ainda precisa de ação. O
-  // histórico não some: continua a um clique em "ver todas" e no Excel.
-  const escopo = (sp.status as EscopoProspeccao) || 'aberto';
-
-  const mes = sp.mes ? parseInt(sp.mes) : undefined;
-  const ano = sp.ano ? parseInt(sp.ano) : undefined;
 
   const filtros: FiltrosProspeccao = {
     setorId: sp.setorId || undefined,
     atendenteId: sp.atendenteId || undefined,
-    escopo,
-    mes, ano,
+    status: (sp.status as FiltrosProspeccao['status']) || undefined,
   };
 
-  const [setores, atendentes, prospeccoes, resumo] = await Promise.all([
+  const [setores, atendentes, prospeccoes] = await Promise.all([
     getSetores(),
     getAtendentes(true),
     getProspeccoes(filtros),
-    getResumoProspeccao({ setorId: filtros.setorId, atendenteId: filtros.atendenteId }),
   ]);
 
   const prospeccoesView = prospeccoes.map((p) => ({
@@ -73,14 +61,7 @@ export default async function ProspeccaoPage({
         atendentes={atendentes.map((a) => ({ id: a.id, nome: a.nome }))}
         filtroSetorId={sp.setorId}
         filtroAtendenteId={sp.atendenteId}
-        filtroStatus={escopo}
-        contagemPorStatus={resumo.porStatus}
-        totalGeral={resumo.total}
-        totalEmAberto={resumo.emAberto}
-        diasSemRetorno={DIAS_SEM_RETORNO_NA_LISTA}
-        meses={resumo.meses}
-        filtroMes={mes}
-        filtroAno={ano}
+        filtroStatus={sp.status}
       />
     </div>
   );
