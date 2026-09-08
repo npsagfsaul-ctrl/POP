@@ -32,6 +32,11 @@ interface Props {
   filtroSetorId?: string;
   filtroAtendenteId?: string;
   filtroStatus?: string;
+  /** Totais de TODOS os registros — os cartões não seguem o filtro da lista. */
+  contagemPorStatus: Record<string, number>;
+  totalGeral: number;
+  totalEmAberto: number;
+  diasSemRetorno: number;
 }
 
 const STATUS_CONFIG: Record<Status, { label: string; badge: string }> = {
@@ -57,6 +62,10 @@ export default function ProspeccaoManager({
   filtroSetorId,
   filtroAtendenteId,
   filtroStatus,
+  contagemPorStatus,
+  totalGeral,
+  totalEmAberto,
+  diasSemRetorno,
 }: Props) {
   const router = useRouter();
   const [aberto, setAberto] = useState(false);
@@ -122,11 +131,9 @@ export default function ProspeccaoManager({
     }
   }
 
-  // Contagem por status, para a barra de resumo
-  const contagem = prospeccoes.reduce((acc, p) => {
-    acc[p.status] = (acc[p.status] || 0) + 1;
-    return acc;
-  }, {} as Record<Status, number>);
+  // Os cartões contam TUDO, vindo do servidor — antes eles somavam a lista já
+  // filtrada, o que agora faria a tela esconder números junto com as linhas.
+  const contagem = contagemPorStatus;
 
   return (
     <div>
@@ -159,8 +166,9 @@ export default function ProspeccaoManager({
           </div>
           <div>
             <label className="form-label" style={{ fontSize: '0.75rem' }}>Status</label>
-            <select className="form-select" value={filtroStatus || ''} onChange={(e) => atualizarFiltro('status', e.target.value)}>
-              <option value="">Todos</option>
+            <select className="form-select" value={filtroStatus || 'aberto'} onChange={(e) => atualizarFiltro('status', e.target.value)}>
+              <option value="aberto">Em aberto (padrão)</option>
+              <option value="todas">Todas — histórico completo</option>
               {(Object.keys(STATUS_CONFIG) as Status[]).map((s) => (
                 <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>
               ))}
@@ -177,6 +185,57 @@ export default function ProspeccaoManager({
         <div className="alert alert-info" style={{ marginBottom: 16 }}>
           É preciso ter ao menos um Setor e um Funcionário cadastrados para lançar uma prospecção.
         </div>
+      )}
+
+      {/* O que a lista está mostrando, e como ver o resto */}
+      <div style={{
+        display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
+        marginBottom: 10, fontSize: '0.8125rem', color: 'var(--text-muted)',
+      }}>
+        {filtroStatus === 'aberto' ? (
+          <>
+            <span>
+              Mostrando os <strong style={{ color: 'var(--text-main)' }}>{totalEmAberto} em aberto</strong>
+              {totalGeral > totalEmAberto && (
+                <> · {totalGeral - totalEmAberto} já resolvidos ficam fora da lista</>
+              )}
+            </span>
+            {totalGeral > totalEmAberto && (
+              <button
+                className="btn btn-secondary btn-sm"
+                style={{ padding: '2px 10px', fontSize: '0.75rem' }}
+                onClick={() => atualizarFiltro('status', 'todas')}
+              >
+                ver todas as {totalGeral}
+              </button>
+            )}
+          </>
+        ) : (
+          <>
+            <span>
+              Mostrando{' '}
+              <strong style={{ color: 'var(--text-main)' }}>
+                {filtroStatus === 'todas'
+                  ? `todas as ${totalGeral}`
+                  : `só "${STATUS_CONFIG[filtroStatus as Status]?.label ?? filtroStatus}"`}
+              </strong>
+            </span>
+            <button
+              className="btn btn-secondary btn-sm"
+              style={{ padding: '2px 10px', fontSize: '0.75rem' }}
+              onClick={() => atualizarFiltro('status', 'aberto')}
+            >
+              voltar para os {totalEmAberto} em aberto
+            </button>
+          </>
+        )}
+      </div>
+
+      {filtroStatus === 'aberto' && (contagem.SEM_RETORNO ?? 0) > 0 && (
+        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: -4, marginBottom: 10 }}>
+          &quot;Sem retorno&quot; continua na lista por {diasSemRetorno} dias depois de marcado, para
+          dar chance de uma nova tentativa. Depois sai sozinho.
+        </p>
       )}
 
       {/* Tabela */}

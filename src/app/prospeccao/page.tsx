@@ -1,7 +1,10 @@
 import Link from 'next/link';
 import { getSetores } from '@/actions/setores';
 import { getAtendentes } from '@/actions/atendentes';
-import { getProspeccoes, FiltrosProspeccao } from '@/actions/prospeccao';
+import {
+  getProspeccoes, getResumoProspeccao, FiltrosProspeccao, EscopoProspeccao,
+  DIAS_SEM_RETORNO_NA_LISTA,
+} from '@/actions/prospeccao';
 import ProspeccaoManager from '@/components/ProspeccaoManager';
 
 export const dynamic = 'force-dynamic';
@@ -13,16 +16,21 @@ export default async function ProspeccaoPage({
 }) {
   const sp = await searchParams;
 
+  // Sem escolha na URL, a lista abre só com o que ainda precisa de ação. O
+  // histórico não some: continua a um clique em "ver todas" e no Excel.
+  const escopo = (sp.status as EscopoProspeccao) || 'aberto';
+
   const filtros: FiltrosProspeccao = {
     setorId: sp.setorId || undefined,
     atendenteId: sp.atendenteId || undefined,
-    status: (sp.status as FiltrosProspeccao['status']) || undefined,
+    escopo,
   };
 
-  const [setores, atendentes, prospeccoes] = await Promise.all([
+  const [setores, atendentes, prospeccoes, resumo] = await Promise.all([
     getSetores(),
     getAtendentes(true),
     getProspeccoes(filtros),
+    getResumoProspeccao({ setorId: filtros.setorId, atendenteId: filtros.atendenteId }),
   ]);
 
   const prospeccoesView = prospeccoes.map((p) => ({
@@ -61,7 +69,11 @@ export default async function ProspeccaoPage({
         atendentes={atendentes.map((a) => ({ id: a.id, nome: a.nome }))}
         filtroSetorId={sp.setorId}
         filtroAtendenteId={sp.atendenteId}
-        filtroStatus={sp.status}
+        filtroStatus={escopo}
+        contagemPorStatus={resumo.porStatus}
+        totalGeral={resumo.total}
+        totalEmAberto={resumo.emAberto}
+        diasSemRetorno={DIAS_SEM_RETORNO_NA_LISTA}
       />
     </div>
   );

@@ -10,10 +10,53 @@ function parseData(dataString: string) {
   return data;
 }
 
+/**
+ * Por quantos dias uma prospecção "Sem retorno" continua na lista do dia a dia.
+ *
+ * Contados a partir do `updatedAt`, não da data da prospecção: o status pode ter
+ * sido marcado bem depois do primeiro contato, e o que importa é há quanto tempo
+ * ela está parada nesse estado.
+ */
+export const DIAS_SEM_RETORNO_NA_LISTA = 30;
+
+/** Status que nunca mais pedem ação — saem da lista assim que são marcados. */
+const STATUS_ENCERRADOS: StatusProspeccao[] = [
+  'FECHADO', 'NAO_TEM_INTERESSE', 'SEM_PERFIL', 'DADOS_INCORRETO',
+];
+
+/** Status que sempre pedem ação. */
+const STATUS_ABERTOS: StatusProspeccao[] = ['NOVO', 'CONTATO'];
+
+/**
+ * O que a lista mostra: só o que ainda precisa de ação (`aberto`, o padrão),
+ * tudo (`todas`), ou um status específico.
+ */
+export type EscopoProspeccao = 'aberto' | 'todas' | StatusProspeccao;
+
 export interface FiltrosProspeccao {
   setorId?: string;
   atendenteId?: string;
-  status?: StatusProspeccao;
+  escopo?: EscopoProspeccao;
+}
+
+function limiteSemRetorno(): Date {
+  const d = new Date();
+  d.setDate(d.getDate() - DIAS_SEM_RETORNO_NA_LISTA);
+  return d;
+}
+
+function condicaoDeEscopo(escopo: EscopoProspeccao | undefined) {
+  if (!escopo || escopo === 'todas') return {};
+  if (escopo === 'aberto') {
+    return {
+      OR: [
+        { status: { in: STATUS_ABERTOS } },
+        // Sem retorno continua em aberto só enquanto for recente.
+        { status: 'SEM_RETORNO' as StatusProspeccao, updatedAt: { gte: limiteSemRetorno() } },
+      ],
+    };
+  }
+  return { status: escopo };
 }
 
 export async function getProspeccoes(filtros: FiltrosProspeccao = {}) {
@@ -21,11 +64,40 @@ export async function getProspeccoes(filtros: FiltrosProspeccao = {}) {
     where: {
       setorId: filtros.setorId || undefined,
       atendenteId: filtros.atendenteId || undefined,
-      status: filtros.status || undefined,
+      ...condicaoDeEscopo(filtros.escopo),
     },
     include: { setor: true, atendente: true },
     orderBy: { data: 'desc' },
   });
+}
+
+/**
+ * Totais por status e total geral, ignorando o escopo.
+ *
+ * Os cartões do topo têm que continuar contando TUDO mesmo quando a lista está
+ * enxuta — senão a tela passaria a esconder números em vez de só esconder linhas.
+ */
+export async function getResumoProspeccao(
+  filtros: Pick<FiltrosProspeccao, 'setorId' | 'atendenteId'> = {},
+) {
+  const where = {
+    setorId: filtros.setorId || undefined,
+    atendenteId: filtros.atendenteId || undefined,
+  };
+
+  const registros = await prisma.prospeccao.findMany({
+    where,
+    select: { status: true },
+  });
+
+  const porStatus: Record<string, number> = {};
+  for (const r of registros) porStatus[r.status] = (porStatus[r.status] || 0) + 1;
+
+  const emAberto = await prisma.prospeccao.count({
+    where: { ...where, ...condicaoDeEscopo('aberto') },
+  });
+
+  return { porStatus, total: registros.length, emAberto, encerrados: STATUS_ENCERRADOS };
 }
 
 export async function criarProspeccao(formData: FormData) {
