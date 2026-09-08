@@ -1,10 +1,8 @@
 import Link from 'next/link';
 import { getSetores } from '@/actions/setores';
 import { getAtendentes } from '@/actions/atendentes';
-import {
-  getProspeccoes, getResumoProspeccao, FiltrosProspeccao, EscopoProspeccao,
-  DIAS_SEM_RETORNO_NA_LISTA,
-} from '@/actions/prospeccao';
+import { getProspeccoes, getResumoProspeccao, FiltrosProspeccao } from '@/actions/prospeccao';
+import { EscopoProspeccao, DIAS_SEM_RETORNO_NA_LISTA } from '@/lib/prospeccaoStatus';
 import ProspeccaoManager from '@/components/ProspeccaoManager';
 
 export const dynamic = 'force-dynamic';

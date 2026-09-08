@@ -3,35 +3,17 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { StatusProspeccao } from '@prisma/client';
+// A regra de "o que ainda pede ação" mora no lib: arquivo 'use server' só pode
+// exportar função assíncrona, e ela precisa ser lida também pelas telas.
+import {
+  STATUS_ABERTOS, STATUS_ENCERRADOS, DIAS_SEM_RETORNO_NA_LISTA, EscopoProspeccao,
+} from '@/lib/prospeccaoStatus';
 
 function parseData(dataString: string) {
   const data = new Date(dataString);
   data.setUTCHours(0, 0, 0, 0);
   return data;
 }
-
-/**
- * Por quantos dias uma prospecção "Sem retorno" continua na lista do dia a dia.
- *
- * Contados a partir do `updatedAt`, não da data da prospecção: o status pode ter
- * sido marcado bem depois do primeiro contato, e o que importa é há quanto tempo
- * ela está parada nesse estado.
- */
-export const DIAS_SEM_RETORNO_NA_LISTA = 30;
-
-/** Status que nunca mais pedem ação — saem da lista assim que são marcados. */
-const STATUS_ENCERRADOS: StatusProspeccao[] = [
-  'FECHADO', 'NAO_TEM_INTERESSE', 'SEM_PERFIL', 'DADOS_INCORRETO',
-];
-
-/** Status que sempre pedem ação. */
-const STATUS_ABERTOS: StatusProspeccao[] = ['NOVO', 'CONTATO'];
-
-/**
- * O que a lista mostra: só o que ainda precisa de ação (`aberto`, o padrão),
- * tudo (`todas`), ou um status específico.
- */
-export type EscopoProspeccao = 'aberto' | 'todas' | StatusProspeccao;
 
 export interface FiltrosProspeccao {
   setorId?: string;
