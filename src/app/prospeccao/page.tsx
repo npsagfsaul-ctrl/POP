@@ -10,7 +10,9 @@ export const dynamic = 'force-dynamic';
 export default async function ProspeccaoPage({
   searchParams,
 }: {
-  searchParams: Promise<{ setorId?: string; atendenteId?: string; status?: string }>;
+  searchParams: Promise<{
+    setorId?: string; atendenteId?: string; status?: string; mes?: string; ano?: string;
+  }>;
 }) {
   const sp = await searchParams;
 
@@ -18,10 +20,14 @@ export default async function ProspeccaoPage({
   // histórico não some: continua a um clique em "ver todas" e no Excel.
   const escopo = (sp.status as EscopoProspeccao) || 'aberto';
 
+  const mes = sp.mes ? parseInt(sp.mes) : undefined;
+  const ano = sp.ano ? parseInt(sp.ano) : undefined;
+
   const filtros: FiltrosProspeccao = {
     setorId: sp.setorId || undefined,
     atendenteId: sp.atendenteId || undefined,
     escopo,
+    mes, ano,
   };
 
   const [setores, atendentes, prospeccoes, resumo] = await Promise.all([
@@ -72,6 +78,9 @@ export default async function ProspeccaoPage({
         totalGeral={resumo.total}
         totalEmAberto={resumo.emAberto}
         diasSemRetorno={DIAS_SEM_RETORNO_NA_LISTA}
+        meses={resumo.meses}
+        filtroMes={mes}
+        filtroAno={ano}
       />
     </div>
   );

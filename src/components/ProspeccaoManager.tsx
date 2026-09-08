@@ -37,7 +37,16 @@ interface Props {
   totalGeral: number;
   totalEmAberto: number;
   diasSemRetorno: number;
+  /** Só os meses que têm registro — o seletor nunca oferece mês vazio. */
+  meses: { ano: number; mes: number; total: number }[];
+  filtroMes?: number;
+  filtroAno?: number;
 }
+
+const NOMES_MES = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+];
 
 const STATUS_CONFIG: Record<Status, { label: string; badge: string }> = {
   NOVO: { label: STATUS_PROSPECCAO_LABEL.NOVO, badge: 'badge-primary' },
@@ -66,6 +75,9 @@ export default function ProspeccaoManager({
   totalGeral,
   totalEmAberto,
   diasSemRetorno,
+  meses,
+  filtroMes,
+  filtroAno,
 }: Props) {
   const router = useRouter();
   const [aberto, setAberto] = useState(false);
@@ -75,12 +87,28 @@ export default function ProspeccaoManager({
 
   const semCadastro = setores.length === 0 || atendentes.length === 0;
 
-  function atualizarFiltro(chave: 'setorId' | 'atendenteId' | 'status', valor: string) {
+  /** Muda só o que foi passado e mantém o resto dos filtros da URL. */
+  function navegar(mudancas: Record<string, string | undefined>) {
+    const atual: Record<string, string | undefined> = {
+      setorId: filtroSetorId,
+      atendenteId: filtroAtendenteId,
+      status: filtroStatus,
+      mes: filtroMes ? String(filtroMes) : undefined,
+      ano: filtroAno ? String(filtroAno) : undefined,
+      ...mudancas,
+    };
     const params = new URLSearchParams();
-    if (chave === 'setorId' ? valor : filtroSetorId) params.set('setorId', chave === 'setorId' ? valor : filtroSetorId!);
-    if (chave === 'atendenteId' ? valor : filtroAtendenteId) params.set('atendenteId', chave === 'atendenteId' ? valor : filtroAtendenteId!);
-    if (chave === 'status' ? valor : filtroStatus) params.set('status', chave === 'status' ? valor : filtroStatus!);
+    for (const [chave, valor] of Object.entries(atual)) if (valor) params.set(chave, valor);
     router.push(`/prospeccao?${params.toString()}`);
+  }
+
+  function escolherMes(valor: string) {
+    if (!valor) return navegar({ mes: undefined, ano: undefined });
+    const [ano, mes] = valor.split('-');
+    // Escolher um mês é olhar histórico. Se a tela estiver na fila de trabalho,
+    // passa para "todas" — senão apareceriam só os em aberto daquele mês, que é
+    // um recorte que ninguém pede. O seletor de Status mostra a mudança.
+    navegar({ mes, ano, status: filtroStatus === 'aberto' ? 'todas' : filtroStatus });
   }
 
   const abrirAdicionar = () => {
@@ -135,6 +163,13 @@ export default function ProspeccaoManager({
   // filtrada, o que agora faria a tela esconder números junto com as linhas.
   const contagem = contagemPorStatus;
 
+  const mesSelecionado = filtroMes && filtroAno ? `${NOMES_MES[filtroMes - 1]} de ${filtroAno}` : null;
+  const rotuloEscopo = filtroStatus === 'aberto'
+    ? 'em aberto'
+    : filtroStatus === 'todas'
+      ? 'todas'
+      : STATUS_CONFIG[filtroStatus as Status]?.label ?? filtroStatus;
+
   return (
     <div>
       {/* Resumo por status */}
@@ -152,25 +187,40 @@ export default function ProspeccaoManager({
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
           <div>
             <label className="form-label" style={{ fontSize: '0.75rem' }}>Setor</label>
-            <select className="form-select" value={filtroSetorId || ''} onChange={(e) => atualizarFiltro('setorId', e.target.value)}>
+            <select className="form-select" value={filtroSetorId || ''} onChange={(e) => navegar({ setorId: e.target.value || undefined })}>
               <option value="">Todos</option>
               {setores.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
             </select>
           </div>
           <div>
             <label className="form-label" style={{ fontSize: '0.75rem' }}>Funcionário</label>
-            <select className="form-select" value={filtroAtendenteId || ''} onChange={(e) => atualizarFiltro('atendenteId', e.target.value)}>
+            <select className="form-select" value={filtroAtendenteId || ''} onChange={(e) => navegar({ atendenteId: e.target.value || undefined })}>
               <option value="">Todos</option>
               {atendentes.map((a) => <option key={a.id} value={a.id}>{a.nome}</option>)}
             </select>
           </div>
           <div>
             <label className="form-label" style={{ fontSize: '0.75rem' }}>Status</label>
-            <select className="form-select" value={filtroStatus || 'aberto'} onChange={(e) => atualizarFiltro('status', e.target.value)}>
+            <select className="form-select" value={filtroStatus || 'aberto'} onChange={(e) => navegar({ status: e.target.value })}>
               <option value="aberto">Em aberto (padrão)</option>
               <option value="todas">Todas — histórico completo</option>
               {(Object.keys(STATUS_CONFIG) as Status[]).map((s) => (
                 <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="form-label" style={{ fontSize: '0.75rem' }}>Mês</label>
+            <select
+              className="form-select"
+              value={filtroMes && filtroAno ? `${filtroAno}-${filtroMes}` : ''}
+              onChange={(e) => escolherMes(e.target.value)}
+            >
+              <option value="">Todos os meses</option>
+              {meses.map((m) => (
+                <option key={`${m.ano}-${m.mes}`} value={`${m.ano}-${m.mes}`}>
+                  {NOMES_MES[m.mes - 1]} de {m.ano} ({m.total})
+                </option>
               ))}
             </select>
           </div>
@@ -192,7 +242,22 @@ export default function ProspeccaoManager({
         display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
         marginBottom: 10, fontSize: '0.8125rem', color: 'var(--text-muted)',
       }}>
-        {filtroStatus === 'aberto' ? (
+        {mesSelecionado ? (
+          <>
+            <span>
+              Histórico de <strong style={{ color: 'var(--text-main)' }}>{mesSelecionado}</strong> ·{' '}
+              {prospeccoes.length} {prospeccoes.length === 1 ? 'registro' : 'registros'}
+              {filtroStatus !== 'todas' && <> (só &quot;{rotuloEscopo}&quot;)</>}
+            </span>
+            <button
+              className="btn btn-secondary btn-sm"
+              style={{ padding: '2px 10px', fontSize: '0.75rem' }}
+              onClick={() => navegar({ status: 'aberto', mes: undefined, ano: undefined })}
+            >
+              voltar para os {totalEmAberto} em aberto
+            </button>
+          </>
+        ) : filtroStatus === 'aberto' ? (
           <>
             <span>
               Mostrando os <strong style={{ color: 'var(--text-main)' }}>{totalEmAberto} em aberto</strong>
@@ -204,7 +269,7 @@ export default function ProspeccaoManager({
               <button
                 className="btn btn-secondary btn-sm"
                 style={{ padding: '2px 10px', fontSize: '0.75rem' }}
-                onClick={() => atualizarFiltro('status', 'todas')}
+                onClick={() => navegar({ status: 'todas' })}
               >
                 ver todas as {totalGeral}
               </button>
@@ -223,7 +288,7 @@ export default function ProspeccaoManager({
             <button
               className="btn btn-secondary btn-sm"
               style={{ padding: '2px 10px', fontSize: '0.75rem' }}
-              onClick={() => atualizarFiltro('status', 'aberto')}
+              onClick={() => navegar({ status: 'aberto', mes: undefined, ano: undefined })}
             >
               voltar para os {totalEmAberto} em aberto
             </button>
@@ -231,7 +296,7 @@ export default function ProspeccaoManager({
         )}
       </div>
 
-      {filtroStatus === 'aberto' && (contagem.SEM_RETORNO ?? 0) > 0 && (
+      {!mesSelecionado && filtroStatus === 'aberto' && (contagem.SEM_RETORNO ?? 0) > 0 && (
         <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: -4, marginBottom: 10 }}>
           &quot;Sem retorno&quot; continua na lista por {diasSemRetorno} dias depois de marcado, para
           dar chance de uma nova tentativa. Depois sai sozinho.
