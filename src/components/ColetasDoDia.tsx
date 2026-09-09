@@ -3,7 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { criarColeta, atualizarColeta, atualizarStatusColeta, deletarColeta } from '@/actions/coletas';
-import { STATUS_COLETA_LABEL, StatusColetaTexto, CORTE_PEDIDOS, corteJaPassou } from '@/lib/coletasStatus';
+import {
+  STATUS_COLETA_LABEL, StatusColetaTexto, CORTE_PEDIDOS, corteJaPassou, corDoColetor,
+} from '@/lib/coletasStatus';
 
 type Periodo = 'MANHA' | 'TARDE' | 'RETORNO';
 type Tipo = 'FIXA' | 'EXTRA';
@@ -23,7 +25,6 @@ interface ColetaItem {
   clienteId: string;
   atendenteId: string | null;
   coletorNome: string;
-  coletorCor: string;
   clienteNome: string;
   clienteCodigo: string | null;
   atendenteNome: string | null;
@@ -42,6 +43,8 @@ interface Props {
   coletores: Opcao[];
   atendentes: Opcao[];
   clientes: Opcao[];
+  /** Alterar/excluir/cancelar são do Atendimento Interno (ou do admin). */
+  podeGerenciar: boolean;
 }
 
 const PERIODOS: { key: Periodo; label: string }[] = [
@@ -55,6 +58,46 @@ const STATUS_CFG: Record<Status, { badge: string; bg: string; dot: string }> = {
   COLETADO: { badge: 'badge-success', bg: 'rgba(52,195,143,0.10)', dot: '#34c38f' },
   CANCELADO: { badge: 'badge-danger', bg: 'rgba(244,106,106,0.10)', dot: '#f46a6a' },
 };
+
+/**
+ * Preto ou branco por cima da cor do coletor, conforme o quanto ela é clara.
+ * A paleta atual é toda escura, então na prática dá branco sempre — a função
+ * fica para o dia em que alguém acrescentar um tom claro à paleta.
+ */
+function corDoTexto(cor: string | null | undefined): string {
+  const hex = (cor ?? '').replace('#', '');
+  if (hex.length !== 6) return 'var(--text-main)';
+  const r = parseInt(hex.slice(0, 2), 16);
+  const g = parseInt(hex.slice(2, 4), 16);
+  const b = parseInt(hex.slice(4, 6), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6 ? '#1a1a1a' : '#ffffff';
+}
+
+/**
+ * Agrupa as coletas por coletor, em ordem alfabética.
+ *
+ * É como a equipe já enxerga na planilha que imprimem: uma faixa por coletor,
+ * com a cor dele. A divisão por período continua sendo a de fora.
+ */
+function agruparPorColetor(itens: ColetaItem[], idsDosColetores: string[]) {
+  const mapa = new Map<string, {
+    coletorId: string; coletorNome: string; cor: string; itens: ColetaItem[];
+  }>();
+
+  for (const c of itens) {
+    if (!mapa.has(c.coletorId)) {
+      mapa.set(c.coletorId, {
+        coletorId: c.coletorId,
+        coletorNome: c.coletorNome,
+        cor: corDoColetor(c.coletorId, idsDosColetores),
+        itens: [],
+      });
+    }
+    mapa.get(c.coletorId)!.itens.push(c);
+  }
+
+  return [...mapa.values()].sort((a, b) => a.coletorNome.localeCompare(b.coletorNome, 'pt-BR'));
+}
 
 function shiftData(dataStr: string, delta: number) {
   const [y, m, d] = dataStr.split('-').map(Number);
@@ -70,7 +113,7 @@ function formatarData(dataStr: string) {
   });
 }
 
-export default function ColetasDoDia({ data, coletas, coletores, atendentes, clientes }: Props) {
+export default function ColetasDoDia({ data, coletas, coletores, atendentes, clientes, podeGerenciar }: Props) {
   const router = useRouter();
   const [aberto, setAberto] = useState(false);
   const [periodoAtual, setPeriodoAtual] = useState<Periodo>('MANHA');
@@ -123,7 +166,7 @@ export default function ColetasDoDia({ data, coletas, coletores, atendentes, cli
     if (!editando && fechado[periodoEscolhido]) {
       const ok = confirm(
         `O horário de pedidos da ${PERIODOS.find((p) => p.key === periodoEscolhido)?.label} era até ${CORTE_PEDIDOS[periodoEscolhido]}.\n\n` +
-        'O coletor já saiu com a folha impressa. Ele só vai ver esta coleta pelo celular, em "Sou coletor".\n\nLançar mesmo assim?',
+        'O coletor já saiu com a folha impressa, então esta coleta não está nela — precisa ser avisada por fora.\n\nLançar mesmo assim?',
       );
       if (!ok) return;
     }
@@ -169,6 +212,9 @@ export default function ColetasDoDia({ data, coletas, coletores, atendentes, cli
   }
 
   const semCadastro = coletores.length === 0 || clientes.length === 0;
+  // A cor sai da posição do coletor no cadastro inteiro, não só entre os que
+  // têm coleta hoje — senão a cor de cada um mudaria conforme o dia.
+  const idsDosColetores = coletores.map((c) => c.id);
   const btnMini: React.CSSProperties = { padding: '2px 8px', fontSize: '0.72rem' };
 
   // As fixas se repetem todo dia — são contexto, não novidade. Ficam recolhidas
@@ -177,20 +223,22 @@ export default function ColetasDoDia({ data, coletas, coletores, atendentes, cli
   const [fixasAbertas, setFixasAbertas] = useState<Record<string, boolean>>({});
   const [linhaAberta, setLinhaAberta] = useState<string | null>(null);
 
-  const botoesDe = (c: ColetaItem) => (
-    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-      {c.status === 'AGUARDANDO' ? (
-        <>
-          <button className="btn btn-success btn-sm" style={btnMini} disabled={loading} onClick={() => handleStatus(c, 'COLETADO')}>✓ Coletado</button>
+  // Alterar, excluir e cancelar são do Atendimento Interno. Quem só está
+  // consultando a rota vê a lista, mas não mexe nela.
+  const botoesDe = (c: ColetaItem) => {
+    if (!podeGerenciar) return null;
+    return (
+      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+        {c.status === 'AGUARDANDO' ? (
           <button className="btn btn-danger btn-sm" style={btnMini} disabled={loading} onClick={() => handleStatus(c, 'CANCELADO')}>Cancelar</button>
-        </>
-      ) : (
-        <button className="btn btn-secondary btn-sm" style={btnMini} disabled={loading} onClick={() => handleStatus(c, 'AGUARDANDO')}>↩ Desfazer</button>
-      )}
-      <button className="btn btn-secondary btn-sm" style={btnMini} onClick={() => abrirEditar(c)}>Editar</button>
-      <button className="btn btn-danger btn-sm" style={btnMini} disabled={loading} onClick={() => handleExcluir(c)}>Excluir</button>
-    </div>
-  );
+        ) : (
+          <button className="btn btn-secondary btn-sm" style={btnMini} disabled={loading} onClick={() => handleStatus(c, 'AGUARDANDO')}>↩ Desfazer</button>
+        )}
+        <button className="btn btn-secondary btn-sm" style={btnMini} onClick={() => abrirEditar(c)}>Editar</button>
+        <button className="btn btn-danger btn-sm" style={btnMini} disabled={loading} onClick={() => handleExcluir(c)}>Excluir</button>
+      </div>
+    );
+  };
 
   /** Linha compacta — usada nas fixas. Abre no clique para ver endereço e agir. */
   const renderLinha = (c: ColetaItem) => {
@@ -208,8 +256,14 @@ export default function ColetasDoDia({ data, coletas, coletores, atendentes, cli
             {c.clienteNome}
             {c.clienteCodigo && <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> ({c.clienteCodigo})</span>}
           </span>
-          {c.status === 'COLETADO' && c.horaColeta && (
-            <span style={{ fontSize: '0.68rem', color: 'var(--success)' }}>{c.horaColeta}</span>
+          {c.tipo !== 'FIXA' && (
+            <span className="badge badge-warning" style={{ fontSize: '0.6rem' }}>extra</span>
+          )}
+          {/* Mesma coluna ATENDENTE da planilha que eles imprimem. */}
+          {c.atendenteNome && (
+            <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', flexShrink: 0 }}>
+              {c.atendenteNome}
+            </span>
           )}
           {c.naoTeveColeta && <span className="badge badge-danger" style={{ fontSize: '0.6rem' }}>sem coleta</span>}
           <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>{aberta ? '▾' : '▸'}</span>
@@ -217,9 +271,9 @@ export default function ColetasDoDia({ data, coletas, coletores, atendentes, cli
         {aberta && (
           <div style={{ padding: '0 2px 8px 18px', display: 'flex', flexDirection: 'column', gap: 6 }}>
             {c.observacao && <div style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>{c.observacao}</div>}
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-              {c.coletorNome}{c.rotaNome ? ` · ${c.rotaNome}` : ''}
-            </div>
+            {c.rotaNome && (
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{c.rotaNome}</div>
+            )}
             {botoesDe(c)}
           </div>
         )}
@@ -227,46 +281,6 @@ export default function ColetasDoDia({ data, coletas, coletores, atendentes, cli
     );
   };
 
-  /** Cartão completo — usado nas extras, que são poucas e cada uma importa. */
-  const renderCartao = (c: ColetaItem) => {
-    const cfg = STATUS_CFG[c.status];
-    const riscado = c.naoTeveColeta || c.status === 'CANCELADO';
-    return (
-      <div
-        key={c.id}
-        style={{
-          borderLeft: `4px solid ${c.coletorCor}`,
-          background: cfg.bg,
-          borderRadius: 'var(--radius-sm)',
-          padding: '8px 10px',
-          opacity: c.status === 'CANCELADO' ? 0.75 : 1,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginBottom: 2 }}>
-          <span style={{ fontWeight: 700, fontSize: '0.85rem', color: c.coletorCor }}>{c.coletorNome}</span>
-          {c.rotaNome && <span className="badge badge-primary" style={{ fontSize: '0.65rem' }}>{c.rotaNome}</span>}
-          <span className={`badge ${cfg.badge}`} style={{ fontSize: '0.65rem' }}>
-            {STATUS_COLETA_LABEL[c.status]}
-            {c.status === 'COLETADO' && c.horaColeta ? ` ${c.horaColeta}` : ''}
-          </span>
-          {c.naoTeveColeta && <span className="badge badge-danger" style={{ fontSize: '0.65rem' }}>não teve coleta</span>}
-        </div>
-        <div style={{ fontSize: '0.875rem', fontWeight: 600, textDecoration: riscado ? 'line-through' : 'none' }}>
-          {c.clienteNome}
-          {c.clienteCodigo && <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}> ({c.clienteCodigo})</span>}
-        </div>
-        {c.observacao && (
-          <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>{c.observacao}</div>
-        )}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 6, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
-            {c.atendenteNome ? `por ${c.atendenteNome} às ${c.criadaEm}` : `cadastrada às ${c.criadaEm}`}
-          </span>
-          {botoesDe(c)}
-        </div>
-      </div>
-    );
-  };
 
   return (
     <div>
@@ -309,7 +323,9 @@ export default function ColetasDoDia({ data, coletas, coletores, atendentes, cli
                   {label}
                   <span className="badge badge-primary" style={{ marginLeft: 6, fontSize: '0.7rem' }}>{doPeriodo.length}</span>
                 </div>
-                <button className="btn btn-primary btn-sm" disabled={semCadastro} onClick={() => abrirAdicionar(key)}>+ Coleta</button>
+                {podeGerenciar && (
+                  <button className="btn btn-primary btn-sm" disabled={semCadastro} onClick={() => abrirAdicionar(key)}>+ Coleta</button>
+                )}
               </div>
               {CORTE_PEDIDOS[key] && (
                 <div style={{ fontSize: '0.72rem', marginBottom: 10, color: fechado[key] ? 'var(--danger)' : 'var(--text-muted)' }}>
@@ -322,62 +338,62 @@ export default function ColetasDoDia({ data, coletas, coletores, atendentes, cli
               {doPeriodo.length === 0 ? (
                 <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', padding: '8px 0' }}>Nenhuma coleta.</p>
               ) : (
-                (() => {
-                  const fixas = doPeriodo.filter((c) => c.tipo === 'FIXA');
-                  const extras = doPeriodo.filter((c) => c.tipo !== 'FIXA');
-                  // Fixa fora do normal continua à vista mesmo com o grupo
-                  // recolhido — é justamente o que precisa de atenção.
-                  const comOcorrencia = fixas.filter((c) => c.naoTeveColeta || c.status === 'CANCELADO');
-                  const aberto = !!fixasAbertas[key];
-                  const nomesColetores = [...new Set(fixas.map((c) => c.coletorNome))];
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {agruparPorColetor(doPeriodo, idsDosColetores).map((grupo) => {
+                    // Extra e ocorrência são o que muda de um dia para o outro —
+                    // ficam à vista mesmo com o grupo recolhido. As fixas normais
+                    // são contexto: 44 delas abertas devolvem o problema de
+                    // rolagem que motivou o recolhimento.
+                    const destaques = grupo.itens.filter(
+                      (c) => c.tipo !== 'FIXA' || c.naoTeveColeta || c.status === 'CANCELADO',
+                    );
+                    const chave = `${key}|${grupo.coletorId}`;
+                    const aberto = fixasAbertas[chave] ?? false;
+                    const extras = grupo.itens.filter((c) => c.tipo !== 'FIXA').length;
+                    const ocorrencias = grupo.itens.filter(
+                      (c) => c.naoTeveColeta || c.status === 'CANCELADO',
+                    ).length;
 
-                  return (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {fixas.length > 0 && (
-                        <div>
-                          <div
-                            onClick={() => setFixasAbertas((p) => ({ ...p, [key]: !aberto }))}
-                            style={{
-                              display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
-                              padding: '6px 8px', borderRadius: 'var(--radius-sm)',
-                              background: 'var(--surface-2)', border: '1px solid var(--border)',
-                            }}
-                          >
-                            <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>{aberto ? '▾' : '▸'}</span>
-                            <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>
-                              {fixas.length} {fixas.length === 1 ? 'fixa' : 'fixas'}
+                    return (
+                      <div key={grupo.coletorId}>
+                        <div
+                          onClick={() => setFixasAbertas((p) => ({ ...p, [chave]: !aberto }))}
+                          style={{
+                            display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
+                            padding: '5px 8px', borderRadius: 'var(--radius-sm)',
+                            // A faixa inteira na cor do coletor, como na planilha
+                            // que a equipe imprime — é assim que eles já leem.
+                            background: grupo.cor || 'var(--surface-2)',
+                            color: corDoTexto(grupo.cor),
+                          }}
+                        >
+                          <span style={{ fontSize: '0.75rem', opacity: 0.75 }}>{aberto ? '▾' : '▸'}</span>
+                          <span style={{ fontSize: '0.8125rem', fontWeight: 700, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
+                            {grupo.coletorNome}
+                          </span>
+                          <span className="badge badge-primary" style={{ fontSize: '0.62rem' }}>{grupo.itens.length}</span>
+                          {extras > 0 && (
+                            <span className="badge badge-warning" style={{ fontSize: '0.62rem' }}>
+                              {extras} extra{extras > 1 ? 's' : ''}
                             </span>
-                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {nomesColetores.join(', ')}
-                            </span>
-                            {comOcorrencia.length > 0 && (
-                              <span className="badge badge-danger" style={{ fontSize: '0.62rem' }}>
-                                {comOcorrencia.length} c/ ocorrência
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Recolhido, só as que fugiram do normal aparecem */}
-                          {!aberto && comOcorrencia.length > 0 && (
-                            <div style={{ marginTop: 4 }}>{comOcorrencia.map(renderLinha)}</div>
                           )}
-                          {aberto && <div style={{ marginTop: 4 }}>{fixas.map(renderLinha)}</div>}
+                          {ocorrencias > 0 && (
+                            <span className="badge badge-danger" style={{ fontSize: '0.62rem' }}>{ocorrencias}</span>
+                          )}
                         </div>
-                      )}
 
-                      {extras.length > 0 && (
-                        <div>
-                          <div style={{ fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: 6 }}>
-                            EXTRAS ({extras.length})
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            {extras.map(renderCartao)}
-                          </div>
+                        {/* A cor continua na lateral das linhas, para a leitura
+                            não se perder quando o grupo é longo. */}
+                        <div style={{
+                          marginTop: 3, paddingLeft: 8,
+                          borderLeft: `4px solid ${grupo.cor || 'var(--border)'}`,
+                        }}>
+                          {(aberto ? grupo.itens : destaques).map(renderLinha)}
                         </div>
-                      )}
-                    </div>
-                  );
-                })()
+                      </div>
+                    );
+                  })}
+                </div>
               )}
             </div>
           );

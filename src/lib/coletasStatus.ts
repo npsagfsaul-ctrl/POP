@@ -13,6 +13,40 @@ export const STATUS_COLETA_LABEL: Record<StatusColetaTexto, string> = {
 // Definido com a operação: manhã até 09:00, tarde até 13:00.
 // Os coletores entram às 08:00 — então a folha da manhã sempre sai antes do
 // corte, e a extra que chega nessa janela só alcança o coletor pelo celular.
+/**
+ * Cores dos coletores.
+ *
+ * Antes cada coletor tinha uma cor escolhida à mão no cadastro, e o resultado
+ * era o da planilha antiga: verde-limão ao lado de azul-marinho e rosa, sem
+ * combinar. Agora a cor é atribuída pelo sistema a partir desta paleta — todas
+ * na mesma faixa de escuridão, então o texto branco funciona em todas e a tela
+ * fica uniforme.
+ */
+export const PALETA_COLETORES = [
+  '#364FC7', // índigo
+  '#0B7285', // ciano
+  '#2B8A3E', // verde
+  '#E67700', // âmbar
+  '#C92A2A', // vermelho
+  '#862E9C', // uva
+  '#087F5B', // esmeralda
+  '#D9480F', // laranja
+  '#A61E4D', // framboesa
+  '#5F3DC4', // violeta
+] as const;
+
+/**
+ * A cor de um coletor, estável ao longo do tempo.
+ *
+ * A posição sai da ordem dos ids (que são sequenciais no tempo), então um
+ * coletor novo entra no fim e não muda a cor de quem já estava — "o Neto é o
+ * azul" continua valendo amanhã.
+ */
+export function corDoColetor(coletorId: string, idsConhecidos: string[]): string {
+  const posicao = [...idsConhecidos].sort().indexOf(coletorId);
+  return PALETA_COLETORES[(posicao < 0 ? 0 : posicao) % PALETA_COLETORES.length];
+}
+
 export const CORTE_PEDIDOS: Record<string, string> = {
   MANHA: '09:00',
   TARDE: '13:00',

@@ -3,6 +3,27 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { PeriodoColeta, TipoColeta, StatusColeta } from '@prisma/client';
+import { isAdmin } from './admin';
+import { getSetorColetas } from './coletasAcesso';
+import { podeEscreverNoSetor } from './setorAcesso';
+
+/**
+ * Lançar, alterar, cancelar e excluir coleta são do setor responsável pelas
+ * coletas (o Atendimento Interno) ou do admin.
+ *
+ * A checagem tem que estar aqui: Server Action é endpoint público, e esconder o
+ * botão na tela não impede ninguém de chamar a função.
+ */
+async function exigirGestaoDeColetas() {
+  const setorColetas = await getSetorColetas();
+  const permitido = setorColetas
+    ? await podeEscreverNoSetor(setorColetas)
+    : await isAdmin();
+
+  if (!permitido) {
+    throw new Error('Só o setor responsável pelas coletas pode alterar a lista.');
+  }
+}
 
 function parseData(dataString: string) {
   const data = new Date(dataString);
@@ -80,6 +101,8 @@ export async function getColetasMensais(mes: number, ano: number) {
 }
 
 export async function criarColeta(formData: FormData) {
+  await exigirGestaoDeColetas();
+
   const dataString = formData.get('data') as string;
   const periodo = formData.get('periodo') as PeriodoColeta;
   const tipo = (formData.get('tipo') as TipoColeta) || 'EXTRA';
@@ -111,6 +134,8 @@ export async function criarColeta(formData: FormData) {
 }
 
 export async function atualizarColeta(id: string, formData: FormData) {
+  await exigirGestaoDeColetas();
+
   const periodo = formData.get('periodo') as PeriodoColeta;
   const tipo = (formData.get('tipo') as TipoColeta) || 'EXTRA';
   const coletorId = formData.get('coletorId') as string;
@@ -133,6 +158,8 @@ export async function atualizarColeta(id: string, formData: FormData) {
 }
 
 export async function atualizarStatusColeta(id: string, status: StatusColeta) {
+  await exigirGestaoDeColetas();
+
   await prisma.coleta.update({
     where: { id },
     data: {
@@ -145,6 +172,8 @@ export async function atualizarStatusColeta(id: string, status: StatusColeta) {
 }
 
 export async function deletarColeta(id: string) {
+  await exigirGestaoDeColetas();
+
   await prisma.coleta.delete({ where: { id } });
   revalidatePath('/coletas');
 }

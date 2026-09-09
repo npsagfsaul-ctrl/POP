@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
+import { podeEscreverNoSetor } from './setorAcesso';
 
 const CHAVE_SENHA = 'coletas_senha';
 const CHAVE_SETOR = 'coletas_setor_id';
@@ -68,10 +69,26 @@ export async function verificarSenhaColetas(senhaTentativa: string) {
   return { success: false, error: 'Senha incorreta' };
 }
 
-/** true se as coletas podem ser acessadas (sem senha ou já autenticado). */
+/**
+ * true se as coletas podem ser vistas.
+ *
+ * Três caminhos, de propósito:
+ * - não há senha configurada;
+ * - a pessoa entrou com a senha das Coletas (é o caso dos coletores, que só
+ *   consultam a rota);
+ * - a pessoa já está autenticada no setor responsável pelas coletas.
+ *
+ * O terceiro caminho existe para o Atendimento Interno não ter que decorar
+ * duas senhas: eles já entram no próprio setor todo dia para o checklist, e
+ * essa mesma senha é a que autoriza mexer na lista.
+ */
 export async function coletasLiberado() {
   const senha = await getColetasSenha();
   if (!senha || senha.trim() === '') return true;
+
   const cookieStore = await cookies();
-  return cookieStore.has('auth_coletas');
+  if (cookieStore.has('auth_coletas')) return true;
+
+  const setorColetas = await getSetorColetas();
+  return setorColetas ? podeEscreverNoSetor(setorColetas) : false;
 }

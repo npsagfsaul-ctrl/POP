@@ -5,6 +5,7 @@ import { getColetores } from '@/actions/coletores';
 import { getAtendentes, getAtendentesPorSetor } from '@/actions/atendentes';
 import { getClientes } from '@/actions/clientes';
 import { coletasLiberado, getSetorColetas } from '@/actions/coletasAcesso';
+import { podeEscreverNoSetor } from '@/actions/setorAcesso';
 import ColetasDoDia from '@/components/ColetasDoDia';
 import ColetasPasswordPrompt from '@/components/ColetasPasswordPrompt';
 import { hojeISOSaoPaulo } from '@/lib/data';
@@ -31,6 +32,11 @@ export default async function ColetasPage({
   // Só os funcionários do setor responsável pelas coletas aparecem no seletor.
   // Sem setor configurado, mostra todos (comportamento anterior).
   const setorColetas = await getSetorColetas();
+
+  // Alterar, excluir e cancelar coleta são do Atendimento Interno (o setor
+  // configurado como responsável) ou do admin. Quem entrou só com a senha das
+  // Coletas enxerga a lista, mas não mexe nela.
+  const podeGerenciar = setorColetas ? await podeEscreverNoSetor(setorColetas) : adminMode;
 
   const [coletas, coletores, atendentes, clientes] = await Promise.all([
     getColetasPorData(dataStr),
@@ -60,7 +66,6 @@ export default async function ColetasPage({
     clienteId: c.clienteId,
     atendenteId: c.atendenteId,
     coletorNome: c.coletor.nome,
-    coletorCor: c.coletor.cor,
     clienteNome: c.cliente.nome,
     clienteCodigo: c.cliente.codigo,
     atendenteNome: c.atendente?.nome ?? null,
@@ -78,12 +83,10 @@ export default async function ColetasPage({
           </nav>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <Link href="/coletas/motorista" className="btn btn-secondary btn-sm">
-            🚚 Sou coletor
-          </Link>
-          <Link href="/coletas/turnos" className="btn btn-secondary btn-sm">
-            🧾 Turnos
-          </Link>
+          {/* "Sou coletor" e "Turnos" saíram a pedido da gestora — a Fase 2
+              (app do coletor) não entrou em uso. As rotas continuam existindo
+              em /coletas/motorista e /coletas/turnos, para voltarem ao ar com
+              duas linhas se o assunto voltar. */}
           <Link href="/coletas/historico" className="btn btn-secondary btn-sm">
             📊 Histórico
           </Link>
@@ -113,6 +116,7 @@ export default async function ColetasPage({
         coletores={coletores.map((c) => ({ id: c.id, nome: c.nome, cor: c.cor }))}
         atendentes={atendentes.map((a) => ({ id: a.id, nome: a.nome }))}
         clientes={clientes.map((c) => ({ id: c.id, nome: c.nome, codigo: c.codigo }))}
+        podeGerenciar={podeGerenciar}
       />
     </div>
   );

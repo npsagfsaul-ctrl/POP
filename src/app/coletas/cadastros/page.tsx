@@ -137,10 +137,9 @@ export default async function CadastrosColetaPage() {
 
       <CadastroManager
         titulo="Coletores"
-        descricao="Quem faz as coletas. A cor identifica o coletor na tela do dia."
+        descricao="Quem faz as coletas. A cor de cada um é escolhida pelo sistema, de uma paleta que combina."
         campos={[
           { name: 'nome', label: 'Nome', obrigatorio: true, placeholder: 'Ex: Bruno' },
-          { name: 'cor', label: 'Cor', tipo: 'color' },
         ]}
         itens={coletores}
         onCriar={criarColetor}
