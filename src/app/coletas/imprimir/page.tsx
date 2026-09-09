@@ -5,8 +5,7 @@ import { coletasLiberado } from '@/actions/coletasAcesso';
 import ColetasPasswordPrompt from '@/components/ColetasPasswordPrompt';
 import PrintButton from '@/components/PrintButton';
 import { hojeISOSaoPaulo } from '@/lib/data';
-import { CORTE_PEDIDOS, corDoColetor } from '@/lib/coletasStatus';
-import { getColetores } from '@/actions/coletores';
+import { CORTE_PEDIDOS } from '@/lib/coletasStatus';
 
 export const dynamic = 'force-dynamic';
 
@@ -43,15 +42,11 @@ export default async function ImprimirColetasPage({
   // Canceladas ficam fora da folha do coletor — ele não deve passar lá.
   const coletas = (await getColetasPorData(dataStr)).filter((c) => c.status !== 'CANCELADO');
 
-  // A cor sai da mesma paleta da tela do dia, pela mesma regra — senão o
-  // quadradinho impresso não bate com a faixa que a equipe vê no sistema.
-  const idsDosColetores = (await getColetores(true)).map((c) => c.id);
-
-  // Agrupa por coletor
+  // Agrupa por coletor. A cor é a gravada no cadastro, a mesma da tela do dia.
   const grupos = new Map<string, { nome: string; cor: string; itens: typeof coletas }>();
   for (const c of coletas) {
     const g = grupos.get(c.coletorId)
-      ?? { nome: c.coletor.nome, cor: corDoColetor(c.coletorId, idsDosColetores), itens: [] };
+      ?? { nome: c.coletor.nome, cor: c.coletor.cor, itens: [] };
     g.itens.push(c);
     grupos.set(c.coletorId, g);
   }

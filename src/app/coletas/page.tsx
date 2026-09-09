@@ -66,6 +66,7 @@ export default async function ColetasPage({
     clienteId: c.clienteId,
     atendenteId: c.atendenteId,
     coletorNome: c.coletor.nome,
+    coletorCor: c.coletor.cor,
     clienteNome: c.cliente.nome,
     clienteCodigo: c.cliente.codigo,
     atendenteNome: c.atendente?.nome ?? null,

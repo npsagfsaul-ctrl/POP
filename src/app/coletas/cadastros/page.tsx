@@ -4,6 +4,7 @@ import Link from 'next/link';
 import CadastroManager from '@/components/CadastroManager';
 import {
   getColetores, criarColetor, atualizarColetor, alternarColetorAtivo, deletarColetor,
+  normalizarCoresColetores,
 } from '@/actions/coletores';
 import {
   getAtendentes, criarAtendente, atualizarAtendente, alternarAtendenteAtivo, deletarAtendente,
@@ -134,6 +135,21 @@ export default async function CadastrosColetaPage() {
           <button type="submit" className="btn btn-primary btn-sm" style={{ height: 38 }}>Salvar senha</button>
         </form>
       </div>
+
+      {/* Os coletores foram cadastrados quando a cor era escolhida à mão, então
+          sobraram tons que não combinam. Este botão passa todos para a paleta —
+          é para rodar uma vez. */}
+      <form
+        action={async () => {
+          'use server';
+          await normalizarCoresColetores();
+        }}
+        style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: -8 }}
+      >
+        <button type="submit" className="btn btn-secondary btn-sm">
+          🎨 Ajustar cores dos coletores
+        </button>
+      </form>
 
       <CadastroManager
         titulo="Coletores"

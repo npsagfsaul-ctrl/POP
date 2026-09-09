@@ -36,15 +36,19 @@ export const PALETA_COLETORES = [
 ] as const;
 
 /**
- * A cor de um coletor, estável ao longo do tempo.
+ * A primeira cor da paleta que ninguém está usando.
  *
- * A posição sai da ordem dos ids (que são sequenciais no tempo), então um
- * coletor novo entra no fim e não muda a cor de quem já estava — "o Neto é o
- * azul" continua valendo amanhã.
+ * A cor é GRAVADA no coletor, não calculada na hora. Calcular pela posição na
+ * lista parecia mais simples, mas cada tela usa uma lista diferente (só ativos,
+ * todos) — e aí a mesma pessoa apareceria de uma cor no painel e de outra na
+ * folha impressa. Gravando, existe uma resposta só.
+ *
+ * Esgotada a paleta, volta ao começo: melhor repetir do que ficar sem cor.
  */
-export function corDoColetor(coletorId: string, idsConhecidos: string[]): string {
-  const posicao = [...idsConhecidos].sort().indexOf(coletorId);
-  return PALETA_COLETORES[(posicao < 0 ? 0 : posicao) % PALETA_COLETORES.length];
+export function proximaCorDaPaleta(coresEmUso: string[]): string {
+  const usadas = new Set(coresEmUso.map((c) => c.toUpperCase()));
+  const livre = PALETA_COLETORES.find((c) => !usadas.has(c.toUpperCase()));
+  return livre ?? PALETA_COLETORES[coresEmUso.length % PALETA_COLETORES.length];
 }
 
 export const CORTE_PEDIDOS: Record<string, string> = {

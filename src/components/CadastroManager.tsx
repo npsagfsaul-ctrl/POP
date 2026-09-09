@@ -172,9 +172,11 @@ export default function CadastroManager({
                 </form>
               ) : (
                 <>
-                  {/* cor (se houver) */}
-                  {campos.some((c) => c.tipo === 'color') && (
-                    <span style={{ width: 16, height: 16, borderRadius: 4, background: (item['cor'] as string) || corPadrao, flexShrink: 0, border: '1px solid rgba(0,0,0,0.1)' }} />
+                  {/* Cor do item, quando existe. Não depende de haver um campo
+                      de cor no formulário: a do coletor é escolhida pelo
+                      sistema, mas continua precisando aparecer aqui. */}
+                  {typeof item['cor'] === 'string' && item['cor'] && (
+                    <span style={{ width: 16, height: 16, borderRadius: 4, background: item['cor'] as string, flexShrink: 0, border: '1px solid rgba(0,0,0,0.1)' }} />
                   )}
                   <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{item['nome'] as string}</span>
                   {item['codigo'] != null && item['codigo'] !== '' && (

@@ -3,9 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { criarColeta, atualizarColeta, atualizarStatusColeta, deletarColeta } from '@/actions/coletas';
-import {
-  STATUS_COLETA_LABEL, StatusColetaTexto, CORTE_PEDIDOS, corteJaPassou, corDoColetor,
-} from '@/lib/coletasStatus';
+import { STATUS_COLETA_LABEL, StatusColetaTexto, CORTE_PEDIDOS, corteJaPassou } from '@/lib/coletasStatus';
 
 type Periodo = 'MANHA' | 'TARDE' | 'RETORNO';
 type Tipo = 'FIXA' | 'EXTRA';
@@ -25,6 +23,8 @@ interface ColetaItem {
   clienteId: string;
   atendenteId: string | null;
   coletorNome: string;
+  /** Gravada no cadastro, da paleta padrão — a mesma na tela e na folha impressa. */
+  coletorCor: string;
   clienteNome: string;
   clienteCodigo: string | null;
   atendenteNome: string | null;
@@ -79,7 +79,7 @@ function corDoTexto(cor: string | null | undefined): string {
  * É como a equipe já enxerga na planilha que imprimem: uma faixa por coletor,
  * com a cor dele. A divisão por período continua sendo a de fora.
  */
-function agruparPorColetor(itens: ColetaItem[], idsDosColetores: string[]) {
+function agruparPorColetor(itens: ColetaItem[]) {
   const mapa = new Map<string, {
     coletorId: string; coletorNome: string; cor: string; itens: ColetaItem[];
   }>();
@@ -89,7 +89,7 @@ function agruparPorColetor(itens: ColetaItem[], idsDosColetores: string[]) {
       mapa.set(c.coletorId, {
         coletorId: c.coletorId,
         coletorNome: c.coletorNome,
-        cor: corDoColetor(c.coletorId, idsDosColetores),
+        cor: c.coletorCor,
         itens: [],
       });
     }
@@ -212,9 +212,6 @@ export default function ColetasDoDia({ data, coletas, coletores, atendentes, cli
   }
 
   const semCadastro = coletores.length === 0 || clientes.length === 0;
-  // A cor sai da posição do coletor no cadastro inteiro, não só entre os que
-  // têm coleta hoje — senão a cor de cada um mudaria conforme o dia.
-  const idsDosColetores = coletores.map((c) => c.id);
   const btnMini: React.CSSProperties = { padding: '2px 8px', fontSize: '0.72rem' };
 
   // As fixas se repetem todo dia — são contexto, não novidade. Ficam recolhidas
@@ -339,7 +336,7 @@ export default function ColetasDoDia({ data, coletas, coletores, atendentes, cli
                 <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', padding: '8px 0' }}>Nenhuma coleta.</p>
               ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {agruparPorColetor(doPeriodo, idsDosColetores).map((grupo) => {
+                  {agruparPorColetor(doPeriodo).map((grupo) => {
                     // Extra e ocorrência são o que muda de um dia para o outro —
                     // ficam à vista mesmo com o grupo recolhido. As fixas normais
                     // são contexto: 44 delas abertas devolvem o problema de
