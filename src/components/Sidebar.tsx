@@ -141,11 +141,6 @@ export default function Sidebar({ isAdmin, ocorrenciasAbertas = 0 }: SidebarProp
               )}
             </Link>
 
-            <Link href="/admin/expediente" className={`sidebar-link ${isActive('/admin/expediente') ? 'active' : ''}`}>
-              <IconMural />
-              Expediente
-            </Link>
-
             <Link href="/admin/relatorio" className={`sidebar-link ${isActive('/admin/relatorio') ? 'active' : ''}`}>
               <IconClipboard />
               Relatório Geral
@@ -171,7 +166,10 @@ export default function Sidebar({ isAdmin, ocorrenciasAbertas = 0 }: SidebarProp
               Novo POP
             </Link>
 
-            <Link href="/admin/login" className="sidebar-link">
+            {/* Antes este item levava para a tela de login, o que não fazia
+                sentido para quem já estava logado. Agora é a casa das poucas
+                coisas que a agência de fato configura. */}
+            <Link href="/admin/configuracoes" className={`sidebar-link ${isActive('/admin/configuracoes') ? 'active' : ''}`}>
               <IconCog />
               Configurações
             </Link>

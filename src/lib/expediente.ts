@@ -128,6 +128,24 @@ export interface FeriadoNacional {
  * Municipal NÃO entra: às vezes o Correios central pede para abrir, então esse
  * dia só vira "sem expediente" quando a agência de fato fechar.
  */
+/**
+ * Feriados nacionais de vários anos, como data → nome.
+ *
+ * Feriado nacional não é configuração, é fato: 25 de dezembro é Natal, e não há
+ * decisão a tomar. Por isso ele é CALCULADO e não cadastrado — ninguém precisa
+ * carregar lista nenhuma, nem em 2030.
+ */
+export function feriadosNacionaisNoIntervalo(
+  anoInicial: number,
+  anoFinal: number,
+): Record<string, string> {
+  const mapa: Record<string, string> = {};
+  for (let ano = anoInicial; ano <= anoFinal; ano++) {
+    for (const f of feriadosNacionais(ano)) mapa[f.data] = f.nome;
+  }
+  return mapa;
+}
+
 export function feriadosNacionais(ano: number): FeriadoNacional[] {
   const pascoa = domingoDePascoa(ano);
 
