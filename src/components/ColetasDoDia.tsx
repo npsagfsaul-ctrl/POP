@@ -227,7 +227,12 @@ export default function ColetasDoDia({ data, coletas, coletores, atendentes, cli
     return (
       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
         {c.status === 'AGUARDANDO' ? (
-          <button className="btn btn-danger btn-sm" style={btnMini} disabled={loading} onClick={() => handleStatus(c, 'CANCELADO')}>Cancelar</button>
+          <>
+            {/* Não é o coletor marcando na rua — é a conferência das 10h e 15h,
+                que o Atendimento Interno faz pelo sistema (POP #15). */}
+            <button className="btn btn-success btn-sm" style={btnMini} disabled={loading} onClick={() => handleStatus(c, 'COLETADO')}>✓ Conferir</button>
+            <button className="btn btn-danger btn-sm" style={btnMini} disabled={loading} onClick={() => handleStatus(c, 'CANCELADO')}>Cancelar</button>
+          </>
         ) : (
           <button className="btn btn-secondary btn-sm" style={btnMini} disabled={loading} onClick={() => handleStatus(c, 'AGUARDANDO')}>↩ Desfazer</button>
         )}
@@ -246,7 +251,13 @@ export default function ColetasDoDia({ data, coletas, coletores, atendentes, cli
       <div key={c.id} style={{ borderBottom: '1px solid var(--border)' }}>
         <div
           onClick={() => setLinhaAberta(aberta ? null : c.id)}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 2px', cursor: 'pointer' }}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 8, padding: '5px 6px', cursor: 'pointer',
+            // Confirmada fica verde, cancelada fica vermelha — dá para ver o
+            // andamento da conferência correndo o olho pela lista.
+            background: cfg.bg,
+            borderRadius: 'var(--radius-sm)',
+          }}
         >
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: cfg.dot, flexShrink: 0 }} />
           <span style={{ fontSize: '0.82rem', fontWeight: 600, textDecoration: riscado ? 'line-through' : 'none', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -256,12 +267,17 @@ export default function ColetasDoDia({ data, coletas, coletores, atendentes, cli
           {c.tipo !== 'FIXA' && (
             <span className="badge badge-warning" style={{ fontSize: '0.6rem' }}>extra</span>
           )}
-          {/* Mesma coluna ATENDENTE da planilha que eles imprimem. */}
-          {c.atendenteNome && (
+          {/* Confirmada mostra a hora da conferência; pendente mostra quem
+              lançou, que é a coluna ATENDENTE da planilha que eles imprimem. */}
+          {c.status === 'COLETADO' && c.horaColeta ? (
+            <span style={{ fontSize: '0.68rem', color: 'var(--success)', fontWeight: 600, flexShrink: 0 }}>
+              ✓ {c.horaColeta}
+            </span>
+          ) : c.atendenteNome ? (
             <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', flexShrink: 0 }}>
               {c.atendenteNome}
             </span>
-          )}
+          ) : null}
           {c.naoTeveColeta && <span className="badge badge-danger" style={{ fontSize: '0.6rem' }}>sem coleta</span>}
           <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>{aberta ? '▾' : '▸'}</span>
         </div>
@@ -350,6 +366,9 @@ export default function ColetasDoDia({ data, coletas, coletores, atendentes, cli
                     const ocorrencias = grupo.itens.filter(
                       (c) => c.naoTeveColeta || c.status === 'CANCELADO',
                     ).length;
+                    // Vira "3/5" quando a conferência começa — dá para ver quem
+                    // já foi conferido sem abrir grupo por grupo.
+                    const conferidas = grupo.itens.filter((c) => c.status === 'COLETADO').length;
 
                     return (
                       <div key={grupo.coletorId}>
@@ -380,7 +399,9 @@ export default function ColetasDoDia({ data, coletas, coletores, atendentes, cli
                               ? 'rgba(255,255,255,0.28)'
                               : 'rgba(0,0,0,0.14)',
                           }}>
-                            {grupo.itens.length}
+                            {conferidas > 0
+                              ? `${conferidas}/${grupo.itens.length}`
+                              : grupo.itens.length}
                           </span>
                           {extras > 0 && (
                             <span style={{

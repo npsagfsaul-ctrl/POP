@@ -5,7 +5,10 @@ export type StatusColetaTexto = 'AGUARDANDO' | 'COLETADO' | 'CANCELADO';
 
 export const STATUS_COLETA_LABEL: Record<StatusColetaTexto, string> = {
   AGUARDANDO: 'Aguardando',
-  COLETADO: 'Coletado',
+  // O valor no banco continua COLETADO (renomear enum reescreveria o
+  // histórico), mas o que a tela diz é "conferida": quem marca é o
+  // Atendimento Interno nas conferências das 10h e 15h, não o coletor na rua.
+  COLETADO: 'Conferida',
   CANCELADO: 'Cancelada',
 };
 
