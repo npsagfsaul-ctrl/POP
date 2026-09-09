@@ -141,6 +141,11 @@ export default function Sidebar({ isAdmin, ocorrenciasAbertas = 0 }: SidebarProp
               )}
             </Link>
 
+            <Link href="/admin/expediente" className={`sidebar-link ${isActive('/admin/expediente') ? 'active' : ''}`}>
+              <IconMural />
+              Expediente
+            </Link>
+
             <Link href="/admin/relatorio" className={`sidebar-link ${isActive('/admin/relatorio') ? 'active' : ''}`}>
               <IconClipboard />
               Relatório Geral

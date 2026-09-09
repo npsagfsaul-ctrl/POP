@@ -13,6 +13,8 @@ import {
   type ResultadoRegua,
   type Concentracao,
 } from '@/lib/conformidade';
+import { montarExpediente } from '@/lib/expediente';
+import { carregarContextoExpediente } from './expediente';
 import { getAtendentes } from './atendentes';
 
 const CHAVES = {
@@ -107,12 +109,13 @@ async function carregarMes(mes: number, ano: number) {
   const proxAno = mes === 12 ? ano + 1 : ano;
   const fim = new Date(`${proxAno}-${String(proxMes).padStart(2, '0')}-01T00:00:00Z`);
 
-  const [setores, registros] = await Promise.all([
+  const [setores, registros, contexto] = await Promise.all([
     prisma.setor.findMany({ include: { pops: true }, orderBy: { nome: 'asc' } }),
     prisma.registroDiario.findMany({ where: { data: { gte: inicio, lt: fim } } }),
+    carregarContextoExpediente(),
   ]);
 
-  return { setores, registros };
+  return { setores, registros, contexto };
 }
 
 export interface SimulacaoSetor {
@@ -127,13 +130,15 @@ export interface SimulacaoSetor {
  * É só comparação — nenhuma nota é alterada por esta função.
  */
 export async function getSimulacaoReguas(mes: number, ano: number): Promise<SimulacaoSetor[]> {
-  const { setores, registros } = await carregarMes(mes, ano);
+  const { setores, registros, contexto } = await carregarMes(mes, ano);
 
   return setores.map((setor) => {
     const doSetor = registros.filter((r) => r.setorId === setor.id);
-    const { dias, diasUteis } = calcularConformidade(
-      setor.pops, doSetor, mes, ano, new Date(), setor.createdAt,
-    );
+    const { dias, diasUteis } = calcularConformidade({
+      pops: setor.pops, registros: doSetor, mes, ano,
+      setorCreatedAt: setor.createdAt,
+      expediente: montarExpediente(setor.diasExpediente, contexto),
+    });
     return {
       id: setor.id,
       nome: setor.nome,
@@ -149,7 +154,7 @@ export async function getSimulacaoReguas(mes: number, ano: number): Promise<Simu
  * gestão não precisar abrir sete relatórios.
  */
 export async function getResumoPremiacao(mes: number, ano: number): Promise<ResumoPremiacao> {
-  const [faixas, atendentes, { setores, registros }] = await Promise.all([
+  const [faixas, atendentes, { setores, registros, contexto }] = await Promise.all([
     getFaixasPremiacao(),
     getAtendentes(),
     carregarMes(mes, ano),
@@ -160,9 +165,11 @@ export async function getResumoPremiacao(mes: number, ano: number): Promise<Resu
 
   for (const setor of setores) {
     const doSetor = registros.filter((r) => r.setorId === setor.id);
-    const { percentualPerfeitos, bateuMeta, dias } = calcularConformidade(
-      setor.pops, doSetor, mes, ano, new Date(), setor.createdAt,
-    );
+    const { percentualPerfeitos, bateuMeta, dias } = calcularConformidade({
+      pops: setor.pops, registros: doSetor, mes, ano,
+      setorCreatedAt: setor.createdAt,
+      expediente: montarExpediente(setor.diasExpediente, contexto),
+    });
     const grupos = calcularPendenciasPorPessoa(dias, atendentes);
 
     resumoSetores.push({

@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { calcularConformidade } from '@/lib/conformidade';
+import { montarExpediente } from '@/lib/expediente';
+import { carregarContextoExpediente } from '@/actions/expediente';
 import { normalizarQuebrasDeLinha } from '@/lib/texto';
 import { isAdmin } from '@/actions/admin';
 import PDFDocument from 'pdfkit';
@@ -25,15 +27,20 @@ export async function GET() {
     where: { data: { gte: new Date(year, month - 1, 1), lt: new Date(year, month, 1) } },
   });
 
+  // Dias de expediente e dias em que a agência não abriu.
+  const contexto = await carregarContextoExpediente();
+
   const relatorio = await Promise.all(
     setores.map(async setor => {
       const registrosSetor = registros.filter(r => r.setorId === setor.id);
 
       // Mesma regra do dashboard: dias úteis até hoje, a partir da criação
       // do setor; dia sem checklist = 0%. Métrica oficial: percentualPerfeitos.
-      const { media: mediaPonderada, percentualPerfeitos: percentual } = calcularConformidade(
-        setor.pops, registrosSetor, month, year, new Date(), setor.createdAt,
-      );
+      const { media: mediaPonderada, percentualPerfeitos: percentual } = calcularConformidade({
+        pops: setor.pops, registros: registrosSetor, mes: month, ano: year,
+        setorCreatedAt: setor.createdAt,
+        expediente: montarExpediente(setor.diasExpediente, contexto),
+      });
 
       const concluidoIds = new Set<string>();
       for (const reg of registrosSetor) {

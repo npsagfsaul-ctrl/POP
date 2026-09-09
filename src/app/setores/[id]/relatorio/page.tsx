@@ -2,6 +2,8 @@ import { prisma } from '@/lib/prisma';
 import { getPopsBySetor } from '@/actions/pops';
 import { getRegistrosMensais } from '@/actions/checklist';
 import { calcularConformidade, calcularPendenciasPorPessoa, calcularFatiaFinal } from '@/lib/conformidade';
+import { montarExpediente } from '@/lib/expediente';
+import { carregarContextoExpediente } from '@/actions/expediente';
 import { getAtendentes } from '@/actions/atendentes';
 import { getFaixasPremiacao } from '@/actions/premiacao';
 import PrintButton from '@/components/PrintButton';
@@ -88,7 +90,11 @@ export default async function RelatorioMensal({
     diasPendentes,
     diasComPendencia,
     dias: diasLedger,
-  } = calcularConformidade(pops, registros, mes, ano, hoje, setor.createdAt);
+  } = calcularConformidade({
+    pops, registros, mes, ano, hoje,
+    setorCreatedAt: setor.createdAt,
+    expediente: montarExpediente(setor.diasExpediente, await carregarContextoExpediente()),
+  });
 
   // Pendências por funcionário (contagem, não porcentagem). Busca o cadastro
   // completo, sem filtrar por ativo, para quem foi desativado no meio do mês

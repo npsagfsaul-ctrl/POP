@@ -1,4 +1,5 @@
 import { getSetorById, updateSetor } from '@/actions/setores';
+import { parseDiasExpediente } from '@/lib/expediente';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 
@@ -12,6 +13,7 @@ export default async function EditarSetor({ params }: { params: Promise<{ id: st
 
   // Criamos uma versão da action que já sabe o ID do setor
   const updateSetorWithId = updateSetor.bind(null, setor.id);
+  const diasAtuais = parseDiasExpediente(setor.diasExpediente);
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -55,6 +57,28 @@ export default async function EditarSetor({ params }: { params: Promise<{ id: st
             <p className="text-xs text-muted mt-2">
               Se você preencher, essa será a nova senha do setor. Se apagar e salvar, o setor ficará com acesso livre.
             </p>
+          </div>
+
+          <div className="form-group">
+            <label className="form-label">Dias de expediente</label>
+            <p className="text-xs text-muted" style={{ marginBottom: 10 }}>
+              Só os dias marcados entram na conta da nota. Domingo nunca conta.
+              Dia sem expediente não é dia perdido — ele simplesmente não existe
+              para este setor.
+            </p>
+            <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}>
+              {([[1, 'Segunda'], [2, 'Terça'], [3, 'Quarta'], [4, 'Quinta'], [5, 'Sexta'], [6, 'Sábado']] as [number, string][])
+                .map(([n, rotulo]) => (
+                  <label key={n} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.875rem', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      name={`dia_${n}`}
+                      defaultChecked={diasAtuais.includes(n)}
+                    />
+                    {rotulo}
+                  </label>
+                ))}
+            </div>
           </div>
 
           <div className="flex justify-end gap-4 mt-8 border-t pt-6">

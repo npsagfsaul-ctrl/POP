@@ -132,14 +132,61 @@ function fimDoDiaLocal(ano: number, mes: number, dia: number): Date {
   return d;
 }
 
-export function calcularConformidade(
-  pops: PopPeso[],
-  registros: RegistroConformidade[],
-  mes: number, // 1–12
-  ano: number,
-  hoje: Date = new Date(),
-  setorCreatedAt?: Date | string,
-): ResultadoConformidade {
+/** Dias em que o setor abre, e os dias em que a agência não abriu. */
+export interface Expediente {
+  /** Dias da semana com expediente: 1=seg … 6=sáb. Domingo nunca entra. */
+  diasSemana: number[];
+  /** Datas (YYYY-MM-DD) em que a agência não abriu — feriado ou fechamento. */
+  semExpediente: Set<string>;
+  /**
+   * Mês (YYYY-MM) a partir do qual esta regra vale. Antes dele, o cálculo segue
+   * como era — seg a sáb, sem feriado — para não reescrever a nota de mês já
+   * fechado e pago.
+   *
+   * `null` = vale sempre (é o que os testes usam para provar que, com expediente
+   * seg–sáb e nenhum feriado, o resultado é idêntico ao de antes).
+   */
+  valeAPartirDe?: string | null;
+}
+
+/** Expediente seg–sáb sem feriado nenhum: exatamente a regra que existia antes. */
+export const EXPEDIENTE_PADRAO: Expediente = {
+  diasSemana: [1, 2, 3, 4, 5, 6],
+  semExpediente: new Set(),
+  valeAPartirDe: null,
+};
+
+export interface EntradaConformidade {
+  pops: PopPeso[];
+  registros: RegistroConformidade[];
+  mes: number; // 1–12
+  ano: number;
+  /**
+   * Obrigatório de propósito. São nove pontos de chamada; se este campo fosse
+   * opcional, esquecer um faria aquela tela calcular por uma regra diferente
+   * das outras — que é justamente o tipo de divergência que já deu problema
+   * aqui. Sendo obrigatório, o compilador cobra todos.
+   */
+  expediente: Expediente;
+  hoje?: Date;
+  setorCreatedAt?: Date | string;
+}
+
+/** true se a regra de expediente já vale para esta data. */
+function expedienteValeEm(dataISO: string, valeAPartirDe?: string | null): boolean {
+  if (!valeAPartirDe) return true;
+  return dataISO.slice(0, 7) >= valeAPartirDe;
+}
+
+export function calcularConformidade({
+  pops,
+  registros,
+  mes,
+  ano,
+  expediente,
+  hoje = new Date(),
+  setorCreatedAt,
+}: EntradaConformidade): ResultadoConformidade {
   // Mapeia registros pelo dia do mês (data é @db.Date = meia-noite UTC).
   const registrosPorDia = new Map<number, RegistroConformidade>();
   registros.forEach((reg) => {
@@ -167,6 +214,16 @@ export function calcularConformidade(
 
     if (dataDia.getDay() === 0) continue; // pula domingo
     if (dataDia > limite) continue; // ignora dias futuros
+
+    // Dia sem expediente não é dia perdido: é dia que não existe para este
+    // setor. Antes disso, sábado contava para todo mundo e feriado não existia,
+    // então Financeiro/Administrativo/Comercial eram medidos sobre 5 dias por
+    // mês em que a porta estava fechada.
+    const dataISO = `${ano}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+    if (expedienteValeEm(dataISO, expediente.valeAPartirDe)) {
+      if (!expediente.diasSemana.includes(dataDia.getDay())) continue;
+      if (expediente.semExpediente.has(dataISO)) continue;
+    }
 
     const fimDia = fimDoDiaLocal(ano, mes, dia);
 

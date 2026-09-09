@@ -23,6 +23,11 @@ model Setor {
   atendentes  Atendente[]
   comunicados Comunicado[]
   agenda      ItemAgenda[]
+
+  /// Dias da semana com expediente: 1=seg … 6=sáb, separados por vírgula.
+  /// Domingo nunca conta. O padrão é seg–sáb, que era a regra única antes —
+  /// assim nenhum setor muda de nota até alguém dizer o contrário.
+  diasExpediente String @default("1,2,3,4,5,6")
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 }
@@ -396,6 +401,20 @@ model RotaFixa {
 model Config {
   chave String @id
   valor String
+}
+
+/// Dia em que a agência não abriu.
+///
+/// Não é "lista de feriados": feriado municipal não entra sozinho, porque às
+/// vezes o Correios central pede para abrir. Só entra o dia em que de fato não
+/// houve expediente — feriado nacional, municipal fechado, falta de energia.
+model DiaSemExpediente {
+  id        String   @id @default(cuid())
+  data      DateTime @unique @db.Date
+  descricao String
+  createdAt DateTime @default(now())
+
+  @@index([data])
 }
 
 // ─── PROSPECÇÃO ───

@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { parseDiasExpediente } from '@/lib/expediente';
 
 import { cookies } from 'next/headers';
 
@@ -33,11 +34,17 @@ export async function updateSetor(id: string, formData: FormData) {
     throw new Error('O nome do setor é obrigatório.');
   }
 
+  // Dias de expediente: checkboxes "dia_1".."dia_6". Se vier nenhum marcado, o
+  // parse cai no padrão seg–sáb em vez de deixar o setor sem nenhum dia útil.
+  const diasMarcados = [1, 2, 3, 4, 5, 6].filter((d) => formData.get(`dia_${d}`) === 'on');
+  const diasExpediente = parseDiasExpediente(diasMarcados.join(',')).join(',');
+
   await prisma.setor.update({
     where: { id },
     data: {
       nome,
       senha: senha && senha.trim() !== '' ? senha : null,
+      diasExpediente,
     },
   });
 

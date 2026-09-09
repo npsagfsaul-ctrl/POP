@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { calcularConformidade } from '@/lib/conformidade';
+import { montarExpediente } from '@/lib/expediente';
+import { carregarContextoExpediente } from '@/actions/expediente';
 import { isAdmin } from '@/actions/admin';
 
 // Helper to get current month/year
@@ -26,6 +28,9 @@ export async function GET(request: Request) {
     include: { pops: true },
   });
 
+  // Dias de expediente e dias em que a agência não abriu.
+  const contexto = await carregarContextoExpediente();
+
   // Fetch registros diários do mês corrente
   const registros = await prisma.registroDiario.findMany({
     where: {
@@ -43,9 +48,11 @@ export async function GET(request: Request) {
 
       // Mesma regra do dashboard: dias úteis até hoje, a partir da criação
       // do setor; dia sem checklist = 0%. Métrica oficial: percentualPerfeitos.
-      const { media: mediaPonderada, percentualPerfeitos: percentual } = calcularConformidade(
-        setor.pops, registrosSetor, month, year, new Date(), setor.createdAt,
-      );
+      const { media: mediaPonderada, percentualPerfeitos: percentual } = calcularConformidade({
+        pops: setor.pops, registros: registrosSetor, mes: month, ano: year,
+        setorCreatedAt: setor.createdAt,
+        expediente: montarExpediente(setor.diasExpediente, contexto),
+      });
 
       // Principais POPs: top 3 por peso que foram concluídos ao menos uma vez
       const concluidoIds = new Set<string>();

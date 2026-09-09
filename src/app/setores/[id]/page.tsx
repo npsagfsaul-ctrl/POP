@@ -14,6 +14,8 @@ import { ocorrenciasAtrasadas, agruparAtrasos, chaveFeito } from '@/lib/agenda';
 import { getPopsBySetor } from '@/actions/pops';
 import { getRegistrosMensais } from '@/actions/checklist';
 import { calcularConformidade, calcularMargem } from '@/lib/conformidade';
+import { montarExpediente } from '@/lib/expediente';
+import { carregarContextoExpediente } from '@/actions/expediente';
 import { hojeISOSaoPaulo, inicioPeriodoEditavel } from '@/lib/data';
 import prisma from '@/lib/prisma';
 
@@ -65,8 +67,14 @@ export default async function VisualizarSetor({
 
   // Calcular métricas (dias úteis até hoje, a partir da criação do setor; dia útil sem checklist = 0%)
   // Métrica oficial da meta: percentualPerfeitos (dias 100% ÷ dias úteis).
+  // Dias em que este setor abre, e os dias em que a agência não abriu.
+  const expediente = montarExpediente(setor.diasExpediente, await carregarContextoExpediente());
+
   const { media: mediaConformidade, diasUteis, diasAbaixo100, percentualPerfeitos, bateuMeta, dias: diasLedger } =
-    calcularConformidade(pops, registros, mesAtual, anoAtual, hoje, setor.createdAt);
+    calcularConformidade({
+      pops, registros, mes: mesAtual, ano: anoAtual, hoje,
+      setorCreatedAt: setor.createdAt, expediente,
+    });
 
   // O calendário mostra exatamente estas notas — não recalcula por conta própria,
   // senão volta a divergir do card de conformidade quando um POP é cadastrado.
@@ -107,18 +115,20 @@ export default async function VisualizarSetor({
   // regra do que é dia útil, que é exatamente o tipo de divergência que já deu
   // problema no calendário.
   const fimDoMes = new Date(Date.UTC(anoAtual, mesAtual, 0, 12, 0, 0));
-  const { diasUteis: diasUteisMes } = calcularConformidade(
-    pops, registros, mesAtual, anoAtual, fimDoMes, setor.createdAt,
-  );
+  const { diasUteis: diasUteisMes } = calcularConformidade({
+    pops, registros, mes: mesAtual, ano: anoAtual, hoje: fimDoMes,
+    setorCreatedAt: setor.createdAt, expediente,
+  });
   const margem = calcularMargem(diasUteisMes, diasAbaixo100);
 
   // Mês anterior, só para comparar.
   const mesAnterior = mesAtual === 1 ? 12 : mesAtual - 1;
   const anoAnterior = mesAtual === 1 ? anoAtual - 1 : anoAtual;
   const registrosAnterior = await getRegistrosMensais(resolvedParams.id, mesAnterior, anoAnterior);
-  const anterior = calcularConformidade(
-    pops, registrosAnterior, mesAnterior, anoAnterior, hoje, setor.createdAt,
-  );
+  const anterior = calcularConformidade({
+    pops, registros: registrosAnterior, mes: mesAnterior, ano: anoAnterior, hoje,
+    setorCreatedAt: setor.createdAt, expediente,
+  });
   // Sem dias a cobrar no mês anterior (setor novo) não há o que comparar.
   const temComparacao = anterior.diasUteis > 0 && diasUteis > 0;
 

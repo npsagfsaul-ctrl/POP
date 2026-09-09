@@ -4,6 +4,8 @@ import { notFound } from 'next/navigation';
 import prisma from '@/lib/prisma';
 import { getRegistrosMensais } from '@/actions/checklist';
 import { calcularConformidade } from '@/lib/conformidade';
+import { montarExpediente } from '@/lib/expediente';
+import { carregarContextoExpediente } from '@/actions/expediente';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,9 +25,10 @@ export default async function RelatorioGeral({
   const mesAtual = resolvedSearchParams.mes ? parseInt(resolvedSearchParams.mes) : hoje.getMonth() + 1;
   const anoAtual = resolvedSearchParams.ano ? parseInt(resolvedSearchParams.ano) : hoje.getFullYear();
 
-  const setores = await prisma.setor.findMany({
-    include: { pops: true }
-  });
+  const [setores, contexto] = await Promise.all([
+    prisma.setor.findMany({ include: { pops: true } }),
+    carregarContextoExpediente(),
+  ]);
 
   const relatorioSetores = await Promise.all(setores.map(async (setor) => {
     const pops = setor.pops;
@@ -33,14 +36,15 @@ export default async function RelatorioGeral({
 
     // Dias úteis até hoje, a partir da criação do setor; dia útil sem checklist = 0%.
     // Métrica oficial da meta: percentualPerfeitos (dias 100% ÷ dias úteis).
-    const { media: mediaConformidade, diasPreenchidos, diasUteis, percentualPerfeitos, bateuMeta } = calcularConformidade(
+    const { media: mediaConformidade, diasPreenchidos, diasUteis, percentualPerfeitos, bateuMeta } = calcularConformidade({
       pops,
       registros,
-      mesAtual,
-      anoAtual,
+      mes: mesAtual,
+      ano: anoAtual,
       hoje,
-      setor.createdAt,
-    );
+      setorCreatedAt: setor.createdAt,
+      expediente: montarExpediente(setor.diasExpediente, contexto),
+    });
 
     return {
       ...setor,
