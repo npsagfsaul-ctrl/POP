@@ -87,17 +87,28 @@ export default function GerenciarExpediente({
             <button
               className="btn btn-secondary btn-sm"
               disabled={ocupado === 'corte'}
-              onClick={() => executar('corte', () => definirExpedienteValeDe(null))}
+              onClick={() => {
+                if (!confirm('Desligar a regra?\n\nOs dias de expediente e os feriados deixam de valer, e a nota volta a ser calculada como antes: sábado contando para todos os setores.')) return;
+                executar('corte', () => definirExpedienteValeDe(null));
+              }}
             >
-              Valer para todos os meses
+              Desligar a regra
             </button>
           )}
         </div>
-        <p style={{ fontSize: '0.8125rem', marginTop: 10 }}>
-          {valeDe
-            ? <>Hoje vale a partir de <strong>{NOMES_MES[Number(valeDe.slice(5, 7)) - 1]} de {valeDe.slice(0, 4)}</strong>.</>
-            : <>Hoje vale para <strong>todos os meses</strong>, inclusive os já fechados.</>}
-        </p>
+        {valeDe ? (
+          <p style={{ fontSize: '0.8125rem', marginTop: 10 }}>
+            Valendo a partir de <strong>{NOMES_MES[Number(valeDe.slice(5, 7)) - 1]} de {valeDe.slice(0, 4)}</strong>.
+            Os meses anteriores seguem com os números que você já usou.
+          </p>
+        ) : (
+          <div className="alert alert-warning" style={{ marginTop: 12, marginBottom: 0 }}>
+            <strong>A regra ainda não está valendo.</strong> Enquanto não houver um mês
+            escolhido, os dias de expediente e os feriados abaixo não afetam nota nenhuma —
+            tudo continua sendo calculado como antes. Isso é de propósito: sem o corte,
+            ligar a regra mudaria a nota de meses que você já fechou e pagou.
+          </div>
+        )}
       </div>
 
       {/* Dias sem expediente */}

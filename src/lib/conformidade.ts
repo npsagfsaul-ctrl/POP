@@ -140,16 +140,16 @@ export interface Expediente {
   semExpediente: Set<string>;
   /**
    * Mês (YYYY-MM) a partir do qual esta regra vale. Antes dele, o cálculo segue
-   * como era — seg a sáb, sem feriado — para não reescrever a nota de mês já
-   * fechado e pago.
+   * como era — seg a sáb, sem feriado.
    *
-   * `null` = vale sempre (é o que os testes usam para provar que, com expediente
-   * seg–sáb e nenhum feriado, o resultado é idêntico ao de antes).
+   * `null` = REGRA DESLIGADA. É o padrão de propósito: sem um mês escolhido,
+   * marcar um setor como seg–sex reescreveria junho, julho e agosto, meses já
+   * fechados e pagos. Quem liga é a gestora, escolhendo de quando vale.
    */
   valeAPartirDe?: string | null;
 }
 
-/** Expediente seg–sáb sem feriado nenhum: exatamente a regra que existia antes. */
+/** Expediente seg–sáb com a regra desligada: exatamente o comportamento antigo. */
 export const EXPEDIENTE_PADRAO: Expediente = {
   diasSemana: [1, 2, 3, 4, 5, 6],
   semExpediente: new Set(),
@@ -172,9 +172,9 @@ export interface EntradaConformidade {
   setorCreatedAt?: Date | string;
 }
 
-/** true se a regra de expediente já vale para esta data. */
+/** true se a regra de expediente já vale para esta data. Sem mês definido, não vale. */
 function expedienteValeEm(dataISO: string, valeAPartirDe?: string | null): boolean {
-  if (!valeAPartirDe) return true;
+  if (!valeAPartirDe) return false;
   return dataISO.slice(0, 7) >= valeAPartirDe;
 }
 
