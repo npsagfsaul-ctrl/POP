@@ -368,14 +368,37 @@ export default function ColetasDoDia({ data, coletas, coletores, atendentes, cli
                           <span style={{ fontSize: '0.8125rem', fontWeight: 700, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textTransform: 'uppercase' }}>
                             {grupo.coletorNome}
                           </span>
-                          <span className="badge badge-primary" style={{ fontSize: '0.62rem' }}>{grupo.itens.length}</span>
+                          {/* Selo comum (badge-*) tem cor própria e some em cima
+                              da faixa colorida. A contagem vira um véu do mesmo
+                              tom do texto; extra e ocorrência viram pílula
+                              branca, para manter o significado da cor legível
+                              sobre qualquer fundo. */}
+                          <span style={{
+                            fontSize: '0.7rem', fontWeight: 700, lineHeight: 1,
+                            padding: '3px 8px', borderRadius: 999,
+                            background: corDoTexto(grupo.cor) === '#ffffff'
+                              ? 'rgba(255,255,255,0.28)'
+                              : 'rgba(0,0,0,0.14)',
+                          }}>
+                            {grupo.itens.length}
+                          </span>
                           {extras > 0 && (
-                            <span className="badge badge-warning" style={{ fontSize: '0.62rem' }}>
+                            <span style={{
+                              fontSize: '0.66rem', fontWeight: 700, lineHeight: 1,
+                              padding: '3px 8px', borderRadius: 999,
+                              background: '#ffffff', color: '#8a5a00',
+                            }}>
                               {extras} extra{extras > 1 ? 's' : ''}
                             </span>
                           )}
                           {ocorrencias > 0 && (
-                            <span className="badge badge-danger" style={{ fontSize: '0.62rem' }}>{ocorrencias}</span>
+                            <span style={{
+                              fontSize: '0.66rem', fontWeight: 700, lineHeight: 1,
+                              padding: '3px 8px', borderRadius: 999,
+                              background: '#ffffff', color: '#a02020',
+                            }}>
+                              {ocorrencias} c/ ocorrência
+                            </span>
                           )}
                         </div>
 
