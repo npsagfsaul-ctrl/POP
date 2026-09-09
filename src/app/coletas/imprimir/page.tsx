@@ -5,7 +5,8 @@ import { coletasLiberado } from '@/actions/coletasAcesso';
 import ColetasPasswordPrompt from '@/components/ColetasPasswordPrompt';
 import PrintButton from '@/components/PrintButton';
 import { hojeISOSaoPaulo } from '@/lib/data';
-import { CORTE_PEDIDOS } from '@/lib/coletasStatus';
+import { CORTE_PEDIDOS, corDoColetor } from '@/lib/coletasStatus';
+import { getColetores } from '@/actions/coletores';
 
 export const dynamic = 'force-dynamic';
 
@@ -42,10 +43,15 @@ export default async function ImprimirColetasPage({
   // Canceladas ficam fora da folha do coletor — ele não deve passar lá.
   const coletas = (await getColetasPorData(dataStr)).filter((c) => c.status !== 'CANCELADO');
 
+  // A cor sai da mesma paleta da tela do dia, pela mesma regra — senão o
+  // quadradinho impresso não bate com a faixa que a equipe vê no sistema.
+  const idsDosColetores = (await getColetores(true)).map((c) => c.id);
+
   // Agrupa por coletor
   const grupos = new Map<string, { nome: string; cor: string; itens: typeof coletas }>();
   for (const c of coletas) {
-    const g = grupos.get(c.coletorId) ?? { nome: c.coletor.nome, cor: c.coletor.cor, itens: [] };
+    const g = grupos.get(c.coletorId)
+      ?? { nome: c.coletor.nome, cor: corDoColetor(c.coletorId, idsDosColetores), itens: [] };
     g.itens.push(c);
     grupos.set(c.coletorId, g);
   }
@@ -160,8 +166,8 @@ export default async function ImprimirColetasPage({
             })}
 
             <div style={{ fontSize: '0.75rem', color: '#777', marginTop: 8, borderTop: '1px solid #ddd', paddingTop: 6 }}>
-              {col.itens.length} coleta(s) impressa(s). O que for pedido depois das {horaImpressao} chega
-              pelo celular, em Coletas → Sou coletor.
+              {col.itens.length} coleta(s) nesta folha, impressa às {horaImpressao}. O que for
+              pedido depois disso não está aqui — o Atendimento Interno avisa por fora.
             </div>
           </div>
         ))
