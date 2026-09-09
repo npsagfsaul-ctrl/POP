@@ -5,7 +5,7 @@
 // eram medidos sobre 4 sábados e os feriados de cada mês, dias em que a porta
 // estava fechada.
 
-import { temExpediente, type Expediente } from './conformidade';
+import { classificarDia, type Expediente, type TipoDeDia } from './conformidade';
 
 export const CHAVE_EXPEDIENTE_VALE_DE = 'expediente_vale_de';
 
@@ -56,24 +56,32 @@ export function formatarDiasExpediente(valor: string | null | undefined): string
 }
 
 /**
- * Dias do mês (YYYY-MM-DD) em que o setor NÃO tem expediente — sem contar
- * domingo, que as telas já tratam. Usa a mesma função do cálculo, para o
- * calendário nunca mostrar um dia que a conta considera de outro jeito.
+ * Classifica os dias do mês para as telas — sem contar domingo, que elas já
+ * tratam. Sai da mesma função do cálculo, para o calendário nunca mostrar um
+ * dia que a conta considera de outro jeito.
+ *
+ * `fechados` são os feriados (nunca contam). `opcionais` são os dias fora do
+ * expediente normal do setor, que contam se forem preenchidos.
  */
-export function diasSemExpedienteNoMes(
+export function classificarDiasDoMes(
   mes: number,
   ano: number,
   expediente: Expediente,
-): string[] {
+): { fechados: string[]; opcionais: string[] } {
   const total = new Date(ano, mes, 0).getDate();
-  const fora: string[] = [];
+  const fechados: string[] = [];
+  const opcionais: string[] = [];
+
   for (let dia = 1; dia <= total; dia++) {
     const diaSemana = new Date(Date.UTC(ano, mes - 1, dia)).getUTCDay();
     if (diaSemana === 0) continue;
     const iso = `${ano}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
-    if (!temExpediente(iso, diaSemana, expediente)) fora.push(iso);
+    const tipo: TipoDeDia = classificarDia(iso, diaSemana, expediente);
+    if (tipo === 'fechado') fechados.push(iso);
+    else if (tipo === 'opcional') opcionais.push(iso);
   }
-  return fora;
+
+  return { fechados, opcionais };
 }
 
 /** Domingo de Páscoa (algoritmo gregoriano de Meeus/Jones/Butcher). */

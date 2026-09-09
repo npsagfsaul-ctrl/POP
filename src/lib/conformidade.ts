@@ -179,20 +179,31 @@ function expedienteValeEm(dataISO: string, valeAPartirDe?: string | null): boole
 }
 
 /**
- * Este dia conta para o setor? (Domingo é tratado à parte, fora daqui.)
+ * Como este dia deve ser tratado. Domingo é tratado à parte, fora daqui.
+ *
+ * - `normal`   — dia de expediente do setor: conta, preenchido ou não.
+ * - `fechado`  — a agência não abriu (feriado). NUNCA conta, nem se alguém
+ *                preencher: ninguém trabalhou, não há o que cobrar.
+ * - `opcional` — fora do dia da semana do setor, tipo sábado de quem só abre
+ *                até sexta. Conta **só se foi preenchido**: preencher é a
+ *                forma de dizer "teve expediente neste sábado". Em branco
+ *                significa que a agência esteve fechada, e o dia não é cobrado.
  *
  * Exportada porque o calendário e a tela de checklist precisam da MESMA
  * resposta que o cálculo usa — se cada tela decidisse por conta própria,
  * voltaríamos a ter telas discordando entre si.
  */
-export function temExpediente(
+export type TipoDeDia = 'normal' | 'fechado' | 'opcional';
+
+export function classificarDia(
   dataISO: string,
   diaDaSemana: number,
   expediente: Expediente,
-): boolean {
-  if (!expedienteValeEm(dataISO, expediente.valeAPartirDe)) return true;
-  if (!expediente.diasSemana.includes(diaDaSemana)) return false;
-  return !expediente.semExpediente.has(dataISO);
+): TipoDeDia {
+  if (!expedienteValeEm(dataISO, expediente.valeAPartirDe)) return 'normal';
+  if (expediente.semExpediente.has(dataISO)) return 'fechado';
+  if (!expediente.diasSemana.includes(diaDaSemana)) return 'opcional';
+  return 'normal';
 }
 
 export function calcularConformidade({
@@ -237,7 +248,11 @@ export function calcularConformidade({
     // então Financeiro/Administrativo/Comercial eram medidos sobre 5 dias por
     // mês em que a porta estava fechada.
     const dataISO = `${ano}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
-    if (!temExpediente(dataISO, dataDia.getDay(), expediente)) continue;
+    const tipoDoDia = classificarDia(dataISO, dataDia.getDay(), expediente);
+
+    // Feriado nunca entra, nem se alguém tiver preenchido. O `opcional` é
+    // decidido mais abaixo, porque depende de o dia ter sido preenchido.
+    if (tipoDoDia === 'fechado') continue;
 
     const fimDia = fimDoDiaLocal(ano, mes, dia);
 
@@ -260,6 +275,12 @@ export function calcularConformidade({
     // Dias passados sem checklist continuam contando como 0% normalmente.
     const ehHoje = dataDia.getTime() === limite.getTime();
     if (ehHoje && !preenchido) continue;
+
+    // Sábado de quem só abre até sexta: só entra se alguém preencheu. Foi a
+    // regra que a gestora pediu — "teve expediente no sábado?" —, respondida
+    // pelo próprio ato de preencher, sem obrigar ninguém a dizer "não" nos
+    // sábados em que a agência esteve fechada.
+    if (tipoDoDia === 'opcional' && !preenchido) continue;
 
     diasUteis++;
 

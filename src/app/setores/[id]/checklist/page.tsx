@@ -7,7 +7,7 @@ import ChecklistForm from '@/components/ChecklistForm';
 import { getRegistroPorData } from '@/actions/checklist';
 import { getAtendentesPorSetor } from '@/actions/atendentes';
 import { hojeISOSaoPaulo, podeEditarChecklist, ehDataFutura, inicioPeriodoEditavel, DIA_LIMITE_FECHAMENTO } from '@/lib/data';
-import { temExpediente } from '@/lib/conformidade';
+import { classificarDia } from '@/lib/conformidade';
 import { montarExpediente } from '@/lib/expediente';
 import { carregarContextoExpediente } from '@/actions/expediente';
 
@@ -90,13 +90,10 @@ export default async function ChecklistDiario({
   const diaDaSemana = new Date(Date.UTC(ano, mes - 1, diaDoMes)).getUTCDay();
   const expediente = montarExpediente(setor.diasExpediente, await carregarContextoExpediente());
 
-  if (diaDaSemana === 0 || !temExpediente(dataSelecionada, diaDaSemana, expediente)) {
-    const motivo = diaDaSemana === 0
-      ? 'Domingo não conta para a meta.'
-      : expediente.semExpediente.has(dataSelecionada)
-        ? 'Esse dia está cadastrado como um dia em que a agência não abriu.'
-        : `O setor ${setor.nome} não tem expediente ${['aos domingos', 'às segundas', 'às terças', 'às quartas', 'às quintas', 'às sextas', 'aos sábados'][diaDaSemana]}.`;
+  const tipoDoDia = classificarDia(dataSelecionada, diaDaSemana, expediente);
 
+  // Feriado e domingo não têm checklist: ninguém trabalhou, não há o que cobrar.
+  if (diaDaSemana === 0 || tipoDoDia === 'fechado') {
     return (
       <div className="max-w-4xl mx-auto pb-12">
         <div className="card" style={{ marginTop: 24 }}>
@@ -104,8 +101,11 @@ export default async function ChecklistDiario({
             Dia sem expediente
           </h2>
           <p style={{ color: 'var(--text-muted)', marginBottom: 16 }}>
-            {motivo} Esse dia <strong>não entra na conta da nota</strong>, então não há
-            checklist para preencher — e não preencher aqui não tira ponto de ninguém.
+            {diaDaSemana === 0
+              ? 'Domingo não conta para a meta.'
+              : 'Esse dia está cadastrado como um dia em que a agência não abriu.'}{' '}
+            Ele <strong>não entra na conta da nota</strong>, então não há checklist para
+            preencher — e não preencher aqui não tira ponto de ninguém.
           </p>
           <Link href={`/setores/${setor.id}`} className="btn btn-primary">
             ← Voltar ao Painel
@@ -144,6 +144,14 @@ export default async function ChecklistDiario({
           </p>
         </div>
       </div>
+
+      {tipoDoDia === 'opcional' && (
+        <div className="alert alert-info" style={{ marginBottom: 16 }}>
+          O setor <strong>{setor.nome}</strong> normalmente não abre neste dia. Se houve
+          trabalho, pode preencher normalmente — o dia passa a contar para a nota. Se não
+          houve, é só sair sem preencher: <strong>o dia não é cobrado de ninguém</strong>.
+        </div>
+      )}
 
       <ChecklistForm
         setorId={setor.id}

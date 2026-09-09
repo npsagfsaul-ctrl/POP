@@ -37,15 +37,21 @@ interface CalendarioProps {
    */
   dataMinimaEdicao?: string;
   /**
-   * Dias (YYYY-MM-DD) sem expediente neste setor — sábado de quem só abre até
-   * sexta, feriado. Aparecem como "OFF", igual ao domingo, e não são clicáveis:
-   * o cálculo ignora esses dias, então preencher ali seria trabalho à toa.
+   * Dias (YYYY-MM-DD) em que a agência não abriu — feriado. Aparecem como
+   * "OFF", igual ao domingo, e não são clicáveis: nunca contam para a nota.
    */
-  diasSemExpediente?: string[];
+  diasFechados?: string[];
+  /**
+   * Dias fora do expediente normal do setor — o sábado de quem só abre até
+   * sexta. Continuam clicáveis: se houve trabalho no sábado, preencher faz o
+   * dia contar. Em branco, não contam e não tiram ponto de ninguém.
+   */
+  diasOpcionais?: string[];
 }
 
-export default function CalendarioDashboard({ setorId, registros, mes, ano, adminMode = false, mediaMensal, diasConsiderados, conformidadePorDia, dataMinimaEdicao, diasSemExpediente = [] }: CalendarioProps) {
-  const semExpediente = new Set(diasSemExpediente);
+export default function CalendarioDashboard({ setorId, registros, mes, ano, adminMode = false, mediaMensal, diasConsiderados, conformidadePorDia, dataMinimaEdicao, diasFechados = [], diasOpcionais = [] }: CalendarioProps) {
+  const fechados = new Set(diasFechados);
+  const opcionais = new Set(diasOpcionais);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedDia, setSelectedDia] = useState<number | null>(null);
   const [comentarioTexto, setComentarioTexto] = useState('');
@@ -196,11 +202,17 @@ export default function CalendarioDashboard({ setorId, registros, mes, ano, admi
           let cls = '';
           let statusText = '';
 
-          const isSemExpediente = semExpediente.has(dataString);
+          const isFechado = fechados.has(dataString);
+          // Sábado sem preenchimento: não conta, mas continua aberto para quem
+          // trabalhou. Se foi preenchido, cai no fluxo normal e mostra a nota.
+          const isOpcionalVazio = opcionais.has(dataString) && conformidade === undefined;
 
-          if (isDomingo || isSemExpediente) {
+          if (isDomingo || isFechado) {
             cls = 'sunday';
             statusText = 'OFF';
+          } else if (isOpcionalVazio) {
+            cls = 'future';
+            statusText = '—';
           } else if (isFuturo) {
             cls = 'future';
             statusText = '';
@@ -258,14 +270,14 @@ export default function CalendarioDashboard({ setorId, registros, mes, ano, admi
           // Dia de mês fechado: mostra a nota, mas não leva mais ao checklist.
           const bloqueado = !!dataMinimaEdicao && dataString < dataMinimaEdicao;
 
-          if (isFuturo || isDomingo || isSemExpediente || bloqueado) {
+          if (isFuturo || isDomingo || isFechado || bloqueado) {
             return (
               <div
                 key={dia}
                 className={`cal-day ${cls}`}
                 title={
-                  isSemExpediente
-                    ? 'Sem expediente neste dia — não conta para a nota'
+                  isFechado
+                    ? 'A agência não abriu neste dia — não conta para a nota'
                     : bloqueado ? 'Mês fechado — não é mais possível editar' : undefined
                 }
                 style={bloqueado ? { cursor: 'not-allowed' } : undefined}
@@ -280,7 +292,11 @@ export default function CalendarioDashboard({ setorId, registros, mes, ano, admi
               key={dia}
               href={`/setores/${setorId}/checklist?data=${dataString}`}
               className={`cal-day ${cls}`}
-              title={registrado ? 'Editar Registro' : 'Preencher Checklist'}
+              title={
+                opcionais.has(dataString)
+                  ? 'Fora do expediente normal — preencha só se houve trabalho neste dia'
+                  : registrado ? 'Editar Registro' : 'Preencher Checklist'
+              }
               style={{ position: 'relative' }}
             >
               {inner}

@@ -14,7 +14,7 @@ import { ocorrenciasAtrasadas, agruparAtrasos, chaveFeito } from '@/lib/agenda';
 import { getPopsBySetor } from '@/actions/pops';
 import { getRegistrosMensais } from '@/actions/checklist';
 import { calcularConformidade, calcularMargem } from '@/lib/conformidade';
-import { montarExpediente, diasSemExpedienteNoMes } from '@/lib/expediente';
+import { montarExpediente, classificarDiasDoMes } from '@/lib/expediente';
 import { carregarContextoExpediente } from '@/actions/expediente';
 import { hojeISOSaoPaulo, inicioPeriodoEditavel } from '@/lib/data';
 import prisma from '@/lib/prisma';
@@ -88,6 +88,8 @@ export default async function VisualizarSetor({
   const listaDiasEmBranco = diasEmBranco.length === 1
     ? String(diasEmBranco[0])
     : `${diasEmBranco.slice(0, -1).join(', ')} e ${diasEmBranco[diasEmBranco.length - 1]}`;
+
+  const classificacaoDosDias = classificarDiasDoMes(mesAtual, anoAtual, expediente);
 
   const hojeSP = hojeISOSaoPaulo();
   const dataMinimaEdicao = inicioPeriodoEditavel(hojeSP);
@@ -375,7 +377,8 @@ export default async function VisualizarSetor({
             diasConsiderados={diasUteis}
             conformidadePorDia={conformidadePorDia}
             dataMinimaEdicao={dataMinimaEdicao}
-            diasSemExpediente={diasSemExpedienteNoMes(mesAtual, anoAtual, expediente)}
+            diasFechados={classificacaoDosDias.fechados}
+            diasOpcionais={classificacaoDosDias.opcionais}
           />
 
           {/* POPs List */}
