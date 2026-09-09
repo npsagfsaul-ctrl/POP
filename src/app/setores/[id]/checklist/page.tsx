@@ -88,7 +88,8 @@ export default async function ChecklistDiario({
   // à toa — e daria a impressão de que aquele dia conta para a nota.
   const [ano, mes, diaDoMes] = dataSelecionada.split('-').map(Number);
   const diaDaSemana = new Date(Date.UTC(ano, mes - 1, diaDoMes)).getUTCDay();
-  const expediente = montarExpediente(setor.diasExpediente, await carregarContextoExpediente());
+  const contextoExpediente = await carregarContextoExpediente();
+  const expediente = montarExpediente(setor.diasExpediente, contextoExpediente);
 
   const tipoDoDia = classificarDia(dataSelecionada, diaDaSemana, expediente);
 
@@ -103,7 +104,7 @@ export default async function ChecklistDiario({
           <p style={{ color: 'var(--text-muted)', marginBottom: 16 }}>
             {diaDaSemana === 0
               ? 'Domingo não conta para a meta.'
-              : 'Esse dia está cadastrado como um dia em que a agência não abriu.'}{' '}
+              : <>Esse dia está cadastrado como <strong>{contextoExpediente.motivos?.[dataSelecionada] ?? 'um dia em que a agência não abriu'}</strong>.</>}{' '}
             Ele <strong>não entra na conta da nota</strong>, então não há checklist para
             preencher — e não preencher aqui não tira ponto de ninguém.
           </p>

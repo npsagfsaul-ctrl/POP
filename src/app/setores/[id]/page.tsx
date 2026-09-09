@@ -68,7 +68,8 @@ export default async function VisualizarSetor({
   // Calcular métricas (dias úteis até hoje, a partir da criação do setor; dia útil sem checklist = 0%)
   // Métrica oficial da meta: percentualPerfeitos (dias 100% ÷ dias úteis).
   // Dias em que este setor abre, e os dias em que a agência não abriu.
-  const expediente = montarExpediente(setor.diasExpediente, await carregarContextoExpediente());
+  const contextoExpediente = await carregarContextoExpediente();
+  const expediente = montarExpediente(setor.diasExpediente, contextoExpediente);
 
   const { media: mediaConformidade, diasUteis, diasAbaixo100, percentualPerfeitos, bateuMeta, dias: diasLedger } =
     calcularConformidade({
@@ -377,7 +378,10 @@ export default async function VisualizarSetor({
             diasConsiderados={diasUteis}
             conformidadePorDia={conformidadePorDia}
             dataMinimaEdicao={dataMinimaEdicao}
-            diasFechados={classificacaoDosDias.fechados}
+            diasFechados={classificacaoDosDias.fechados.map((data) => ({
+              data,
+              motivo: contextoExpediente.motivos?.[data] ?? 'Fechado',
+            }))}
             diasOpcionais={classificacaoDosDias.opcionais}
           />
 

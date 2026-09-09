@@ -17,6 +17,14 @@ export async function getDiasSemExpediente(): Promise<Set<string>> {
   return new Set(dias.map((d) => new Date(d.data).toISOString().slice(0, 10)));
 }
 
+/** Data → motivo ("Independência", "falta de energia"), para as telas explicarem. */
+export async function getMotivosSemExpediente(): Promise<Record<string, string>> {
+  const dias = await prisma.diaSemExpediente.findMany({ select: { data: true, descricao: true } });
+  return Object.fromEntries(
+    dias.map((d) => [new Date(d.data).toISOString().slice(0, 10), d.descricao]),
+  );
+}
+
 /** Mês (YYYY-MM) a partir do qual a regra de expediente passa a valer. */
 export async function getExpedienteValeDe(): Promise<string | null> {
   const cfg = await prisma.config.findUnique({ where: { chave: CHAVE_EXPEDIENTE_VALE_DE } });
@@ -45,11 +53,11 @@ export async function definirExpedienteValeDe(valor: string | null) {
 
 /** Tudo que o cálculo precisa saber sobre expediente, numa ida só ao banco. */
 export async function carregarContextoExpediente() {
-  const [semExpediente, valeAPartirDe] = await Promise.all([
-    getDiasSemExpediente(),
+  const [motivos, valeAPartirDe] = await Promise.all([
+    getMotivosSemExpediente(),
     getExpedienteValeDe(),
   ]);
-  return { semExpediente, valeAPartirDe };
+  return { semExpediente: new Set(Object.keys(motivos)), motivos, valeAPartirDe };
 }
 
 // ─── DIAS SEM EXPEDIENTE (feriados e fechamentos) ───

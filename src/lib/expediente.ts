@@ -12,6 +12,8 @@ export const CHAVE_EXPEDIENTE_VALE_DE = 'expediente_vale_de';
 /** O que vale para a agência inteira: dias fechados e a partir de quando conta. */
 export interface ContextoExpediente {
   semExpediente: Set<string>;
+  /** Data → motivo, para as telas dizerem POR QUE o dia não conta. */
+  motivos?: Record<string, string>;
   valeAPartirDe: string | null;
 }
 

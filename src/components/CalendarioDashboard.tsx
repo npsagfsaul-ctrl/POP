@@ -37,10 +37,11 @@ interface CalendarioProps {
    */
   dataMinimaEdicao?: string;
   /**
-   * Dias (YYYY-MM-DD) em que a agência não abriu — feriado. Aparecem como
-   * "OFF", igual ao domingo, e não são clicáveis: nunca contam para a nota.
+   * Dias em que a agência não abriu, com o motivo. Não são clicáveis e nunca
+   * contam. O motivo aparece na própria célula: "OFF" seco não diz se o dia
+   * está fechado por feriado, por falta de energia, ou por engano no cadastro.
    */
-  diasFechados?: string[];
+  diasFechados?: { data: string; motivo: string }[];
   /**
    * Dias fora do expediente normal do setor — o sábado de quem só abre até
    * sexta. Continuam clicáveis: se houve trabalho no sábado, preencher faz o
@@ -50,7 +51,7 @@ interface CalendarioProps {
 }
 
 export default function CalendarioDashboard({ setorId, registros, mes, ano, adminMode = false, mediaMensal, diasConsiderados, conformidadePorDia, dataMinimaEdicao, diasFechados = [], diasOpcionais = [] }: CalendarioProps) {
-  const fechados = new Set(diasFechados);
+  const fechados = new Map(diasFechados.map((d) => [d.data, d.motivo]));
   const opcionais = new Set(diasOpcionais);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedDia, setSelectedDia] = useState<number | null>(null);
@@ -202,12 +203,16 @@ export default function CalendarioDashboard({ setorId, registros, mes, ano, admi
           let cls = '';
           let statusText = '';
 
-          const isFechado = fechados.has(dataString);
+          const motivoFechado = fechados.get(dataString);
+          const isFechado = motivoFechado !== undefined;
           // Sábado sem preenchimento: não conta, mas continua aberto para quem
           // trabalhou. Se foi preenchido, cai no fluxo normal e mostra a nota.
           const isOpcionalVazio = opcionais.has(dataString) && conformidade === undefined;
 
-          if (isDomingo || isFechado) {
+          if (isFechado) {
+            cls = 'sunday';
+            statusText = motivoFechado!;
+          } else if (isDomingo) {
             cls = 'sunday';
             statusText = 'OFF';
           } else if (isOpcionalVazio) {
@@ -233,7 +238,20 @@ export default function CalendarioDashboard({ setorId, registros, mes, ano, admi
           const inner = (
             <div style={{ position: 'relative', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
               <span className="cal-num">{dia}</span>
-              {statusText && <span className="cal-pct">{statusText}</span>}
+              {statusText && (
+                <span
+                  className="cal-pct"
+                  // O motivo do fechamento é texto, não porcentagem: precisa
+                  // caber numa célula pequena sem estourar.
+                  style={isFechado ? {
+                    fontSize: '0.6rem', lineHeight: 1.15, textAlign: 'center',
+                    padding: '0 3px', overflow: 'hidden', display: '-webkit-box',
+                    WebkitLineClamp: 2, WebkitBoxOrient: 'vertical',
+                  } : undefined}
+                >
+                  {statusText}
+                </span>
+              )}
               
               {/* Alerta badge for sector representative */}
               {!adminMode && temAlerta && (
@@ -277,7 +295,7 @@ export default function CalendarioDashboard({ setorId, registros, mes, ano, admi
                 className={`cal-day ${cls}`}
                 title={
                   isFechado
-                    ? 'A agência não abriu neste dia — não conta para a nota'
+                    ? `${motivoFechado} — a agência não abriu, o dia não conta para a nota`
                     : bloqueado ? 'Mês fechado — não é mais possível editar' : undefined
                 }
                 style={bloqueado ? { cursor: 'not-allowed' } : undefined}
