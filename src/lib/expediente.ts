@@ -5,7 +5,7 @@
 // eram medidos sobre 4 sábados e os feriados de cada mês, dias em que a porta
 // estava fechada.
 
-import type { Expediente } from './conformidade';
+import { temExpediente, type Expediente } from './conformidade';
 
 export const CHAVE_EXPEDIENTE_VALE_DE = 'expediente_vale_de';
 
@@ -53,6 +53,27 @@ export function formatarDiasExpediente(valor: string | null | undefined): string
     return `${NOMES_DIA_SEMANA[dias[0]].slice(0, 3)} a ${NOMES_DIA_SEMANA[dias[dias.length - 1]].slice(0, 3)}`;
   }
   return dias.map((d) => NOMES_DIA_SEMANA[d].slice(0, 3)).join(', ');
+}
+
+/**
+ * Dias do mês (YYYY-MM-DD) em que o setor NÃO tem expediente — sem contar
+ * domingo, que as telas já tratam. Usa a mesma função do cálculo, para o
+ * calendário nunca mostrar um dia que a conta considera de outro jeito.
+ */
+export function diasSemExpedienteNoMes(
+  mes: number,
+  ano: number,
+  expediente: Expediente,
+): string[] {
+  const total = new Date(ano, mes, 0).getDate();
+  const fora: string[] = [];
+  for (let dia = 1; dia <= total; dia++) {
+    const diaSemana = new Date(Date.UTC(ano, mes - 1, dia)).getUTCDay();
+    if (diaSemana === 0) continue;
+    const iso = `${ano}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+    if (!temExpediente(iso, diaSemana, expediente)) fora.push(iso);
+  }
+  return fora;
 }
 
 /** Domingo de Páscoa (algoritmo gregoriano de Meeus/Jones/Butcher). */

@@ -14,7 +14,7 @@ import { ocorrenciasAtrasadas, agruparAtrasos, chaveFeito } from '@/lib/agenda';
 import { getPopsBySetor } from '@/actions/pops';
 import { getRegistrosMensais } from '@/actions/checklist';
 import { calcularConformidade, calcularMargem } from '@/lib/conformidade';
-import { montarExpediente } from '@/lib/expediente';
+import { montarExpediente, diasSemExpedienteNoMes } from '@/lib/expediente';
 import { carregarContextoExpediente } from '@/actions/expediente';
 import { hojeISOSaoPaulo, inicioPeriodoEditavel } from '@/lib/data';
 import prisma from '@/lib/prisma';
@@ -375,6 +375,7 @@ export default async function VisualizarSetor({
             diasConsiderados={diasUteis}
             conformidadePorDia={conformidadePorDia}
             dataMinimaEdicao={dataMinimaEdicao}
+            diasSemExpediente={diasSemExpedienteNoMes(mesAtual, anoAtual, expediente)}
           />
 
           {/* POPs List */}

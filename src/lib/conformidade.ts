@@ -178,6 +178,23 @@ function expedienteValeEm(dataISO: string, valeAPartirDe?: string | null): boole
   return dataISO.slice(0, 7) >= valeAPartirDe;
 }
 
+/**
+ * Este dia conta para o setor? (Domingo é tratado à parte, fora daqui.)
+ *
+ * Exportada porque o calendário e a tela de checklist precisam da MESMA
+ * resposta que o cálculo usa — se cada tela decidisse por conta própria,
+ * voltaríamos a ter telas discordando entre si.
+ */
+export function temExpediente(
+  dataISO: string,
+  diaDaSemana: number,
+  expediente: Expediente,
+): boolean {
+  if (!expedienteValeEm(dataISO, expediente.valeAPartirDe)) return true;
+  if (!expediente.diasSemana.includes(diaDaSemana)) return false;
+  return !expediente.semExpediente.has(dataISO);
+}
+
 export function calcularConformidade({
   pops,
   registros,
@@ -220,10 +237,7 @@ export function calcularConformidade({
     // então Financeiro/Administrativo/Comercial eram medidos sobre 5 dias por
     // mês em que a porta estava fechada.
     const dataISO = `${ano}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
-    if (expedienteValeEm(dataISO, expediente.valeAPartirDe)) {
-      if (!expediente.diasSemana.includes(dataDia.getDay())) continue;
-      if (expediente.semExpediente.has(dataISO)) continue;
-    }
+    if (!temExpediente(dataISO, dataDia.getDay(), expediente)) continue;
 
     const fimDia = fimDoDiaLocal(ano, mes, dia);
 

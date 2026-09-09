@@ -4,6 +4,9 @@ import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { podeEditarChecklist, ehDataFutura, DIA_LIMITE_FECHAMENTO } from '@/lib/data';
+import { temExpediente } from '@/lib/conformidade';
+import { montarExpediente } from '@/lib/expediente';
+import { carregarContextoExpediente } from './expediente';
 
 export async function salvarChecklist(formData: FormData) {
   const setorId = formData.get('setorId') as string;
@@ -33,6 +36,22 @@ export async function salvarChecklist(formData: FormData) {
     throw new Error(
       `Este mês já foi fechado e não aceita mais alterações. O mês anterior pode ser preenchido até o dia ${DIA_LIMITE_FECHAMENTO}.`,
     );
+  }
+
+  // Dia sem expediente para este setor não entra na nota — gravar um checklist
+  // ali criaria um registro que nenhuma tela mostra e nenhum cálculo lê.
+  const setorDoDia = await prisma.setor.findUnique({
+    where: { id: setorId },
+    select: { diasExpediente: true },
+  });
+  if (setorDoDia) {
+    const expediente = montarExpediente(
+      setorDoDia.diasExpediente,
+      await carregarContextoExpediente(),
+    );
+    if (!temExpediente(dataString, data.getUTCDay(), expediente)) {
+      throw new Error('Este dia não tem expediente para este setor, então não conta para a nota.');
+    }
   }
 
   // Collect responses from form data

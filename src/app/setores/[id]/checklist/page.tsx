@@ -7,6 +7,9 @@ import ChecklistForm from '@/components/ChecklistForm';
 import { getRegistroPorData } from '@/actions/checklist';
 import { getAtendentesPorSetor } from '@/actions/atendentes';
 import { hojeISOSaoPaulo, podeEditarChecklist, ehDataFutura, inicioPeriodoEditavel, DIA_LIMITE_FECHAMENTO } from '@/lib/data';
+import { temExpediente } from '@/lib/conformidade';
+import { montarExpediente } from '@/lib/expediente';
+import { carregarContextoExpediente } from '@/actions/expediente';
 
 export default async function ChecklistDiario({ 
   params,
@@ -72,6 +75,37 @@ export default async function ChecklistDiario({
                 depois disso ele é fechado para que a nota de um mês já apurado não mude.
               </>
             )}
+          </p>
+          <Link href={`/setores/${setor.id}`} className="btn btn-primary">
+            ← Voltar ao Painel
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Dia sem expediente: o cálculo ignora, então preencher aqui seria trabalho
+  // à toa — e daria a impressão de que aquele dia conta para a nota.
+  const [ano, mes, diaDoMes] = dataSelecionada.split('-').map(Number);
+  const diaDaSemana = new Date(Date.UTC(ano, mes - 1, diaDoMes)).getUTCDay();
+  const expediente = montarExpediente(setor.diasExpediente, await carregarContextoExpediente());
+
+  if (diaDaSemana === 0 || !temExpediente(dataSelecionada, diaDaSemana, expediente)) {
+    const motivo = diaDaSemana === 0
+      ? 'Domingo não conta para a meta.'
+      : expediente.semExpediente.has(dataSelecionada)
+        ? 'Esse dia está cadastrado como um dia em que a agência não abriu.'
+        : `O setor ${setor.nome} não tem expediente ${['aos domingos', 'às segundas', 'às terças', 'às quartas', 'às quintas', 'às sextas', 'aos sábados'][diaDaSemana]}.`;
+
+    return (
+      <div className="max-w-4xl mx-auto pb-12">
+        <div className="card" style={{ marginTop: 24 }}>
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: 8 }}>
+            Dia sem expediente
+          </h2>
+          <p style={{ color: 'var(--text-muted)', marginBottom: 16 }}>
+            {motivo} Esse dia <strong>não entra na conta da nota</strong>, então não há
+            checklist para preencher — e não preencher aqui não tira ponto de ninguém.
           </p>
           <Link href={`/setores/${setor.id}`} className="btn btn-primary">
             ← Voltar ao Painel

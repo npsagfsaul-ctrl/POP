@@ -36,9 +36,16 @@ interface CalendarioProps {
    * um mês já fechado: continuam à mostra com a nota, mas deixam de ser clicáveis.
    */
   dataMinimaEdicao?: string;
+  /**
+   * Dias (YYYY-MM-DD) sem expediente neste setor — sábado de quem só abre até
+   * sexta, feriado. Aparecem como "OFF", igual ao domingo, e não são clicáveis:
+   * o cálculo ignora esses dias, então preencher ali seria trabalho à toa.
+   */
+  diasSemExpediente?: string[];
 }
 
-export default function CalendarioDashboard({ setorId, registros, mes, ano, adminMode = false, mediaMensal, diasConsiderados, conformidadePorDia, dataMinimaEdicao }: CalendarioProps) {
+export default function CalendarioDashboard({ setorId, registros, mes, ano, adminMode = false, mediaMensal, diasConsiderados, conformidadePorDia, dataMinimaEdicao, diasSemExpediente = [] }: CalendarioProps) {
+  const semExpediente = new Set(diasSemExpediente);
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedDia, setSelectedDia] = useState<number | null>(null);
   const [comentarioTexto, setComentarioTexto] = useState('');
@@ -189,7 +196,9 @@ export default function CalendarioDashboard({ setorId, registros, mes, ano, admi
           let cls = '';
           let statusText = '';
 
-          if (isDomingo) {
+          const isSemExpediente = semExpediente.has(dataString);
+
+          if (isDomingo || isSemExpediente) {
             cls = 'sunday';
             statusText = 'OFF';
           } else if (isFuturo) {
@@ -249,12 +258,16 @@ export default function CalendarioDashboard({ setorId, registros, mes, ano, admi
           // Dia de mês fechado: mostra a nota, mas não leva mais ao checklist.
           const bloqueado = !!dataMinimaEdicao && dataString < dataMinimaEdicao;
 
-          if (isFuturo || isDomingo || bloqueado) {
+          if (isFuturo || isDomingo || isSemExpediente || bloqueado) {
             return (
               <div
                 key={dia}
                 className={`cal-day ${cls}`}
-                title={bloqueado ? 'Mês fechado — não é mais possível editar' : undefined}
+                title={
+                  isSemExpediente
+                    ? 'Sem expediente neste dia — não conta para a nota'
+                    : bloqueado ? 'Mês fechado — não é mais possível editar' : undefined
+                }
                 style={bloqueado ? { cursor: 'not-allowed' } : undefined}
               >
                 {inner}
