@@ -3,7 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { isAdmin } from './admin';
-import { CHAVE_EXPEDIENTE_VALE_DE } from '@/lib/expediente';
+import { CHAVE_EXPEDIENTE_VALE_DE, feriadosNacionais } from '@/lib/expediente';
 
 /**
  * Monta o expediente para o cálculo de conformidade.
@@ -101,7 +101,6 @@ export async function removerDiaSemExpediente(id: string) {
 export async function semearFeriadosNacionais(anos: number[]) {
   if (!(await isAdmin())) throw new Error('Apenas o administrador pode mexer nisso.');
 
-  const { feriadosNacionais } = await import('@/lib/expediente');
   let criados = 0;
 
   for (const ano of anos) {
