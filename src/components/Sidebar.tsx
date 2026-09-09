@@ -156,10 +156,10 @@ export default function Sidebar({ isAdmin, ocorrenciasAbertas = 0 }: SidebarProp
               Fechamento do Prêmio
             </Link>
 
-            <Link href="/admin/simulador" className={`sidebar-link ${isActive('/admin/simulador') ? 'active' : ''}`}>
-              <IconClipboard />
-              Comparar réguas
-            </Link>
+            {/* "Comparar réguas" saiu do menu a pedido da gestora — a decisão
+                de trocar a régua perdeu urgência. A tela continua em
+                /admin/simulador, protegida por login, para voltar ao menu com
+                uma linha se o assunto voltar. */}
 
             <Link href="/setores/novo" className={`sidebar-link ${isActive('/setores/novo') ? 'active' : ''}`}>
               <IconPlus />
