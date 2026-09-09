@@ -14,7 +14,7 @@ import { ocorrenciasAtrasadas, agruparAtrasos, chaveFeito } from '@/lib/agenda';
 import { getPopsBySetor } from '@/actions/pops';
 import { getRegistrosMensais } from '@/actions/checklist';
 import { calcularConformidade, calcularMargem } from '@/lib/conformidade';
-import { montarExpediente, classificarDiasDoMes, formatarDiasExpediente } from '@/lib/expediente';
+import { montarExpediente, classificarDiasDoMes } from '@/lib/expediente';
 import { carregarContextoExpediente } from '@/actions/expediente';
 import { hojeISOSaoPaulo, inicioPeriodoEditavel } from '@/lib/data';
 import prisma from '@/lib/prisma';
@@ -341,40 +341,6 @@ export default async function VisualizarSetor({
               {mesAindaAberto
                 ? 'Cada um deles conta como 0% — clique no dia no calendário para preencher.'
                 : 'Mês fechado: esses dias contam como 0% e não podem mais ser preenchidos.'}
-            </div>
-          )}
-
-          {/* Estado da regra de expediente, onde o efeito dela aparece. Sem
-              isso, "por que o feriado ainda conta?" só se responde abrindo
-              outra tela e comparando de cabeça. */}
-          <div style={{ marginTop: 12, fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-            Expediente deste setor: <strong>{formatarDiasExpediente(setor.diasExpediente)}</strong>
-            {' · '}
-            {contextoExpediente.valeAPartirDe ? (
-              <>
-                {diasUteis} {diasUteis === 1 ? 'dia contado' : 'dias contados'} até hoje
-                {classificacaoDosDias.fechados.length > 0 && (
-                  <> · {classificacaoDosDias.fechados.length}{' '}
-                    {classificacaoDosDias.fechados.length === 1 ? 'dia fechado' : 'dias fechados'} neste mês</>
-                )}
-              </>
-            ) : (
-              <span style={{ color: 'var(--danger)' }}>
-                regra de expediente <strong>desligada</strong> — sábados e feriados ainda contam
-              </span>
-            )}
-          </div>
-
-          {adminMode && !contextoExpediente.valeAPartirDe && (
-            <div className="alert alert-warning" style={{ marginTop: 10 }}>
-              A regra de expediente <strong>ainda não foi ligada</strong>, então feriados e
-              dias sem expediente continuam entrando na conta — é por isso que um feriado
-              ainda aparece com nota. Para ligar, vá em{' '}
-              <Link href="/admin/expediente" style={{ textDecoration: 'underline' }}>
-                Administração → Expediente
-              </Link>{' '}
-              e salve o <strong>mês inicial</strong>. Enquanto ele estiver em branco, nada é
-              descontado.
             </div>
           )}
 
