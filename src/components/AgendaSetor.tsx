@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   ocorrenciasNoMes, ocorrenciasAtrasadas, agruparAtrasos, rotuloFrequencia, diasNoMes,
-  INTERVALOS_MESES, ItemAgendaCalc, Frequencia,
+  INTERVALOS_MESES, ItemAgendaCalc, posicaoNoMes, textoSemanal, textoMensalSemana,
 } from '@/lib/agenda';
 import {
   criarItemAgenda, alternarFeito, alternarItemAgenda, excluirItemAgenda, marcarVariasFeitas,
@@ -45,16 +45,14 @@ export default function AgendaSetor({ setorId, itens, mes, ano, hojeISO, podeEdi
   const [formAberto, setFormAberto] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
 
-  // Clicar num dia abre o cadastro já apontando para aquele dia — é o que se
-  // espera de um calendário. Como aqui todo processo é repetido, o dia clicado
-  // é ambíguo ("toda segunda" ou "dia 14 de todo mês"?), então os dois campos
-  // vêm preenchidos e trocar a opção não obriga a escolher de novo.
-  const [inicial, setInicial] = useState<{ diaSemana: number; diaMes: number; data: string } | null>(null);
+  // Clicar num dia abre o cadastro partindo daquele dia; o botão "+ Novo
+  // processo" parte de hoje. O formulário oferece as repetições já escritas
+  // com a data ("toda segunda-feira", "todo mês, no dia 22").
+  const [dataDoForm, setDataDoForm] = useState<string | null>(null);
 
   function abrirNovoEm(data: string) {
     if (!podeEditar) return;
-    const [a, m, d] = data.split('-').map(Number);
-    setInicial({ diaSemana: new Date(Date.UTC(a, m - 1, d)).getUTCDay(), diaMes: d, data });
+    setDataDoForm(data);
     setFormAberto(true);
     // O cadastro fica no card de baixo; sem isso o clique parece não fazer nada.
     requestAnimationFrame(() => {
@@ -278,7 +276,7 @@ export default function AgendaSetor({ setorId, itens, mes, ano, hojeISO, podeEdi
           {podeEditar && (
             <button
               className="btn btn-primary btn-sm"
-              onClick={() => { setInicial(null); setFormAberto((v) => !v); }}
+              onClick={() => { setDataDoForm(null); setFormAberto((v) => !v); }}
             >
               {formAberto ? 'Fechar' : '+ Novo processo'}
             </button>
@@ -287,14 +285,12 @@ export default function AgendaSetor({ setorId, itens, mes, ano, hojeISO, podeEdi
 
         {formAberto && podeEditar && (
           <FormNovoItem
-            // Remonta quando vem de um clique em outro dia, para os campos
-            // recomeçarem apontando para o dia certo.
-            key={inicial ? inicial.data : 'padrao'}
+            // Remonta quando vem de um clique em outro dia, para o formulário
+            // recomeçar apontando para o dia certo.
+            key={dataDoForm ?? 'hoje'}
             setorId={setorId}
-            diaSemanaInicial={inicial?.diaSemana}
-            diaMesInicial={inicial?.diaMes}
-            dataClicada={inicial?.data}
-            onPronto={() => { setFormAberto(false); setInicial(null); router.refresh(); }}
+            dataInicial={dataDoForm ?? hojeISO}
+            onPronto={() => { setFormAberto(false); setDataDoForm(null); router.refresh(); }}
           />
         )}
 
@@ -363,52 +359,88 @@ export default function AgendaSetor({ setorId, itens, mes, ano, hojeISO, podeEdi
   );
 }
 
+/**
+ * Cadastro de processo partindo de um DIA, como no Google Agenda: primeiro a
+ * data, depois se repete — e as opções já vêm escritas com aquele dia
+ * ("toda segunda-feira", "todo mês, no dia 22"), sem campo de dia da semana
+ * nem de dia do mês para preencher.
+ *
+ * O padrão é "não repete": quem clica num dia específico geralmente está
+ * pensando naquele dia.
+ */
+type Repeticao = 'UNICA' | 'DIARIA' | 'SEMANAL' | 'MENSAL' | 'MENSAL_SEMANA_ORDEM' | 'MENSAL_SEMANA_ULTIMA';
+
 function FormNovoItem({
   setorId,
   onPronto,
-  diaSemanaInicial,
-  diaMesInicial,
-  dataClicada,
+  dataInicial,
 }: {
   setorId: string;
   onPronto: () => void;
-  diaSemanaInicial?: number;
-  diaMesInicial?: number;
-  dataClicada?: string;
+  dataInicial: string;
 }) {
-  const [frequencia, setFrequencia] = useState<Frequencia>('SEMANAL');
-  const [semanaDoMes, setSemanaDoMes] = useState(1);
-  // Um clique num dia do calendário já sugere aquela data para a tarefa avulsa.
-  const [dataUnica, setDataUnica] = useState(dataClicada ?? '');
   const [titulo, setTitulo] = useState('');
   const [observacao, setObservacao] = useState('');
-  // Domingo (0) não é dia de trabalho e nem aparece na lista de opções, então
-  // um clique num domingo cai na segunda.
-  const [diaSemana, setDiaSemana] = useState(
-    diaSemanaInicial && diaSemanaInicial >= 1 && diaSemanaInicial <= 6 ? diaSemanaInicial : 1,
-  );
-  const [diaMes, setDiaMes] = useState(diaMesInicial ?? 5);
+  const [data, setData] = useState(dataInicial);
+  const [repeticao, setRepeticao] = useState<Repeticao>('UNICA');
   const [intervaloMeses, setIntervaloMeses] = useState(1);
-  const [mesBase, setMesBase] = useState(1);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
 
+  const dataValida = /^\d{4}-\d{2}-\d{2}$/.test(data);
+  const pos = dataValida ? posicaoNoMes(data) : null;
+  const ddmm = dataValida ? `${data.slice(8, 10)}/${data.slice(5, 7)}` : '';
+
+  // As opções dependem do dia escolhido, e se reescrevem quando ele muda.
+  const opcoes: { valor: Repeticao; texto: string }[] = pos && !pos.ehDomingo ? [
+    { valor: 'UNICA', texto: `Não repete — só em ${ddmm}` },
+    { valor: 'DIARIA', texto: 'Todo dia (seg a sáb)' },
+    { valor: 'SEMANAL', texto: textoSemanal(pos.diaSemana) },
+    { valor: 'MENSAL', texto: `Todo mês, no dia ${pos.dia}` },
+    // A 5ª ocorrência não existe em todo mês, então ela só é oferecida como "última".
+    ...(pos.ordem <= 4
+      ? [{ valor: 'MENSAL_SEMANA_ORDEM' as Repeticao, texto: textoMensalSemana(pos.diaSemana, pos.ordem) }]
+      : []),
+    ...(pos.ehUltima
+      ? [{ valor: 'MENSAL_SEMANA_ULTIMA' as Repeticao, texto: textoMensalSemana(pos.diaSemana, -1) }]
+      : []),
+  ] : [];
+
+  // Se mudar a data e a opção marcada deixar de existir (ex.: "última" num dia
+  // que não é o último), volta para "não repete" em vez de salvar algo errado.
+  const repeticaoValida = opcoes.some((o) => o.valor === repeticao) ? repeticao : 'UNICA';
+  const ehMensal = repeticaoValida === 'MENSAL'
+    || repeticaoValida === 'MENSAL_SEMANA_ORDEM'
+    || repeticaoValida === 'MENSAL_SEMANA_ULTIMA';
+
   async function salvar(e: React.FormEvent) {
     e.preventDefault();
+    if (!pos || pos.ehDomingo) return;
     setSalvando(true);
     setErro(null);
     try {
-      const usaMes = frequencia === 'MENSAL' || frequencia === 'MENSAL_SEMANA';
-      await criarItemAgenda(setorId, {
-        titulo, observacao,
-        frequencia,
-        diaSemana: frequencia === 'SEMANAL' || frequencia === 'MENSAL_SEMANA' ? diaSemana : null,
-        diaMes: frequencia === 'MENSAL' ? diaMes : null,
-        semanaDoMes: frequencia === 'MENSAL_SEMANA' ? semanaDoMes : null,
-        dataUnica: frequencia === 'UNICA' ? dataUnica : null,
-        intervaloMeses: usaMes ? intervaloMeses : 1,
-        mesBase: usaMes ? mesBase : null,
-      });
+      const base = { titulo, observacao };
+      // "A cada 4 meses" conta a partir do mês do dia escolhido — por isso não
+      // existe mais o campo "contando de".
+      const mensal = { intervaloMeses: ehMensal ? intervaloMeses : 1, mesBase: pos.mes };
+
+      if (repeticaoValida === 'UNICA') {
+        await criarItemAgenda(setorId, { ...base, frequencia: 'UNICA', dataUnica: data });
+      } else if (repeticaoValida === 'DIARIA') {
+        await criarItemAgenda(setorId, { ...base, frequencia: 'DIARIA' });
+      } else if (repeticaoValida === 'SEMANAL') {
+        await criarItemAgenda(setorId, { ...base, frequencia: 'SEMANAL', diaSemana: pos.diaSemana });
+      } else if (repeticaoValida === 'MENSAL') {
+        await criarItemAgenda(setorId, { ...base, frequencia: 'MENSAL', diaMes: pos.dia, ...mensal });
+      } else {
+        await criarItemAgenda(setorId, {
+          ...base,
+          frequencia: 'MENSAL_SEMANA',
+          diaSemana: pos.diaSemana,
+          semanaDoMes: repeticaoValida === 'MENSAL_SEMANA_ULTIMA' ? -1 : pos.ordem,
+          ...mensal,
+        });
+      }
       onPronto();
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Não foi possível salvar.');
@@ -434,157 +466,74 @@ function FormNovoItem({
       </div>
 
       <div className="form-group">
-        <label className="form-label">Com que frequência?</label>
-        {/* Uma opção por linha, com exemplo. Lado a lado, "num dia do mês" e
-            "numa semana do mês" viravam quase a mesma frase e ninguém
-            distinguia sem testar. */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {([
-            ['UNICA', 'Uma vez só, numa data', 'ex.: entregar o relatório dia 22'],
-            ['DIARIA', 'Todo dia', 'de segunda a sábado'],
-            ['SEMANAL', 'Toda semana', 'ex.: toda segunda-feira'],
-            ['MENSAL', 'Uma vez por mês, num dia fixo', 'ex.: todo dia 5'],
-            ['MENSAL_SEMANA', 'Uma vez por mês, num dia da semana', 'ex.: primeira segunda do mês'],
-          ] as [Frequencia, string, string][]).map(([valor, rotulo, exemplo]) => {
-            const marcada = frequencia === valor;
-            return (
-              <label
-                key={valor}
-                style={{
-                  display: 'flex', alignItems: 'baseline', gap: 8, cursor: 'pointer',
-                  padding: '7px 10px', borderRadius: 'var(--radius-sm)',
-                  background: marcada ? 'var(--primary-light, var(--surface-2))' : 'transparent',
-                  border: `1px solid ${marcada ? 'var(--primary)' : 'transparent'}`,
-                }}
-              >
-                <input
-                  type="radio"
-                  checked={marcada}
-                  onChange={() => setFrequencia(valor)}
-                  style={{ flex: 'none' }}
-                />
-                <span style={{ fontSize: '0.875rem', fontWeight: marcada ? 600 : 400 }}>
-                  {rotulo}
-                  <span style={{ fontWeight: 400, color: 'var(--text-muted)', marginLeft: 6, fontSize: '0.8125rem' }}>
-                    — {exemplo}
-                  </span>
-                </span>
-              </label>
-            );
-          })}
-        </div>
+        <label className="form-label">Dia</label>
+        <input
+          type="date"
+          className="form-input"
+          style={{ maxWidth: 200 }}
+          value={data}
+          onChange={(e) => setData(e.target.value)}
+          required
+        />
+        {pos?.ehDomingo && (
+          <p style={{ color: 'var(--danger)', fontSize: '0.8125rem', marginTop: 6 }}>
+            Domingo não tem expediente — escolha outro dia.
+          </p>
+        )}
       </div>
 
-      {frequencia === 'UNICA' && (
+      {opcoes.length > 0 && (
         <div className="form-group">
-          <label className="form-label">Em que dia?</label>
-          <input
-            type="date"
-            className="form-input"
-            style={{ maxWidth: 200 }}
-            value={dataUnica}
-            onChange={(e) => setDataUnica(e.target.value)}
-          />
+          <label className="form-label">Repetir</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {opcoes.map((o) => {
+              const marcada = repeticaoValida === o.valor;
+              return (
+                <label
+                  key={o.valor}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
+                    padding: '7px 10px', borderRadius: 'var(--radius-sm)',
+                    background: marcada ? 'var(--primary-light, var(--surface-2))' : 'transparent',
+                    border: `1px solid ${marcada ? 'var(--primary)' : 'transparent'}`,
+                    fontSize: '0.875rem', fontWeight: marcada ? 600 : 400,
+                  }}
+                >
+                  <input
+                    type="radio"
+                    checked={marcada}
+                    onChange={() => setRepeticao(o.valor)}
+                    style={{ flex: 'none' }}
+                  />
+                  {o.texto}
+                </label>
+              );
+            })}
+          </div>
         </div>
       )}
 
-      {frequencia === 'DIARIA' && (
-        <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: -4, marginBottom: 12 }}>
-          Domingo fica de fora, porque não tem expediente.
-        </p>
-      )}
-
-      {frequencia === 'MENSAL_SEMANA' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
-          <div className="form-group">
-            <label className="form-label">Qual semana</label>
-            <select className="form-select" value={semanaDoMes} onChange={(e) => setSemanaDoMes(Number(e.target.value))}>
-              <option value={1}>Primeira</option>
-              <option value={2}>Segunda</option>
-              <option value={3}>Terceira</option>
-              <option value={4}>Quarta</option>
-              <option value={-1}>Última</option>
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Dia da semana</label>
-            <select className="form-select" value={diaSemana} onChange={(e) => setDiaSemana(Number(e.target.value))}>
-              {[1, 2, 3, 4, 5, 6].map((d) => (
-                <option key={d} value={d}>{['', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][d]}</option>
-              ))}
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Repete</label>
-            <select className="form-select" value={intervaloMeses} onChange={(e) => setIntervaloMeses(Number(e.target.value))}>
-              {INTERVALOS_MESES.map((n) => (
-                <option key={n} value={n}>
-                  {n === 1 ? 'Todo mês' : n === 12 ? 'Uma vez por ano' : `A cada ${n} meses`}
-                </option>
-              ))}
-            </select>
-          </div>
-          {intervaloMeses > 1 && (
-            <div className="form-group">
-              <label className="form-label">Contando de</label>
-              <select className="form-select" value={mesBase} onChange={(e) => setMesBase(Number(e.target.value))}>
-                {NOMES_MES.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
-              </select>
-            </div>
-          )}
-        </div>
-      )}
-
-      {frequencia === 'SEMANAL' ? (
+      {ehMensal && (
         <div className="form-group">
-          <label className="form-label">Dia da semana</label>
-          <select className="form-select" style={{ maxWidth: 220 }} value={diaSemana} onChange={(e) => setDiaSemana(Number(e.target.value))}>
-            {[1, 2, 3, 4, 5, 6].map((d) => (
-              <option key={d} value={d}>{['', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][d]}</option>
+          <label className="form-label">A cada</label>
+          <select
+            className="form-select"
+            style={{ maxWidth: 220 }}
+            value={intervaloMeses}
+            onChange={(e) => setIntervaloMeses(Number(e.target.value))}
+          >
+            {INTERVALOS_MESES.map((n) => (
+              <option key={n} value={n}>
+                {n === 1 ? '1 mês' : n === 12 ? '12 meses (uma vez por ano)' : `${n} meses`}
+              </option>
             ))}
           </select>
-        </div>
-      ) : frequencia === 'MENSAL' ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12 }}>
-          <div className="form-group">
-            <label className="form-label">Dia do mês</label>
-            <input
-              type="number" min={1} max={31} className="form-input"
-              value={diaMes} onChange={(e) => setDiaMes(Number(e.target.value))}
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Repete</label>
-            <select className="form-select" value={intervaloMeses} onChange={(e) => setIntervaloMeses(Number(e.target.value))}>
-              {INTERVALOS_MESES.map((n) => (
-                <option key={n} value={n}>
-                  {n === 1 ? 'Todo mês' : n === 12 ? 'Uma vez por ano' : `A cada ${n} meses`}
-                </option>
-              ))}
-            </select>
-          </div>
-          {intervaloMeses > 1 && (
-            <div className="form-group">
-              <label className="form-label">Contando de</label>
-              <select className="form-select" value={mesBase} onChange={(e) => setMesBase(Number(e.target.value))}>
-                {NOMES_MES.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
-              </select>
-            </div>
+          {intervaloMeses > 1 && pos && (
+            <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: 6 }}>
+              Vai cair em: <strong>{mesesDoCiclo(pos.mes, intervaloMeses)}</strong>
+            </p>
           )}
         </div>
-      ) : null}
-
-      {/* Confirmação em português do que foi escolhido — as combinações de
-          semana, dia e intervalo são fáceis de errar sem ver o resultado. */}
-      {frequencia !== 'DIARIA' && (
-        <p style={{
-          fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: -4, marginBottom: 14,
-          padding: '8px 10px', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)',
-        }}>
-          No calendário vai cair assim: <strong style={{ color: 'var(--text-main)' }}>{rotuloFrequencia({
-            id: 'previa', frequencia, diaSemana, diaMes, semanaDoMes, dataUnica, intervaloMeses, mesBase,
-          })}</strong>
-        </p>
       )}
 
       <div className="form-group">
@@ -600,9 +549,22 @@ function FormNovoItem({
 
       {erro && <div className="alert alert-danger" style={{ marginBottom: 12 }}>{erro}</div>}
 
-      <button type="submit" className="btn btn-primary btn-sm" disabled={salvando}>
+      <button
+        type="submit"
+        className="btn btn-primary btn-sm"
+        disabled={salvando || !pos || pos.ehDomingo}
+      >
         {salvando ? 'Salvando…' : 'Adicionar à agenda'}
       </button>
     </form>
   );
+}
+
+/** "set, jan, mai" — os meses em que um ciclo de N meses cai, a partir de um mês. */
+function mesesDoCiclo(mesBase: number, intervalo: number): string {
+  const nomes: string[] = [];
+  for (let i = 0; i < 12; i += intervalo) {
+    nomes.push(NOMES_MES[(mesBase - 1 + i) % 12].slice(0, 3).toLowerCase());
+  }
+  return nomes.join(', ');
 }

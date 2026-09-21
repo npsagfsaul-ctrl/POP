@@ -39,7 +39,6 @@ export interface ItemAgendaCalc {
  */
 export const INTERVALOS_MESES = [1, 2, 3, 4, 6, 12] as const;
 
-const NOMES_DIA_SEMANA = ['domingo', 'segunda', 'terça', 'quarta', 'quinta', 'sexta', 'sábado'];
 const NOMES_MES = [
   'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
   'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
@@ -234,10 +233,53 @@ export function diferencaEmDias(a: string, b: string): number {
   return Math.round(ms / 86_400_000);
 }
 
-/** "Toda segunda", "Dia 5 de todo mês", "Dia 10, a cada 4 meses (jan, mai, set)". */
-const ORDINAIS_SEMANA: Record<number, string> = {
+const NOMES_DIA_COMPLETOS = [
+  'domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado',
+];
+const ORDINAIS_F: Record<number, string> = {
   1: 'primeira', 2: 'segunda', 3: 'terceira', 4: 'quarta', [-1]: 'última',
 };
+const ORDINAIS_M: Record<number, string> = {
+  1: 'primeiro', 2: 'segundo', 3: 'terceiro', 4: 'quarto', [-1]: 'último',
+};
+
+/** Sábado e domingo são masculinos: "todo sábado", não "toda sábado". */
+function ehMasculino(diaSemana: number) {
+  return diaSemana === 0 || diaSemana === 6;
+}
+
+/** "Toda segunda-feira", "Todo sábado". */
+export function textoSemanal(diaSemana: number): string {
+  return `${ehMasculino(diaSemana) ? 'Todo' : 'Toda'} ${NOMES_DIA_COMPLETOS[diaSemana]}`;
+}
+
+/** "Toda primeira segunda-feira do mês", "Todo último sábado do mês". */
+export function textoMensalSemana(diaSemana: number, semanaDoMes: number): string {
+  const m = ehMasculino(diaSemana);
+  const ordinal = (m ? ORDINAIS_M : ORDINAIS_F)[semanaDoMes] ?? (m ? 'primeiro' : 'primeira');
+  return `${m ? 'Todo' : 'Toda'} ${ordinal} ${NOMES_DIA_COMPLETOS[diaSemana]} do mês`;
+}
+
+/**
+ * Onde uma data cai dentro do mês — o que o cadastro precisa para oferecer
+ * "toda segunda", "todo dia 22" e "toda quarta segunda do mês" a partir do dia
+ * clicado.
+ *
+ * `ordem` é qual ocorrência daquele dia da semana ela é (1ª a 5ª). `ehUltima`
+ * diz se não há outra depois no mesmo mês. As duas podem valer ao mesmo tempo
+ * — a 4ª segunda pode ser também a última — e aí a pessoa escolhe qual quis
+ * dizer, porque nos meses de cinco segundas as duas regras dão dias diferentes.
+ */
+export function posicaoNoMes(dataISO: string) {
+  const [ano, mes, dia] = dataISO.split('-').map(Number);
+  const diaSemana = new Date(Date.UTC(ano, mes - 1, dia)).getUTCDay();
+  return {
+    ano, mes, dia, diaSemana,
+    ordem: Math.ceil(dia / 7),
+    ehUltima: dia + 7 > diasNoMes(mes, ano),
+    ehDomingo: diaSemana === 0,
+  };
+}
 
 export function rotuloFrequencia(item: ItemAgendaCalc): string {
   if (item.frequencia === 'UNICA') {
@@ -249,14 +291,12 @@ export function rotuloFrequencia(item: ItemAgendaCalc): string {
   if (item.frequencia === 'DIARIA') return 'Todo dia (seg a sáb)';
 
   if (item.frequencia === 'SEMANAL') {
-    return item.diaSemana == null ? 'Semanal' : `Toda ${NOMES_DIA_SEMANA[item.diaSemana]}`;
+    return item.diaSemana == null ? 'Semanal' : textoSemanal(item.diaSemana);
   }
 
   if (item.frequencia === 'MENSAL_SEMANA') {
     if (item.diaSemana == null || item.semanaDoMes == null) return 'Uma vez por mês';
-    const ordinal = ORDINAIS_SEMANA[item.semanaDoMes] ?? 'primeira';
-    const dia = NOMES_DIA_SEMANA[item.diaSemana];
-    const base = `${ordinal.charAt(0).toUpperCase()}${ordinal.slice(1)} ${dia} do mês`;
+    const base = textoMensalSemana(item.diaSemana, item.semanaDoMes);
     const intervalo = Math.max(1, item.intervaloMeses || 1);
     return intervalo === 1 ? base : `${base}, a cada ${intervalo} meses`;
   }
