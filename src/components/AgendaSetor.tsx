@@ -49,12 +49,12 @@ export default function AgendaSetor({ setorId, itens, mes, ano, hojeISO, podeEdi
   // espera de um calendário. Como aqui todo processo é repetido, o dia clicado
   // é ambíguo ("toda segunda" ou "dia 14 de todo mês"?), então os dois campos
   // vêm preenchidos e trocar a opção não obriga a escolher de novo.
-  const [inicial, setInicial] = useState<{ diaSemana: number; diaMes: number } | null>(null);
+  const [inicial, setInicial] = useState<{ diaSemana: number; diaMes: number; data: string } | null>(null);
 
   function abrirNovoEm(data: string) {
     if (!podeEditar) return;
     const [a, m, d] = data.split('-').map(Number);
-    setInicial({ diaSemana: new Date(Date.UTC(a, m - 1, d)).getUTCDay(), diaMes: d });
+    setInicial({ diaSemana: new Date(Date.UTC(a, m - 1, d)).getUTCDay(), diaMes: d, data });
     setFormAberto(true);
     // O cadastro fica no card de baixo; sem isso o clique parece não fazer nada.
     requestAnimationFrame(() => {
@@ -289,10 +289,11 @@ export default function AgendaSetor({ setorId, itens, mes, ano, hojeISO, podeEdi
           <FormNovoItem
             // Remonta quando vem de um clique em outro dia, para os campos
             // recomeçarem apontando para o dia certo.
-            key={inicial ? `${inicial.diaSemana}-${inicial.diaMes}` : 'padrao'}
+            key={inicial ? inicial.data : 'padrao'}
             setorId={setorId}
             diaSemanaInicial={inicial?.diaSemana}
             diaMesInicial={inicial?.diaMes}
+            dataClicada={inicial?.data}
             onPronto={() => { setFormAberto(false); setInicial(null); router.refresh(); }}
           />
         )}
@@ -367,14 +368,18 @@ function FormNovoItem({
   onPronto,
   diaSemanaInicial,
   diaMesInicial,
+  dataClicada,
 }: {
   setorId: string;
   onPronto: () => void;
   diaSemanaInicial?: number;
   diaMesInicial?: number;
+  dataClicada?: string;
 }) {
   const [frequencia, setFrequencia] = useState<Frequencia>('SEMANAL');
   const [semanaDoMes, setSemanaDoMes] = useState(1);
+  // Um clique num dia do calendário já sugere aquela data para a tarefa avulsa.
+  const [dataUnica, setDataUnica] = useState(dataClicada ?? '');
   const [titulo, setTitulo] = useState('');
   const [observacao, setObservacao] = useState('');
   // Domingo (0) não é dia de trabalho e nem aparece na lista de opções, então
@@ -400,6 +405,7 @@ function FormNovoItem({
         diaSemana: frequencia === 'SEMANAL' || frequencia === 'MENSAL_SEMANA' ? diaSemana : null,
         diaMes: frequencia === 'MENSAL' ? diaMes : null,
         semanaDoMes: frequencia === 'MENSAL_SEMANA' ? semanaDoMes : null,
+        dataUnica: frequencia === 'UNICA' ? dataUnica : null,
         intervaloMeses: usaMes ? intervaloMeses : 1,
         mesBase: usaMes ? mesBase : null,
       });
@@ -434,6 +440,7 @@ function FormNovoItem({
             distinguia sem testar. */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {([
+            ['UNICA', 'Uma vez só, numa data', 'ex.: entregar o relatório dia 22'],
             ['DIARIA', 'Todo dia', 'de segunda a sábado'],
             ['SEMANAL', 'Toda semana', 'ex.: toda segunda-feira'],
             ['MENSAL', 'Uma vez por mês, num dia fixo', 'ex.: todo dia 5'],
@@ -467,6 +474,19 @@ function FormNovoItem({
           })}
         </div>
       </div>
+
+      {frequencia === 'UNICA' && (
+        <div className="form-group">
+          <label className="form-label">Em que dia?</label>
+          <input
+            type="date"
+            className="form-input"
+            style={{ maxWidth: 200 }}
+            value={dataUnica}
+            onChange={(e) => setDataUnica(e.target.value)}
+          />
+        </div>
+      )}
 
       {frequencia === 'DIARIA' && (
         <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: -4, marginBottom: 12 }}>
@@ -562,7 +582,7 @@ function FormNovoItem({
           padding: '8px 10px', background: 'var(--surface-2)', borderRadius: 'var(--radius-sm)',
         }}>
           No calendário vai cair assim: <strong style={{ color: 'var(--text-main)' }}>{rotuloFrequencia({
-            id: 'previa', frequencia, diaSemana, diaMes, semanaDoMes, intervaloMeses, mesBase,
+            id: 'previa', frequencia, diaSemana, diaMes, semanaDoMes, dataUnica, intervaloMeses, mesBase,
           })}</strong>
         </p>
       )}

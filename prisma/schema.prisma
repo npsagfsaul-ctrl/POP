@@ -174,6 +174,7 @@ enum FrequenciaAgenda {
   // sem recriar o tipo — a ordem de exibição fica na tela, não aqui.
   DIARIA        // todo dia de expediente (seg–sáb)
   MENSAL_SEMANA // "primeira segunda", "última sexta" do mês
+  UNICA         // acontece uma vez só, numa data escolhida
 }
 
 model ItemAgenda {
@@ -187,6 +188,9 @@ model ItemAgenda {
 
   /// 1–4 = primeira…quarta, -1 = última. Só para MENSAL_SEMANA.
   semanaDoMes Int?
+
+  /// A data em que acontece. Só para UNICA.
+  dataUnica DateTime? @db.Date
 
   // A cada quantos meses repete, e a partir de qual mês contar.
   // Só divisores de 12 (1, 2, 3, 4, 6, 12): assim o ciclo fecha dentro do ano

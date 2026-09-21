@@ -4,7 +4,7 @@
 // calendário comparada com texto não tem fuso para dar errado, que é a origem
 // do bug que já derrubou a nota dos setores depois das 21h.
 
-export type Frequencia = 'DIARIA' | 'SEMANAL' | 'MENSAL' | 'MENSAL_SEMANA';
+export type Frequencia = 'DIARIA' | 'SEMANAL' | 'MENSAL' | 'MENSAL_SEMANA' | 'UNICA';
 
 export interface ItemAgendaCalc {
   id: string;
@@ -15,6 +15,8 @@ export interface ItemAgendaCalc {
   diaMes?: number | null;
   /** 1–4 = primeira…quarta, -1 = última. Só para MENSAL_SEMANA. */
   semanaDoMes?: number | null;
+  /** YYYY-MM-DD. Só para UNICA. */
+  dataUnica?: string | null;
   /** A cada quantos meses repete. 1 = todo mês. */
   intervaloMeses: number;
   /** 1–12: o mês a partir do qual o intervalo conta. */
@@ -70,6 +72,16 @@ export function ocorrenciasNoMes(item: ItemAgendaCalc, mes: number, ano: number)
   const total = diasNoMes(mes, ano);
   const desde = item.criadoEm ?? null;
   const naoVale = (data: string) => !!desde && data < desde;
+
+  // Acontece uma vez só, na data escolhida.
+  //
+  // Não passa pelo corte de `criadoEm`: a data foi digitada de propósito, então
+  // se alguém cadastrar hoje algo de ontem que ficou pendente, tem que aparecer.
+  if (item.frequencia === 'UNICA') {
+    if (!item.dataUnica) return [];
+    const [anoU, mesU] = item.dataUnica.split('-').map(Number);
+    return anoU === ano && mesU === mes ? [item.dataUnica] : [];
+  }
 
   // Todo dia de expediente. Domingo fica de fora: a agência não abre.
   if (item.frequencia === 'DIARIA') {
@@ -228,6 +240,12 @@ const ORDINAIS_SEMANA: Record<number, string> = {
 };
 
 export function rotuloFrequencia(item: ItemAgendaCalc): string {
+  if (item.frequencia === 'UNICA') {
+    if (!item.dataUnica) return 'Uma vez só';
+    const [a, m, d] = item.dataUnica.split('-');
+    return `Uma vez só, em ${d}/${m}/${a}`;
+  }
+
   if (item.frequencia === 'DIARIA') return 'Todo dia (seg a sáb)';
 
   if (item.frequencia === 'SEMANAL') {

@@ -40,6 +40,7 @@ export async function getAgendaDoSetor(setorId: string) {
     diaSemana: i.diaSemana,
     diaMes: i.diaMes,
     semanaDoMes: i.semanaDoMes,
+    dataUnica: i.dataUnica ? isoDeData(i.dataUnica) : null,
     intervaloMeses: i.intervaloMeses,
     mesBase: i.mesBase,
     ativo: i.ativo,
@@ -64,6 +65,7 @@ export interface NovoItemAgenda {
   diaSemana?: number | null;
   diaMes?: number | null;
   semanaDoMes?: number | null;
+  dataUnica?: string | null;
   intervaloMeses?: number;
   mesBase?: number | null;
 }
@@ -81,7 +83,27 @@ export async function criarItemAgenda(setorId: string, dados: NovoItemAgenda) {
     observacao: dados.observacao?.trim() || null,
   };
 
-  if (dados.frequencia === 'DIARIA') {
+  if (dados.frequencia === 'UNICA') {
+    const data = (dados.dataUnica ?? '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) {
+      throw new Error('Escolha a data em que isso acontece.');
+    }
+    // Domingo não tem expediente: o item cairia numa célula que o calendário
+    // mostra como OFF e o processo ficaria invisível.
+    const [a, m, d] = data.split('-').map(Number);
+    if (new Date(Date.UTC(a, m - 1, d)).getUTCDay() === 0) {
+      throw new Error('Esse dia é um domingo, quando não há expediente. Escolha outro dia.');
+    }
+
+    await prisma.itemAgenda.create({
+      data: {
+        ...comum,
+        frequencia: 'UNICA',
+        dataUnica: new Date(Date.UTC(a, m - 1, d)),
+        intervaloMeses: 1,
+      },
+    });
+  } else if (dados.frequencia === 'DIARIA') {
     await prisma.itemAgenda.create({
       data: { ...comum, frequencia: 'DIARIA', intervaloMeses: 1 },
     });
