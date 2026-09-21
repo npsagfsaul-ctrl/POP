@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   ocorrenciasNoMes, ocorrenciasAtrasadas, agruparAtrasos, rotuloFrequencia, diasNoMes,
-  INTERVALOS_MESES, ItemAgendaCalc, posicaoNoMes, textoSemanal, textoMensalSemana,
+  INTERVALOS_MESES, ItemAgendaCalc, posicaoNoMes, textoSemanal, textoMensalSemana, nesteDiaDaSemana,
 } from '@/lib/agenda';
 import {
   criarItemAgenda, alternarFeito, alternarItemAgenda, excluirItemAgenda, marcarVariasFeitas,
@@ -393,7 +393,9 @@ function FormNovoItem({
 
   // As opções dependem do dia escolhido, e se reescrevem quando ele muda.
   const opcoes: { valor: Repeticao; texto: string }[] = pos && !pos.ehDomingo ? [
-    { valor: 'UNICA', texto: `Não repete — só em ${ddmm}` },
+    // O dia da semana aparece aqui para ficar claro de onde vêm as opções de
+    // baixo ("toda terça-feira" porque o dia escolhido é uma terça).
+    { valor: 'UNICA', texto: `Não repete — só ${nesteDiaDaSemana(pos.diaSemana)}, ${ddmm}` },
     { valor: 'DIARIA', texto: 'Todo dia (seg a sáb)' },
     { valor: 'SEMANAL', texto: textoSemanal(pos.diaSemana) },
     { valor: 'MENSAL', texto: `Todo mês, no dia ${pos.dia}` },

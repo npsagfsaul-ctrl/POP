@@ -236,11 +236,13 @@ export function diferencaEmDias(a: string, b: string): number {
 const NOMES_DIA_COMPLETOS = [
   'domingo', 'segunda-feira', 'terça-feira', 'quarta-feira', 'quinta-feira', 'sexta-feira', 'sábado',
 ];
+// Em número, não por extenso: os dias da semana em português já são números
+// ("segunda", "quarta"), e "toda quarta terça-feira do mês" ninguém entende.
 const ORDINAIS_F: Record<number, string> = {
-  1: 'primeira', 2: 'segunda', 3: 'terceira', 4: 'quarta', [-1]: 'última',
+  1: '1ª', 2: '2ª', 3: '3ª', 4: '4ª', [-1]: 'última',
 };
 const ORDINAIS_M: Record<number, string> = {
-  1: 'primeiro', 2: 'segundo', 3: 'terceiro', 4: 'quarto', [-1]: 'último',
+  1: '1º', 2: '2º', 3: '3º', 4: '4º', [-1]: 'último',
 };
 
 /** Sábado e domingo são masculinos: "todo sábado", não "toda sábado". */
@@ -253,11 +255,17 @@ export function textoSemanal(diaSemana: number): string {
   return `${ehMasculino(diaSemana) ? 'Todo' : 'Toda'} ${NOMES_DIA_COMPLETOS[diaSemana]}`;
 }
 
-/** "Toda primeira segunda-feira do mês", "Todo último sábado do mês". */
+/** "Na 4ª terça-feira de cada mês", "No último sábado de cada mês". */
 export function textoMensalSemana(diaSemana: number, semanaDoMes: number): string {
   const m = ehMasculino(diaSemana);
-  const ordinal = (m ? ORDINAIS_M : ORDINAIS_F)[semanaDoMes] ?? (m ? 'primeiro' : 'primeira');
-  return `${m ? 'Todo' : 'Toda'} ${ordinal} ${NOMES_DIA_COMPLETOS[diaSemana]} do mês`;
+  const ordinal = (m ? ORDINAIS_M : ORDINAIS_F)[semanaDoMes] ?? (m ? '1º' : '1ª');
+  return `${m ? 'No' : 'Na'} ${ordinal} ${NOMES_DIA_COMPLETOS[diaSemana]} de cada mês`;
+}
+
+/** "nesta terça", "neste sábado" — para dizer de que dia da semana é uma data. */
+export function nesteDiaDaSemana(diaSemana: number): string {
+  const nome = NOMES_DIA_COMPLETOS[diaSemana].replace('-feira', '');
+  return `${ehMasculino(diaSemana) ? 'neste' : 'nesta'} ${nome}`;
 }
 
 /**
