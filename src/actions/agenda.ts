@@ -103,9 +103,9 @@ export async function criarItemAgenda(setorId: string, dados: NovoItemAgenda) {
         intervaloMeses: 1,
       },
     });
-  } else if (dados.frequencia === 'DIARIA') {
+  } else if (dados.frequencia === 'DIARIA' || dados.frequencia === 'DIAS_UTEIS') {
     await prisma.itemAgenda.create({
-      data: { ...comum, frequencia: 'DIARIA', intervaloMeses: 1 },
+      data: { ...comum, frequencia: dados.frequencia, intervaloMeses: 1 },
     });
   } else if (dados.frequencia === 'SEMANAL') {
     const dia = Number(dados.diaSemana);

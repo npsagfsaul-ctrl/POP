@@ -4,7 +4,7 @@
 // calendário comparada com texto não tem fuso para dar errado, que é a origem
 // do bug que já derrubou a nota dos setores depois das 21h.
 
-export type Frequencia = 'DIARIA' | 'SEMANAL' | 'MENSAL' | 'MENSAL_SEMANA' | 'UNICA';
+export type Frequencia = 'DIARIA' | 'DIAS_UTEIS' | 'SEMANAL' | 'MENSAL' | 'MENSAL_SEMANA' | 'UNICA';
 
 export interface ItemAgendaCalc {
   id: string;
@@ -82,11 +82,15 @@ export function ocorrenciasNoMes(item: ItemAgendaCalc, mes: number, ano: number)
     return anoU === ano && mesU === mes ? [item.dataUnica] : [];
   }
 
-  // Todo dia de expediente. Domingo fica de fora: a agência não abre.
-  if (item.frequencia === 'DIARIA') {
+  // Todo dia de expediente. Domingo fica de fora: a agência não abre. Em
+  // DIAS_UTEIS o sábado também fica — é o "segunda a sexta" do Google Agenda, e
+  // sem ele um setor que não abre sábado ganharia um atraso falso por semana.
+  if (item.frequencia === 'DIARIA' || item.frequencia === 'DIAS_UTEIS') {
+    const pulaSabado = item.frequencia === 'DIAS_UTEIS';
     const datas: string[] = [];
     for (let dia = 1; dia <= total; dia++) {
-      if (diaDaSemana(ano, mes, dia) === 0) continue;
+      const ds = diaDaSemana(ano, mes, dia);
+      if (ds === 0 || (pulaSabado && ds === 6)) continue;
       const data = iso(ano, mes, dia);
       if (!naoVale(data)) datas.push(data);
     }
@@ -262,11 +266,6 @@ export function textoMensalSemana(diaSemana: number, semanaDoMes: number): strin
   return `${m ? 'No' : 'Na'} ${ordinal} ${NOMES_DIA_COMPLETOS[diaSemana]} de cada mês`;
 }
 
-/** "nesta terça", "neste sábado" — para dizer de que dia da semana é uma data. */
-export function nesteDiaDaSemana(diaSemana: number): string {
-  const nome = NOMES_DIA_COMPLETOS[diaSemana].replace('-feira', '');
-  return `${ehMasculino(diaSemana) ? 'neste' : 'nesta'} ${nome}`;
-}
 
 /**
  * Onde uma data cai dentro do mês — o que o cadastro precisa para oferecer
@@ -296,7 +295,8 @@ export function rotuloFrequencia(item: ItemAgendaCalc): string {
     return `Uma vez só, em ${d}/${m}/${a}`;
   }
 
-  if (item.frequencia === 'DIARIA') return 'Todo dia (seg a sáb)';
+  if (item.frequencia === 'DIARIA') return 'Todos os dias (seg a sáb)';
+  if (item.frequencia === 'DIAS_UTEIS') return 'Todos os dias da semana (seg a sex)';
 
   if (item.frequencia === 'SEMANAL') {
     return item.diaSemana == null ? 'Semanal' : textoSemanal(item.diaSemana);

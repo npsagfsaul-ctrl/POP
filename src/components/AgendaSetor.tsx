@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   ocorrenciasNoMes, ocorrenciasAtrasadas, agruparAtrasos, rotuloFrequencia, diasNoMes,
-  INTERVALOS_MESES, ItemAgendaCalc, posicaoNoMes, textoSemanal, textoMensalSemana, nesteDiaDaSemana,
+  INTERVALOS_MESES, ItemAgendaCalc, posicaoNoMes, textoSemanal, textoMensalSemana,
 } from '@/lib/agenda';
 import {
   criarItemAgenda, alternarFeito, alternarItemAgenda, excluirItemAgenda, marcarVariasFeitas,
@@ -368,7 +368,9 @@ export default function AgendaSetor({ setorId, itens, mes, ano, hojeISO, podeEdi
  * O padrão é "não repete": quem clica num dia específico geralmente está
  * pensando naquele dia.
  */
-type Repeticao = 'UNICA' | 'DIARIA' | 'SEMANAL' | 'MENSAL' | 'MENSAL_SEMANA_ORDEM' | 'MENSAL_SEMANA_ULTIMA';
+type Repeticao =
+  | 'UNICA' | 'DIARIA' | 'DIAS_UTEIS' | 'SEMANAL'
+  | 'MENSAL' | 'MENSAL_SEMANA_ORDEM' | 'MENSAL_SEMANA_ULTIMA' | 'ANUAL';
 
 function FormNovoItem({
   setorId,
@@ -389,27 +391,27 @@ function FormNovoItem({
 
   const dataValida = /^\d{4}-\d{2}-\d{2}$/.test(data);
   const pos = dataValida ? posicaoNoMes(data) : null;
-  const ddmm = dataValida ? `${data.slice(8, 10)}/${data.slice(5, 7)}` : '';
 
-  // As opções dependem do dia escolhido, e se reescrevem quando ele muda.
+  // Mesmas palavras e mesma ordem do Google Agenda, que a equipe já conhece.
+  // As opções são escritas com o dia escolhido e se reescrevem quando ele muda.
+  const nomeDia = pos ? textoSemanal(pos.diaSemana).replace(/^Tod[ao] /, '') : '';
+  const mensalNaSemana = (ordem: number) =>
+    pos ? `Mensal ${textoMensalSemana(pos.diaSemana, ordem).replace(' de cada mês', '').replace(/^N/, 'n')}` : '';
+
   const opcoes: { valor: Repeticao; texto: string }[] = pos && !pos.ehDomingo ? [
-    // O dia da semana aparece aqui para ficar claro de onde vêm as opções de
-    // baixo ("toda terça-feira" porque o dia escolhido é uma terça).
-    { valor: 'UNICA', texto: `Não repete — só ${nesteDiaDaSemana(pos.diaSemana)}, ${ddmm}` },
-    { valor: 'DIARIA', texto: 'Todo dia (seg a sáb)' },
-    { valor: 'SEMANAL', texto: textoSemanal(pos.diaSemana) },
-    { valor: 'MENSAL', texto: `Todo mês, no dia ${pos.dia}` },
+    { valor: 'UNICA', texto: 'Não se repete' },
+    { valor: 'DIARIA', texto: 'Todos os dias (segunda a sábado)' },
+    { valor: 'SEMANAL', texto: `Semanal: cada ${nomeDia}` },
+    { valor: 'MENSAL', texto: `Mensal no dia ${pos.dia}` },
     // A 5ª ocorrência não existe em todo mês, então ela só é oferecida como "última".
-    ...(pos.ordem <= 4
-      ? [{ valor: 'MENSAL_SEMANA_ORDEM' as Repeticao, texto: textoMensalSemana(pos.diaSemana, pos.ordem) }]
-      : []),
-    ...(pos.ehUltima
-      ? [{ valor: 'MENSAL_SEMANA_ULTIMA' as Repeticao, texto: textoMensalSemana(pos.diaSemana, -1) }]
-      : []),
+    ...(pos.ordem <= 4 ? [{ valor: 'MENSAL_SEMANA_ORDEM' as Repeticao, texto: mensalNaSemana(pos.ordem) }] : []),
+    ...(pos.ehUltima ? [{ valor: 'MENSAL_SEMANA_ULTIMA' as Repeticao, texto: mensalNaSemana(-1) }] : []),
+    { valor: 'ANUAL', texto: `Anual em ${pos.dia} de ${NOMES_MES[pos.mes - 1].toLowerCase()}` },
+    { valor: 'DIAS_UTEIS', texto: 'Todos os dias da semana (segunda a sexta-feira)' },
   ] : [];
 
-  // Se mudar a data e a opção marcada deixar de existir (ex.: "última" num dia
-  // que não é o último), volta para "não repete" em vez de salvar algo errado.
+  // Se mudar a data e a opção escolhida deixar de existir (ex.: "última" num
+  // dia que não é o último), volta para "não se repete" em vez de salvar errado.
   const repeticaoValida = opcoes.some((o) => o.valor === repeticao) ? repeticao : 'UNICA';
   const ehMensal = repeticaoValida === 'MENSAL'
     || repeticaoValida === 'MENSAL_SEMANA_ORDEM'
@@ -428,8 +430,13 @@ function FormNovoItem({
 
       if (repeticaoValida === 'UNICA') {
         await criarItemAgenda(setorId, { ...base, frequencia: 'UNICA', dataUnica: data });
-      } else if (repeticaoValida === 'DIARIA') {
-        await criarItemAgenda(setorId, { ...base, frequencia: 'DIARIA' });
+      } else if (repeticaoValida === 'DIARIA' || repeticaoValida === 'DIAS_UTEIS') {
+        await criarItemAgenda(setorId, { ...base, frequencia: repeticaoValida });
+      } else if (repeticaoValida === 'ANUAL') {
+        // Anual é o mensal "a cada 12 meses", no mês e dia escolhidos.
+        await criarItemAgenda(setorId, {
+          ...base, frequencia: 'MENSAL', diaMes: pos.dia, intervaloMeses: 12, mesBase: pos.mes,
+        });
       } else if (repeticaoValida === 'SEMANAL') {
         await criarItemAgenda(setorId, { ...base, frequencia: 'SEMANAL', diaSemana: pos.diaSemana });
       } else if (repeticaoValida === 'MENSAL') {
@@ -467,52 +474,41 @@ function FormNovoItem({
         />
       </div>
 
-      <div className="form-group">
-        <label className="form-label">Dia</label>
-        <input
-          type="date"
-          className="form-input"
-          style={{ maxWidth: 200 }}
-          value={data}
-          onChange={(e) => setData(e.target.value)}
-          required
-        />
-        {pos?.ehDomingo && (
-          <p style={{ color: 'var(--danger)', fontSize: '0.8125rem', marginTop: 6 }}>
-            Domingo não tem expediente — escolha outro dia.
-          </p>
+      {/* Dia e repetição lado a lado, como no Google Agenda. Um menu fechado em
+          "Não se repete" em vez da lista inteira de opções à vista. */}
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+        <div className="form-group" style={{ marginBottom: 12 }}>
+          <label className="form-label">Dia</label>
+          <input
+            type="date"
+            className="form-input"
+            style={{ width: 180 }}
+            value={data}
+            onChange={(e) => setData(e.target.value)}
+            required
+          />
+        </div>
+
+        {opcoes.length > 0 && (
+          <div className="form-group" style={{ marginBottom: 12, flex: 1, minWidth: 260 }}>
+            <label className="form-label">Repetir</label>
+            <select
+              className="form-select"
+              value={repeticaoValida}
+              onChange={(e) => setRepeticao(e.target.value as Repeticao)}
+            >
+              {opcoes.map((o) => (
+                <option key={o.valor} value={o.valor}>{o.texto}</option>
+              ))}
+            </select>
+          </div>
         )}
       </div>
 
-      {opcoes.length > 0 && (
-        <div className="form-group">
-          <label className="form-label">Repetir</label>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {opcoes.map((o) => {
-              const marcada = repeticaoValida === o.valor;
-              return (
-                <label
-                  key={o.valor}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
-                    padding: '7px 10px', borderRadius: 'var(--radius-sm)',
-                    background: marcada ? 'var(--primary-light, var(--surface-2))' : 'transparent',
-                    border: `1px solid ${marcada ? 'var(--primary)' : 'transparent'}`,
-                    fontSize: '0.875rem', fontWeight: marcada ? 600 : 400,
-                  }}
-                >
-                  <input
-                    type="radio"
-                    checked={marcada}
-                    onChange={() => setRepeticao(o.valor)}
-                    style={{ flex: 'none' }}
-                  />
-                  {o.texto}
-                </label>
-              );
-            })}
-          </div>
-        </div>
+      {pos?.ehDomingo && (
+        <p style={{ color: 'var(--danger)', fontSize: '0.8125rem', marginTop: -4, marginBottom: 12 }}>
+          Domingo não tem expediente — escolha outro dia.
+        </p>
       )}
 
       {ehMensal && (
@@ -524,10 +520,9 @@ function FormNovoItem({
             value={intervaloMeses}
             onChange={(e) => setIntervaloMeses(Number(e.target.value))}
           >
-            {INTERVALOS_MESES.map((n) => (
-              <option key={n} value={n}>
-                {n === 1 ? '1 mês' : n === 12 ? '12 meses (uma vez por ano)' : `${n} meses`}
-              </option>
+            {/* 12 meses já é a opção "Anual" do menu de cima. */}
+            {INTERVALOS_MESES.filter((n) => n !== 12).map((n) => (
+              <option key={n} value={n}>{n === 1 ? '1 mês' : `${n} meses`}</option>
             ))}
           </select>
           {intervaloMeses > 1 && pos && (

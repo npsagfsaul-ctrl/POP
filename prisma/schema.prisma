@@ -175,6 +175,7 @@ enum FrequenciaAgenda {
   DIARIA        // todo dia de expediente (seg–sáb)
   MENSAL_SEMANA // "primeira segunda", "última sexta" do mês
   UNICA         // acontece uma vez só, numa data escolhida
+  DIAS_UTEIS    // segunda a sexta — para quem não abre aos sábados
 }
 
 model ItemAgenda {
