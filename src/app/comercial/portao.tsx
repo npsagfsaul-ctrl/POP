@@ -1,19 +1,20 @@
-import PasswordPrompt from '@/components/PasswordPrompt';
-import { podeUsarComercial, getSetorComercial, comercialSemSenha } from '@/actions/comercialAcesso';
+import ComercialLogin, { OpcaoEntrada } from '@/components/ComercialLogin';
+import { nivelComercial, setoresDoComercial } from '@/actions/comercialAcesso';
 
 /**
- * O que mostrar quando a pessoa não pode entrar no Comercial — ou `null`,
- * quando pode.
+ * O que mostrar quando a pessoa ainda não entrou no Comercial — ou `null`,
+ * quando já entrou.
  *
  * Fica num lugar só porque são três telas com a mesma porta: lista, cadastro e
  * ficha. Uma delas esquecer a checagem seria mostrar a senha dos IDs Correios
  * para quem passar pela URL direto.
  */
 export async function portaoComercial() {
-  if (await podeUsarComercial()) return null;
+  if (await nivelComercial()) return null;
 
-  const setor = await getSetorComercial();
-  if (!setor) {
+  const { comercial, leitura } = await setoresDoComercial();
+
+  if (!comercial) {
     return (
       <div className="alert alert-info">
         A área Comercial ainda não foi ligada a um setor. Peça ao administrador
@@ -22,10 +23,10 @@ export async function portaoComercial() {
     );
   }
 
-  if (await comercialSemSenha()) {
+  if (!comercial.temSenha) {
     return (
       <div className="alert alert-warning">
-        <strong>O setor {setor.nome} ainda está sem senha.</strong>
+        <strong>O setor {comercial.nome} ainda está sem senha.</strong>
         <p style={{ margin: '8px 0 0' }}>
           Esta área guarda a senha do ID Correios dos clientes, então ela só abre
           com senha. O administrador cadastra a senha do setor em Configurações,
@@ -35,5 +36,12 @@ export async function portaoComercial() {
     );
   }
 
-  return <PasswordPrompt setorId={setor.id} setorNome={setor.nome} />;
+  // Setor sem senha cadastrada fica fora da lista: não dá para pedir uma senha
+  // que não existe.
+  const opcoes: OpcaoEntrada[] = [{ id: comercial.id, nome: comercial.nome, papel: 'editar' }];
+  if (leitura?.temSenha && leitura.id !== comercial.id) {
+    opcoes.push({ id: leitura.id, nome: leitura.nome, papel: 'ver' });
+  }
+
+  return <ComercialLogin opcoes={opcoes} />;
 }

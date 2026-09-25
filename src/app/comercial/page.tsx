@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { buscarClientes } from '@/actions/clientes';
+import { nivelComercial } from '@/actions/comercialAcesso';
 import { portaoComercial } from './portao';
 
 export const dynamic = 'force-dynamic';
@@ -11,6 +12,8 @@ export default async function ComercialPage({
 }) {
   const fechado = await portaoComercial();
   if (fechado) return fechado;
+
+  const podeEditar = (await nivelComercial()) === 'editar';
 
   const sp = await searchParams;
   const termo = (sp.q ?? '').trim();
@@ -27,7 +30,13 @@ export default async function ComercialPage({
             <span className="breadcrumb-current">Comercial</span>
           </nav>
         </div>
-        <Link href="/comercial/novo" className="btn btn-primary btn-sm">+ Novo cliente</Link>
+        {podeEditar ? (
+          <Link href="/comercial/novo" className="btn btn-primary btn-sm">+ Novo cliente</Link>
+        ) : (
+          /* Uma linha só, e só para quem entrou para consultar: sem ela, a
+             pessoa abre a ficha, tenta digitar e não entende o porquê. */
+          <span className="badge badge-info">Consulta — quem cadastra é o Comercial</span>
+        )}
       </div>
 
       <div className="card" style={{ marginBottom: 20 }}>

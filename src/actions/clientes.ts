@@ -3,7 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { TipoCliente } from '@prisma/client';
-import { podeUsarComercial } from './comercialAcesso';
+import { podeEditarComercial } from './comercialAcesso';
 
 export async function getClientes(apenasAtivos = false) {
   return prisma.cliente.findMany({
@@ -121,13 +121,14 @@ function dadosDoFormulario(formData: FormData, exigirNome: boolean) {
 }
 
 /**
- * Cadastrar e alterar cliente é do Comercial (ou do admin).
+ * Cadastrar e alterar cliente é do Comercial (ou do admin). O Atendimento
+ * Interno entra na área, mas só para consultar.
  *
  * A checagem fica aqui e não só na tela: Server Action é endereço público, e
  * esconder o botão não impede ninguém de chamar a função.
  */
 async function exigirComercial() {
-  if (!(await podeUsarComercial())) {
+  if (!(await podeEditarComercial())) {
     throw new Error('Só o setor Comercial pode mexer no cadastro de clientes.');
   }
 }

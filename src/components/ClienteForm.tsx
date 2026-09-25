@@ -36,6 +36,8 @@ export interface ClienteFormDados {
 interface Props {
   /** Ausente = cadastro novo. */
   cliente?: ClienteFormDados;
+  /** Atendimento Interno: consulta a ficha, não altera. */
+  somenteLeitura?: boolean;
 }
 
 interface LinhaId {
@@ -92,7 +94,28 @@ function Campo({
   );
 }
 
-export default function ClienteForm({ cliente }: Props) {
+/**
+ * Cada bloco é um `fieldset`: marcado como desabilitado, ele desliga todos os
+ * campos de dentro de uma vez, sem precisar repetir `disabled` em cada um.
+ */
+function Bloco({
+  titulo,
+  desabilitado,
+  children,
+}: {
+  titulo: string;
+  desabilitado: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <fieldset className="card" disabled={desabilitado} style={{ marginBottom: 20 }}>
+      <div className="card-title">{titulo}</div>
+      {children}
+    </fieldset>
+  );
+}
+
+export default function ClienteForm({ cliente, somenteLeitura = false }: Props) {
   const router = useRouter();
   const editando = !!cliente;
 
@@ -177,9 +200,7 @@ export default function ClienteForm({ cliente }: Props) {
 
   return (
     <form onSubmit={handleSubmit}>
-      <div className="card" style={{ marginBottom: 20 }}>
-        <div className="card-title">Identificação</div>
-
+      <Bloco titulo="Identificação" desabilitado={somenteLeitura}>
         <Linha>
           <div className="form-group" style={{ flex: '1 1 160px', marginBottom: 16 }}>
             <label className="form-label" htmlFor="tipo">Tipo</label>
@@ -241,8 +262,12 @@ export default function ClienteForm({ cliente }: Props) {
             hint="O número que aparece na folha dos coletores."
           />
         </Linha>
-      </div>
+      </Bloco>
 
+      {/* Este bloco não usa <Bloco> porque o "Mostrar as senhas" precisa
+          continuar clicável para quem só consulta: dentro de um fieldset
+          desabilitado ele morreria junto com os campos. Só as linhas dos IDs
+          vão para o fieldset. */}
       <div className="card" style={{ marginBottom: 20 }}>
         <div className="card-title">IDs Correios</div>
         <p className="form-hint" style={{ marginTop: -8, marginBottom: 10 }}>
@@ -259,6 +284,7 @@ export default function ClienteForm({ cliente }: Props) {
           Mostrar as senhas
         </label>
 
+        <fieldset disabled={somenteLeitura} style={{ border: 0, padding: 0, margin: 0 }}>
         {/* Marca que esta tela mexe nos IDs. A tela de Cadastros das Coletas
             não manda isso, então salvar por lá não apaga a lista. */}
         <input type="hidden" name="idsCorreiosEnviados" value="1" />
@@ -304,29 +330,33 @@ export default function ClienteForm({ cliente }: Props) {
                 autoComplete="new-password"
               />
             </div>
-            <button
-              type="button"
-              className="btn btn-outline btn-sm"
-              onClick={() => removerId(i)}
-              title="Remover este ID"
-              style={{ marginBottom: 2 }}
-            >
-              Remover
-            </button>
+            {!somenteLeitura && (
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => removerId(i)}
+                title="Remover este ID"
+                style={{ marginBottom: 2 }}
+              >
+                Remover
+              </button>
+            )}
           </div>
         ))}
 
-        <button type="button" className="btn btn-outline btn-sm" onClick={adicionarId}>
-          + Adicionar ID
-        </button>
+        {!somenteLeitura && (
+          <button type="button" className="btn btn-outline btn-sm" onClick={adicionarId}>
+            + Adicionar ID
+          </button>
+        )}
+        </fieldset>
       </div>
 
       {/* Quem assina e quem atende quase nunca são a mesma pessoa: o contrato
           sai no nome do dono, e quem recebe o coletor é outra. Por isso são
           dois blocos, e não um "responsável" que serve para as duas coisas. */}
       {pessoaJuridica && (
-        <div className="card" style={{ marginBottom: 20 }}>
-          <div className="card-title">Quem assina o contrato</div>
+        <Bloco titulo="Quem assina o contrato" desabilitado={somenteLeitura}>
           <p className="form-hint" style={{ marginTop: -8, marginBottom: 14 }}>
             A pessoa física por trás do CNPJ — é dela que os Correios pedem o CPF.
           </p>
@@ -366,13 +396,13 @@ export default function ClienteForm({ cliente }: Props) {
               largura={2}
             />
           </Linha>
-        </div>
+        </Bloco>
       )}
 
-      <div className="card" style={{ marginBottom: 20 }}>
-        <div className="card-title">
-          {pessoaJuridica ? 'Quem atende no dia a dia' : 'Contato'}
-        </div>
+      <Bloco
+        titulo={pessoaJuridica ? 'Quem atende no dia a dia' : 'Contato'}
+        desabilitado={somenteLeitura}
+      >
         <Linha>
           <Campo
             label="Falar com"
@@ -396,10 +426,9 @@ export default function ClienteForm({ cliente }: Props) {
             largura={2}
           />
         </Linha>
-      </div>
+      </Bloco>
 
-      <div className="card" style={{ marginBottom: 20 }}>
-        <div className="card-title">Endereço da coleta</div>
+      <Bloco titulo="Endereço da coleta" desabilitado={somenteLeitura}>
         <Linha>
           <Campo label="CEP" name="cep" defaultValue={cliente?.cep} placeholder="00000-000" />
           <Campo label="Rua" name="rua" defaultValue={cliente?.rua} placeholder="Ex: Rua Sete de Setembro" largura={3} />
@@ -411,10 +440,9 @@ export default function ClienteForm({ cliente }: Props) {
           <Campo label="Cidade" name="cidade" defaultValue={cliente?.cidade} placeholder="Ex: Itabira" largura={2} />
           <Campo label="UF" name="uf" defaultValue={cliente?.uf} placeholder="MG" />
         </Linha>
-      </div>
+      </Bloco>
 
-      <div className="card" style={{ marginBottom: 20 }}>
-        <div className="card-title">Observação</div>
+      <Bloco titulo="Observação" desabilitado={somenteLeitura}>
         <div className="form-group" style={{ marginBottom: 0 }}>
           <textarea
             id="observacao"
@@ -425,10 +453,13 @@ export default function ClienteForm({ cliente }: Props) {
             rows={3}
           />
         </div>
-      </div>
+      </Bloco>
 
       {erro && <div className="alert alert-danger" style={{ marginBottom: 16 }}>{erro}</div>}
 
+      {somenteLeitura ? (
+        <Link href="/comercial" className="btn btn-outline">← Voltar para a lista</Link>
+      ) : (
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
         <button type="submit" className="btn btn-primary" disabled={salvando}>
           {salvando ? 'Salvando…' : editando ? 'Salvar alterações' : 'Cadastrar cliente'}
@@ -446,6 +477,7 @@ export default function ClienteForm({ cliente }: Props) {
           </div>
         )}
       </div>
+      )}
     </form>
   );
 }

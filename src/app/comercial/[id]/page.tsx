@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getClientePorId } from '@/actions/clientes';
 import ClienteForm from '@/components/ClienteForm';
+import { nivelComercial } from '@/actions/comercialAcesso';
 import { portaoComercial } from '../portao';
 
 export const dynamic = 'force-dynamic';
@@ -28,6 +29,7 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
       </div>
 
       <ClienteForm
+        somenteLeitura={(await nivelComercial()) !== 'editar'}
         cliente={{
           id: cliente.id,
           nome: cliente.nome,

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import ClienteForm from '@/components/ClienteForm';
+import { nivelComercial } from '@/actions/comercialAcesso';
 import { portaoComercial } from '../portao';
 
 export const dynamic = 'force-dynamic';
@@ -7,6 +8,15 @@ export const dynamic = 'force-dynamic';
 export default async function NovoClientePage() {
   const fechado = await portaoComercial();
   if (fechado) return fechado;
+
+  if ((await nivelComercial()) !== 'editar') {
+    return (
+      <div className="alert alert-info">
+        Quem cadastra cliente é o setor Comercial. Você entrou para consultar —{' '}
+        <Link href="/comercial" style={{ textDecoration: 'underline' }}>volte para a lista</Link>.
+      </div>
+    );
+  }
 
   return (
     <div>

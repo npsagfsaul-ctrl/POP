@@ -1201,3 +1201,20 @@ tbody tr:hover td { background: var(--surface-2); }
     linear-gradient(160deg, rgba(15, 23, 42, 0.62), rgba(15, 23, 42, 0.78)),
     url('/fachada-agencia.jpg') center / cover no-repeat;
 }
+
+/* Campo travado — a ficha do cliente aberta por quem só consulta.
+   Sem isto o campo fica branco igual ao editável, e a pessoa só descobre que
+   não pode mexer depois de tentar digitar. */
+.form-input:disabled,
+.form-select:disabled,
+.form-textarea:disabled {
+  background: var(--surface-2);
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+/* fieldset é só um agrupador aqui: não deve desenhar borda nem espaçamento
+   próprios por cima do .card. */
+fieldset.card {
+  min-width: 0;
+}
