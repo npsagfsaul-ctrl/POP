@@ -1180,3 +1180,24 @@ tbody tr:hover td { background: var(--surface-2); }
   }
 }
 
+
+/* ─── TELAS DE ENTRADA COM SENHA ─── */
+/* São três telas irmãs (admin, setor e coletas). A fachada da agência ao fundo
+   dá a elas a cara do lugar; o desfoque está gravado no arquivo, e não em
+   filtro de CSS, porque assim a imagem fica pequena (59 KB) e não custa nada
+   para desenhar em celular. */
+.tela-senha {
+  position: relative;
+  min-height: 70vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  /* Duas camadas na mesma declaração: a escura fica por cima da foto e é ela
+     que deixa o cartão branco legível. Não precisa de pseudo-elemento. */
+  background:
+    linear-gradient(160deg, rgba(15, 23, 42, 0.62), rgba(15, 23, 42, 0.78)),
+    url('/fachada-agencia.jpg') center / cover no-repeat;
+}

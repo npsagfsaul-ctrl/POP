@@ -29,7 +29,7 @@ export default function ColetasPasswordPrompt() {
   };
 
   return (
-    <div className="min-h-[60vh] flex items-center justify-center">
+    <div className="tela-senha">
       <div className="card max-w-md w-full p-8 shadow-xl border-t-4 border-primary">
         <div className="text-center mb-6">
           <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-4">
