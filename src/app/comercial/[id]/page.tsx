@@ -47,7 +47,7 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
           nomeFantasia: cliente.nomeFantasia,
           documento: cliente.documento,
           inscricaoEstadual: cliente.inscricaoEstadual,
-          idCorreios: cliente.idCorreios,
+          idsCorreios: cliente.idsCorreios,
           responsavel: cliente.responsavel,
           telefone: cliente.telefone,
           email: cliente.email,

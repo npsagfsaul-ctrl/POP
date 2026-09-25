@@ -13,7 +13,33 @@ export async function getClientes(apenasAtivos = false) {
 }
 
 export async function getClientePorId(id: string) {
-  return prisma.cliente.findUnique({ where: { id } });
+  const cliente = await prisma.cliente.findUnique({
+    where: { id },
+    include: { idsCorreios: { orderBy: { createdAt: 'asc' } } },
+  });
+  if (!cliente) return null;
+
+  return { ...cliente, idsCorreios: juntarComOIdAntigo(cliente) };
+}
+
+/**
+ * A lista de IDs do cliente, com o campo único antigo incluído.
+ *
+ * Só junta, não grava: quem tiver preenchido `idCorreios` antes da lista
+ * existir vê o número na tela normalmente e, ao salvar a ficha, ele vira uma
+ * linha de verdade. Como a junção confere se o número já está na lista, não
+ * duplica depois disso.
+ */
+function juntarComOIdAntigo(cliente: {
+  idCorreios: string | null;
+  idsCorreios: { numero: string; apelido: string | null }[];
+}) {
+  const antigo = cliente.idCorreios?.trim();
+  const jaEstaNaLista = antigo && cliente.idsCorreios.some((i) => i.numero === antigo);
+
+  return antigo && !jaEstaNaLista
+    ? [{ numero: antigo, apelido: null }, ...cliente.idsCorreios]
+    : cliente.idsCorreios.map((i) => ({ numero: i.numero, apelido: i.apelido }));
 }
 
 /**
@@ -34,6 +60,7 @@ export async function buscarClientes(termo: string, apenasAtivos = false) {
             { documento: { contains: t, mode: 'insensitive' as const } },
             { telefone: { contains: t, mode: 'insensitive' as const } },
             { idCorreios: { contains: t, mode: 'insensitive' as const } },
+            { idsCorreios: { some: { numero: { contains: t, mode: 'insensitive' as const } } } },
             { cidade: { contains: t, mode: 'insensitive' as const } },
           ],
         }
@@ -43,8 +70,10 @@ export async function buscarClientes(termo: string, apenasAtivos = false) {
   return prisma.cliente.findMany({ where, orderBy: { nome: 'asc' }, take: 200 });
 }
 
+// `idCorreios` ficou de fora: os IDs viraram lista, gravada por
+// `sincronizarIdsCorreios`. O campo antigo não recebe valor novo.
 const CAMPOS_TEXTO = [
-  'codigo', 'nomeFantasia', 'documento', 'inscricaoEstadual', 'idCorreios',
+  'codigo', 'nomeFantasia', 'documento', 'inscricaoEstadual',
   'responsavel', 'telefone', 'email',
   'cep', 'rua', 'numero', 'complemento', 'bairro', 'cidade', 'uf', 'observacao',
 ] as const;
@@ -98,10 +127,40 @@ function revalidar() {
   revalidatePath('/coletas');
 }
 
+/**
+ * Regrava a lista de IDs Correios do cliente com o que o formulário mandou.
+ *
+ * Só age se o formulário disser que mexeu nos IDs — a tela de Cadastros das
+ * Coletas não tem esse campo, e sem a marca ela apagaria a lista inteira ao
+ * salvar nome e código.
+ *
+ * Apaga e recria em vez de casar linha por linha: ninguém aponta para um ID,
+ * então a lista é só o que a tela mostra.
+ */
+async function sincronizarIdsCorreios(clienteId: string, formData: FormData) {
+  if (!formData.has('idsCorreiosEnviados')) return;
+
+  const numeros = formData.getAll('idNumero').map((v) => String(v).trim());
+  const apelidos = formData.getAll('idApelido').map((v) => String(v).trim());
+
+  const linhas = numeros
+    .map((numero, i) => ({ clienteId, numero, apelido: apelidos[i] || null }))
+    .filter((l) => l.numero !== '');
+
+  await prisma.$transaction([
+    prisma.idCorreios.deleteMany({ where: { clienteId } }),
+    ...(linhas.length ? [prisma.idCorreios.createMany({ data: linhas })] : []),
+    // O campo antigo some assim que a lista é gravada: daí em diante existe
+    // um lugar só onde procurar o ID do cliente.
+    prisma.cliente.update({ where: { id: clienteId }, data: { idCorreios: null } }),
+  ]);
+}
+
 export async function criarCliente(formData: FormData) {
   await exigirComercial();
   const dados = dadosDoFormulario(formData, true) as { nome: string };
   const cliente = await prisma.cliente.create({ data: dados });
+  await sincronizarIdsCorreios(cliente.id, formData);
   revalidar();
   return cliente.id;
 }
@@ -109,6 +168,7 @@ export async function criarCliente(formData: FormData) {
 export async function atualizarCliente(id: string, formData: FormData) {
   await exigirComercial();
   await prisma.cliente.update({ where: { id }, data: dadosDoFormulario(formData, false) });
+  await sincronizarIdsCorreios(id, formData);
   revalidar();
 }
 

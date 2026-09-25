@@ -349,7 +349,12 @@ model Cliente {
   nomeFantasia      String?
   documento         String? // CNPJ ou CPF
   inscricaoEstadual String?
-  idCorreios        String?
+
+  /// Campo único de ID Correios, de quando o cadastro supunha um ID por
+  /// cliente. Virou a lista `idsCorreios` assim que descobrimos que um mesmo
+  /// cliente tem vários. Fica aqui só para não perder o que tenha sido digitado
+  /// antes da troca: é lido junto com a lista e nunca mais recebe valor novo.
+  idCorreios String?
 
   responsavel String?
   telefone    String?
@@ -365,12 +370,31 @@ model Cliente {
 
   observacao String?
 
-  coletas    Coleta[]
-  rotasFixas RotaFixa[]
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+  coletas     Coleta[]
+  rotasFixas  RotaFixa[]
+  idsCorreios IdCorreios[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
   @@index([nome])
+}
+
+/// Um ID do cliente nos Correios.
+///
+/// São linhas próprias, e não um campo no cliente, porque o mesmo cliente tem
+/// vários — um por contrato ou cartão de postagem. O apelido existe para o
+/// balcão saber qual é qual na hora de postar.
+model IdCorreios {
+  id        String  @id @default(cuid())
+  clienteId String
+  cliente   Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  numero  String
+  apelido String? // "Sedex", "Contrato 9912", "Cartão do escritório"…
+
+  createdAt DateTime @default(now())
+
+  @@index([clienteId])
 }
 
 model Coleta {

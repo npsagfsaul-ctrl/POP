@@ -13,7 +13,7 @@ export interface ClienteFormDados {
   nomeFantasia: string | null;
   documento: string | null;
   inscricaoEstadual: string | null;
-  idCorreios: string | null;
+  idsCorreios: { numero: string; apelido: string | null }[];
   responsavel: string | null;
   telefone: string | null;
   email: string | null;
@@ -87,7 +87,29 @@ export default function ClienteForm({ cliente }: Props) {
   const [erro, setErro] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
 
+  // Uma linha em branco quando não há nenhum ID, só para a pessoa ver onde
+  // digitar. Linha vazia é descartada ao salvar.
+  const [ids, setIds] = useState<{ numero: string; apelido: string }[]>(
+    cliente?.idsCorreios.length
+      ? cliente.idsCorreios.map((i) => ({ numero: i.numero, apelido: i.apelido ?? '' }))
+      : [{ numero: '', apelido: '' }],
+  );
+
   const pessoaJuridica = tipo === 'PJ';
+
+  function trocarId(indice: number, campo: 'numero' | 'apelido', valor: string) {
+    setIds((atual) => atual.map((l, i) => (i === indice ? { ...l, [campo]: valor } : l)));
+  }
+
+  function adicionarId() {
+    setIds((atual) => [...atual, { numero: '', apelido: '' }]);
+  }
+
+  function removerId(indice: number) {
+    // Nunca fica sem nenhuma linha: sem campo na tela, não dá para cadastrar o
+    // primeiro ID sem antes descobrir o botão de adicionar.
+    setIds((atual) => (atual.length === 1 ? [{ numero: '', apelido: '' }] : atual.filter((_, i) => i !== indice)));
+  }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -198,13 +220,61 @@ export default function ClienteForm({ cliente }: Props) {
             placeholder="Ex: 1215"
             hint="O número que aparece na folha dos coletores."
           />
-          <Campo
-            label="ID Correios"
-            name="idCorreios"
-            defaultValue={cliente?.idCorreios}
-            placeholder="Ex: 9912345678"
-          />
         </Linha>
+      </div>
+
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div className="card-title">IDs Correios</div>
+        <p className="form-hint" style={{ marginTop: -8, marginBottom: 14 }}>
+          O mesmo cliente costuma ter mais de um — um por contrato ou cartão de
+          postagem. O apelido é só para o balcão saber qual é qual.
+        </p>
+
+        {/* Marca que esta tela mexe nos IDs. A tela de Cadastros das Coletas
+            não manda isso, então salvar por lá não apaga a lista. */}
+        <input type="hidden" name="idsCorreiosEnviados" value="1" />
+
+        {ids.map((linha, i) => (
+          <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-end', marginBottom: 10 }}>
+            <div style={{ flex: '2 1 150px' }}>
+              {i === 0 && <label className="form-label" htmlFor={`idNumero-${i}`}>Número</label>}
+              <input
+                id={`idNumero-${i}`}
+                name="idNumero"
+                className="form-input"
+                value={linha.numero}
+                onChange={(e) => trocarId(i, 'numero', e.target.value)}
+                placeholder="Ex: 9912345678"
+                autoComplete="off"
+              />
+            </div>
+            <div style={{ flex: '3 1 170px' }}>
+              {i === 0 && <label className="form-label" htmlFor={`idApelido-${i}`}>Para quê</label>}
+              <input
+                id={`idApelido-${i}`}
+                name="idApelido"
+                className="form-input"
+                value={linha.apelido}
+                onChange={(e) => trocarId(i, 'apelido', e.target.value)}
+                placeholder="Ex: Sedex, Contrato da matriz"
+                autoComplete="off"
+              />
+            </div>
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              onClick={() => removerId(i)}
+              title="Remover este ID"
+              style={{ marginBottom: 2 }}
+            >
+              Remover
+            </button>
+          </div>
+        ))}
+
+        <button type="button" className="btn btn-outline btn-sm" onClick={adicionarId}>
+          + Adicionar ID
+        </button>
       </div>
 
       <div className="card" style={{ marginBottom: 20 }}>
