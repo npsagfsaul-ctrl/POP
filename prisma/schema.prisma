@@ -328,15 +328,49 @@ model Atendente {
   updatedAt   DateTime     @updatedAt
 }
 
+enum TipoCliente {
+  PJ
+  PF
+}
+
+/// O cliente da agência — um só para o sistema inteiro.
+///
+/// Nasceu com nome e código, para as Coletas. O Comercial ampliou o cadastro
+/// (documento, contato, endereço) em vez de criar a própria lista: duas listas
+/// de cliente seriam duas verdades, e o endereço cadastrado aqui é o que sai na
+/// folha impressa do coletor.
 model Cliente {
-  id         String     @id @default(cuid())
-  nome       String
-  codigo     String?    // código do cliente (o número entre parênteses na planilha)
-  ativo      Boolean    @default(true)
+  id     String  @id @default(cuid())
+  nome   String // razão social, ou o nome da pessoa
+  codigo String? // código do cliente (o número entre parênteses na planilha)
+  ativo  Boolean @default(true)
+
+  tipo              TipoCliente @default(PJ)
+  nomeFantasia      String?
+  documento         String? // CNPJ ou CPF
+  inscricaoEstadual String?
+  idCorreios        String?
+
+  responsavel String?
+  telefone    String?
+  email       String?
+
+  cep         String?
+  rua         String?
+  numero      String?
+  complemento String?
+  bairro      String?
+  cidade      String?
+  uf          String?
+
+  observacao String?
+
   coletas    Coleta[]
   rotasFixas RotaFixa[]
   createdAt  DateTime   @default(now())
   updatedAt  DateTime   @updatedAt
+
+  @@index([nome])
 }
 
 model Coleta {

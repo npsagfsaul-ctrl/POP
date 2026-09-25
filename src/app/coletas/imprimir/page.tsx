@@ -21,6 +21,20 @@ function formatarData(dataStr: string) {
   });
 }
 
+/**
+ * Endereço em uma linha, para a folha do coletor.
+ *
+ * Só as partes preenchidas entram: cliente antigo, cadastrado quando a tela
+ * pedia só nome e código, sai sem endereço em vez de sair com vírgulas soltas.
+ */
+function enderecoEmUmaLinha(c: {
+  rua: string | null; numero: string | null; complemento: string | null;
+  bairro: string | null; cidade: string | null;
+}) {
+  const logradouro = [c.rua, c.numero].filter(Boolean).join(', ');
+  return [logradouro, c.complemento, c.bairro, c.cidade].filter(Boolean).join(' — ');
+}
+
 const PERIODOS: { key: 'MANHA' | 'TARDE' | 'RETORNO'; label: string }[] = [
   { key: 'MANHA', label: 'Manhã' },
   { key: 'TARDE', label: 'Tarde' },
@@ -123,6 +137,11 @@ export default async function ImprimirColetasPage({
                             <strong>{c.cliente.nome}</strong>
                             {c.observacao && <span style={{ color: '#444' }}> — {c.observacao}</span>}
                             {c.naoTeveColeta && <span style={{ color: '#b91c1c' }}> — não teve coleta</span>}
+                            {enderecoEmUmaLinha(c.cliente) && (
+                              <div style={{ color: '#555', fontSize: '0.78rem' }}>
+                                {enderecoEmUmaLinha(c.cliente)}
+                              </div>
+                            )}
                           </td>
                           <td style={tdStyle} />
                         </tr>
@@ -142,6 +161,11 @@ export default async function ImprimirColetasPage({
                             <strong>{c.cliente.nome}</strong>
                             {c.observacao && <span style={{ color: '#444' }}> — {c.observacao}</span>}
                             {c.naoTeveColeta && <span style={{ color: '#b91c1c' }}> — não teve coleta</span>}
+                            {enderecoEmUmaLinha(c.cliente) && (
+                              <div style={{ color: '#555', fontSize: '0.78rem' }}>
+                                {enderecoEmUmaLinha(c.cliente)}
+                              </div>
+                            )}
                           </td>
                           <td style={tdStyle} />
                         </tr>

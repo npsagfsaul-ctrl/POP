@@ -27,8 +27,9 @@ interface CadastroManagerProps {
   descricao?: string;
   campos: CampoCadastro[];
   itens: ItemCadastro[];
-  onCriar: (formData: FormData) => Promise<void>;
-  onAtualizar: (id: string, formData: FormData) => Promise<void>;
+  /** Promise<unknown> porque algumas actions devolvem o id do que criaram. Aqui o retorno não é usado. */
+  onCriar: (formData: FormData) => Promise<unknown>;
+  onAtualizar: (id: string, formData: FormData) => Promise<unknown>;
   onAlternarAtivo: (id: string, ativo: boolean) => Promise<void>;
   onDeletar: (id: string) => Promise<void>;
 }
@@ -50,7 +51,7 @@ export default function CadastroManager({
 
   const corPadrao = '#3b82f6';
 
-  async function executar(fn: () => Promise<void>) {
+  async function executar(fn: () => Promise<unknown>) {
     setErro(null);
     setCarregando(true);
     try {
