@@ -95,6 +95,141 @@ function Campo({
 }
 
 /**
+ * Os IDs para quem só consulta — o Atendimento Interno, na hora de postar.
+ *
+ * Aqui não são campos de formulário desabilitados: campo desabilitado não
+ * deixa selecionar nem copiar o que está escrito dentro dele, e a senha existe
+ * justamente para ser copiada e colada no site dos Correios. Então é texto de
+ * verdade, com um botão para revelar e outro para copiar.
+ */
+function IdsParaConsulta({ ids }: { ids: LinhaId[] }) {
+  const [visiveis, setVisiveis] = useState<Record<number, boolean>>({});
+  const [copiado, setCopiado] = useState<number | null>(null);
+  const [erroCopia, setErroCopia] = useState(false);
+
+  const preenchidos = ids.filter((l) => l.numero.trim() !== '');
+
+  if (preenchidos.length === 0) {
+    return (
+      <p className="text-muted" style={{ margin: 0 }}>
+        Este cliente ainda não tem nenhum ID Correios cadastrado. Quem cadastra
+        é o setor Comercial.
+      </p>
+    );
+  }
+
+  /**
+   * Copia pelo jeito novo e, se o navegador não deixar, pelo jeito antigo.
+   *
+   * A área de transferência moderna exige permissão e conexão segura, e nem
+   * todo navegador do balcão vai dar. O `execCommand` é obsoleto mas funciona
+   * em todos eles.
+   *
+   * Em qualquer caminho a senha também aparece na tela. Nenhum navegador
+   * confirma de verdade que a cópia foi para a área de transferência, e um
+   * "Copiado!" que mente é pior do que não ter o botão: a pessoa colaria nada
+   * no site dos Correios sem entender por quê. Com a senha à mostra, dá para
+   * conferir e, se preciso, selecionar e copiar na mão.
+   */
+  async function copiar(indice: number, senha: string) {
+    setErroCopia(false);
+    setVisiveis((v) => ({ ...v, [indice]: true }));
+
+    try {
+      await navigator.clipboard.writeText(senha);
+      setCopiado(indice);
+      setTimeout(() => setCopiado(null), 2000);
+      return;
+    } catch {
+      // cai para o jeito antigo
+    }
+
+    try {
+      const campo = document.createElement('textarea');
+      campo.value = senha;
+      campo.style.position = 'fixed';
+      campo.style.opacity = '0';
+      document.body.appendChild(campo);
+      campo.select();
+      const deu = document.execCommand('copy');
+      document.body.removeChild(campo);
+      if (deu) {
+        setCopiado(indice);
+        setTimeout(() => setCopiado(null), 2000);
+        return;
+      }
+    } catch {
+      // cai para mostrar a senha
+    }
+
+    setErroCopia(true);
+  }
+
+  return (
+    <>
+      <div className="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th style={{ textAlign: 'left' }}>Número</th>
+              <th style={{ textAlign: 'left' }}>Para quê</th>
+              <th style={{ textAlign: 'left' }}>Senha</th>
+              <th />
+            </tr>
+          </thead>
+          <tbody>
+            {preenchidos.map((linha, i) => (
+              <tr key={i}>
+                <td style={{ fontWeight: 600 }}>{linha.numero}</td>
+                <td>{linha.apelido || '—'}</td>
+                <td>
+                  {!linha.senha ? (
+                    <span className="text-muted">sem senha cadastrada</span>
+                  ) : visiveis[i] ? (
+                    <span style={{ fontFamily: 'monospace', fontSize: '1rem', userSelect: 'all' }}>
+                      {linha.senha}
+                    </span>
+                  ) : (
+                    <span className="text-muted">••••••••</span>
+                  )}
+                </td>
+                <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                  {linha.senha && (
+                    <>
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-sm"
+                        onClick={() => setVisiveis((v) => ({ ...v, [i]: !v[i] }))}
+                      >
+                        {visiveis[i] ? 'Ocultar' : 'Mostrar'}
+                      </button>{' '}
+                      <button
+                        type="button"
+                        className="btn btn-outline btn-sm"
+                        onClick={() => copiar(i, linha.senha)}
+                      >
+                        {copiado === i ? 'Copiado!' : 'Copiar'}
+                      </button>
+                    </>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {erroCopia && (
+        <p className="form-hint" style={{ marginTop: 10 }}>
+          Não deu para copiar sozinho neste navegador — a senha está à mostra
+          para você selecionar e copiar na mão.
+        </p>
+      )}
+    </>
+  );
+}
+
+/**
  * Cada bloco é um `fieldset`: marcado como desabilitado, ele desliga todos os
  * campos de dentro de uma vez, sem precisar repetir `disabled` em cada um.
  */
@@ -275,6 +410,10 @@ export default function ClienteForm({ cliente, somenteLeitura = false }: Props) 
           postagem. O apelido é só para o balcão saber qual é qual.
         </p>
 
+        {somenteLeitura ? (
+          <IdsParaConsulta ids={ids} />
+        ) : (
+        <>
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, cursor: 'pointer', fontSize: '0.875rem' }}>
           <input
             type="checkbox"
@@ -350,6 +489,8 @@ export default function ClienteForm({ cliente, somenteLeitura = false }: Props) 
           </button>
         )}
         </fieldset>
+        </>
+        )}
       </div>
 
       {/* Quem assina e quem atende quase nunca são a mesma pessoa: o contrato
