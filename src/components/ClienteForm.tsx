@@ -15,6 +15,7 @@ export interface ClienteFormDados {
   inscricaoEstadual: string | null;
   idsCorreios: { numero: string; apelido: string | null }[];
   responsavel: string | null;
+  cpfResponsavel: string | null;
   telefone: string | null;
   email: string | null;
   cep: string | null;
@@ -278,15 +279,33 @@ export default function ClienteForm({ cliente }: Props) {
       </div>
 
       <div className="card" style={{ marginBottom: 20 }}>
-        <div className="card-title">Contato</div>
+        <div className="card-title">
+          {pessoaJuridica ? 'Responsável pela empresa' : 'Contato'}
+        </div>
+        {pessoaJuridica && (
+          <p className="form-hint" style={{ marginTop: -8, marginBottom: 14 }}>
+            A pessoa física por trás do CNPJ — é dela que os Correios pedem o CPF
+            no contrato.
+          </p>
+        )}
         <Linha>
           <Campo
-            label="Responsável"
+            label={pessoaJuridica ? 'Nome do responsável' : 'Responsável'}
             name="responsavel"
             defaultValue={cliente?.responsavel}
-            placeholder="Quem atende a gente"
+            placeholder={pessoaJuridica ? 'Quem responde pela empresa' : 'Quem atende a gente'}
             largura={2}
           />
+          {/* O CPF do responsável só aparece na empresa. Na pessoa física ele
+              seria o mesmo CPF já pedido ali em cima. */}
+          {pessoaJuridica && (
+            <Campo
+              label="CPF do responsável"
+              name="cpfResponsavel"
+              defaultValue={cliente?.cpfResponsavel}
+              placeholder="000.000.000-00"
+            />
+          )}
           <Campo
             label="Telefone / WhatsApp"
             name="telefone"

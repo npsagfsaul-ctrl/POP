@@ -357,8 +357,11 @@ model Cliente {
   idCorreios String?
 
   responsavel String?
-  telefone    String?
-  email       String?
+  /// CPF de quem responde pela empresa. Empresa não assina contrato sozinha:
+  /// mesmo no cadastro de um CNPJ, os Correios pedem a pessoa física por trás.
+  cpfResponsavel String?
+  telefone       String?
+  email          String?
 
   cep         String?
   rua         String?

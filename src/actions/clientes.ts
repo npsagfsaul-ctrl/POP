@@ -58,6 +58,7 @@ export async function buscarClientes(termo: string, apenasAtivos = false) {
             { nomeFantasia: { contains: t, mode: 'insensitive' as const } },
             { codigo: { contains: t, mode: 'insensitive' as const } },
             { documento: { contains: t, mode: 'insensitive' as const } },
+            { cpfResponsavel: { contains: t, mode: 'insensitive' as const } },
             { telefone: { contains: t, mode: 'insensitive' as const } },
             { idCorreios: { contains: t, mode: 'insensitive' as const } },
             { idsCorreios: { some: { numero: { contains: t, mode: 'insensitive' as const } } } },
@@ -74,7 +75,7 @@ export async function buscarClientes(termo: string, apenasAtivos = false) {
 // `sincronizarIdsCorreios`. O campo antigo não recebe valor novo.
 const CAMPOS_TEXTO = [
   'codigo', 'nomeFantasia', 'documento', 'inscricaoEstadual',
-  'responsavel', 'telefone', 'email',
+  'responsavel', 'cpfResponsavel', 'telefone', 'email',
   'cep', 'rua', 'numero', 'complemento', 'bairro', 'cidade', 'uf', 'observacao',
 ] as const;
 
