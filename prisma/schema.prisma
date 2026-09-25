@@ -360,6 +360,11 @@ model Cliente {
   /// um CNPJ, os Correios pedem a pessoa física por trás dela.
   responsavel    String?
   cpfResponsavel String?
+  rgResponsavel  String?
+  /// Data de nascimento como texto "aaaa-mm-dd", e não DateTime: o servidor
+  /// roda em UTC e uma data sem hora vira o dia anterior com facilidade.
+  nascimentoResponsavel String?
+  nomeMaeResponsavel    String?
 
   /// Quem atende no dia a dia — quase nunca é quem assinou o contrato, e é a
   /// pessoa que o coletor e o balcão de fato procuram.

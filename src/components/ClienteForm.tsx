@@ -16,6 +16,9 @@ export interface ClienteFormDados {
   idsCorreios: { numero: string; apelido: string | null; senha: string | null }[];
   responsavel: string | null;
   cpfResponsavel: string | null;
+  rgResponsavel: string | null;
+  nascimentoResponsavel: string | null;
+  nomeMaeResponsavel: string | null;
   contatoNome: string | null;
   telefone: string | null;
   email: string | null;
@@ -340,6 +343,27 @@ export default function ClienteForm({ cliente }: Props) {
               name="cpfResponsavel"
               defaultValue={cliente?.cpfResponsavel}
               placeholder="000.000.000-00"
+            />
+            <Campo
+              label="RG"
+              name="rgResponsavel"
+              defaultValue={cliente?.rgResponsavel}
+              placeholder="MG-00.000.000"
+            />
+          </Linha>
+          <Linha>
+            <Campo
+              label="Data de nascimento"
+              name="nascimentoResponsavel"
+              tipo="date"
+              defaultValue={cliente?.nascimentoResponsavel}
+            />
+            <Campo
+              label="Nome da mãe"
+              name="nomeMaeResponsavel"
+              defaultValue={cliente?.nomeMaeResponsavel}
+              placeholder="Como está no documento"
+              largura={2}
             />
           </Linha>
         </div>
