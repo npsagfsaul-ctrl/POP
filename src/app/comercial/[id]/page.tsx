@@ -1,25 +1,14 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getClientePorId } from '@/actions/clientes';
-import { podeUsarComercial, getSetorComercial } from '@/actions/comercialAcesso';
-import PasswordPrompt from '@/components/PasswordPrompt';
 import ClienteForm from '@/components/ClienteForm';
+import { portaoComercial } from '../portao';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ClientePage({ params }: { params: Promise<{ id: string }> }) {
-  if (!(await podeUsarComercial())) {
-    const setor = await getSetorComercial();
-    if (!setor) {
-      return (
-        <div className="alert alert-info">
-          A área Comercial ainda não foi ligada a um setor. Peça ao administrador
-          para criar o setor Comercial.
-        </div>
-      );
-    }
-    return <PasswordPrompt setorId={setor.id} setorNome={setor.nome} />;
-  }
+  const fechado = await portaoComercial();
+  if (fechado) return fechado;
 
   const { id } = await params;
   const cliente = await getClientePorId(id);
@@ -50,6 +39,7 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
           idsCorreios: cliente.idsCorreios,
           responsavel: cliente.responsavel,
           cpfResponsavel: cliente.cpfResponsavel,
+          contatoNome: cliente.contatoNome,
           telefone: cliente.telefone,
           email: cliente.email,
           cep: cliente.cep,

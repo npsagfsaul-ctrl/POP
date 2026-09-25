@@ -13,9 +13,10 @@ export interface ClienteFormDados {
   nomeFantasia: string | null;
   documento: string | null;
   inscricaoEstadual: string | null;
-  idsCorreios: { numero: string; apelido: string | null }[];
+  idsCorreios: { numero: string; apelido: string | null; senha: string | null }[];
   responsavel: string | null;
   cpfResponsavel: string | null;
+  contatoNome: string | null;
   telefone: string | null;
   email: string | null;
   cep: string | null;
@@ -33,6 +34,14 @@ interface Props {
   /** Ausente = cadastro novo. */
   cliente?: ClienteFormDados;
 }
+
+interface LinhaId {
+  numero: string;
+  apelido: string;
+  senha: string;
+}
+
+const LINHA_ID_VAZIA: LinhaId = { numero: '', apelido: '', senha: '' };
 
 /** Uma linha do formulário, com as colunas em proporção. */
 function Linha({ children }: { children: React.ReactNode }) {
@@ -90,26 +99,33 @@ export default function ClienteForm({ cliente }: Props) {
 
   // Uma linha em branco quando não há nenhum ID, só para a pessoa ver onde
   // digitar. Linha vazia é descartada ao salvar.
-  const [ids, setIds] = useState<{ numero: string; apelido: string }[]>(
+  const [ids, setIds] = useState<LinhaId[]>(
     cliente?.idsCorreios.length
-      ? cliente.idsCorreios.map((i) => ({ numero: i.numero, apelido: i.apelido ?? '' }))
-      : [{ numero: '', apelido: '' }],
+      ? cliente.idsCorreios.map((i) => ({
+          numero: i.numero,
+          apelido: i.apelido ?? '',
+          senha: i.senha ?? '',
+        }))
+      : [LINHA_ID_VAZIA],
   );
+
+  // Senha escondida por padrão: a ficha costuma ser aberta com alguém do lado.
+  const [mostrarSenhas, setMostrarSenhas] = useState(false);
 
   const pessoaJuridica = tipo === 'PJ';
 
-  function trocarId(indice: number, campo: 'numero' | 'apelido', valor: string) {
+  function trocarId(indice: number, campo: keyof LinhaId, valor: string) {
     setIds((atual) => atual.map((l, i) => (i === indice ? { ...l, [campo]: valor } : l)));
   }
 
   function adicionarId() {
-    setIds((atual) => [...atual, { numero: '', apelido: '' }]);
+    setIds((atual) => [...atual, LINHA_ID_VAZIA]);
   }
 
   function removerId(indice: number) {
     // Nunca fica sem nenhuma linha: sem campo na tela, não dá para cadastrar o
     // primeiro ID sem antes descobrir o botão de adicionar.
-    setIds((atual) => (atual.length === 1 ? [{ numero: '', apelido: '' }] : atual.filter((_, i) => i !== indice)));
+    setIds((atual) => (atual.length === 1 ? [LINHA_ID_VAZIA] : atual.filter((_, i) => i !== indice)));
   }
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -226,10 +242,19 @@ export default function ClienteForm({ cliente }: Props) {
 
       <div className="card" style={{ marginBottom: 20 }}>
         <div className="card-title">IDs Correios</div>
-        <p className="form-hint" style={{ marginTop: -8, marginBottom: 14 }}>
+        <p className="form-hint" style={{ marginTop: -8, marginBottom: 10 }}>
           O mesmo cliente costuma ter mais de um — um por contrato ou cartão de
           postagem. O apelido é só para o balcão saber qual é qual.
         </p>
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14, cursor: 'pointer', fontSize: '0.875rem' }}>
+          <input
+            type="checkbox"
+            checked={mostrarSenhas}
+            onChange={(e) => setMostrarSenhas(e.target.checked)}
+          />
+          Mostrar as senhas
+        </label>
 
         {/* Marca que esta tela mexe nos IDs. A tela de Cadastros das Coletas
             não manda isso, então salvar por lá não apaga a lista. */}
@@ -261,6 +286,21 @@ export default function ClienteForm({ cliente }: Props) {
                 autoComplete="off"
               />
             </div>
+            <div style={{ flex: '2 1 130px' }}>
+              {i === 0 && <label className="form-label" htmlFor={`idSenha-${i}`}>Senha</label>}
+              <input
+                id={`idSenha-${i}`}
+                name="idSenha"
+                type={mostrarSenhas ? 'text' : 'password'}
+                className="form-input"
+                value={linha.senha}
+                onChange={(e) => trocarId(i, 'senha', e.target.value)}
+                placeholder="Senha deste ID"
+                /* new-password para o navegador não oferecer salvar nem
+                   preencher com a senha de quem está usando o sistema. */
+                autoComplete="new-password"
+              />
+            </div>
             <button
               type="button"
               className="btn btn-outline btn-sm"
@@ -278,34 +318,45 @@ export default function ClienteForm({ cliente }: Props) {
         </button>
       </div>
 
-      <div className="card" style={{ marginBottom: 20 }}>
-        <div className="card-title">
-          {pessoaJuridica ? 'Responsável pela empresa' : 'Contato'}
-        </div>
-        {pessoaJuridica && (
+      {/* Quem assina e quem atende quase nunca são a mesma pessoa: o contrato
+          sai no nome do dono, e quem recebe o coletor é outra. Por isso são
+          dois blocos, e não um "responsável" que serve para as duas coisas. */}
+      {pessoaJuridica && (
+        <div className="card" style={{ marginBottom: 20 }}>
+          <div className="card-title">Quem assina o contrato</div>
           <p className="form-hint" style={{ marginTop: -8, marginBottom: 14 }}>
-            A pessoa física por trás do CNPJ — é dela que os Correios pedem o CPF
-            no contrato.
+            A pessoa física por trás do CNPJ — é dela que os Correios pedem o CPF.
           </p>
-        )}
-        <Linha>
-          <Campo
-            label={pessoaJuridica ? 'Nome do responsável' : 'Responsável'}
-            name="responsavel"
-            defaultValue={cliente?.responsavel}
-            placeholder={pessoaJuridica ? 'Quem responde pela empresa' : 'Quem atende a gente'}
-            largura={2}
-          />
-          {/* O CPF do responsável só aparece na empresa. Na pessoa física ele
-              seria o mesmo CPF já pedido ali em cima. */}
-          {pessoaJuridica && (
+          <Linha>
             <Campo
-              label="CPF do responsável"
+              label="Nome"
+              name="responsavel"
+              defaultValue={cliente?.responsavel}
+              placeholder="Quem responde pela empresa"
+              largura={2}
+            />
+            <Campo
+              label="CPF"
               name="cpfResponsavel"
               defaultValue={cliente?.cpfResponsavel}
               placeholder="000.000.000-00"
             />
-          )}
+          </Linha>
+        </div>
+      )}
+
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div className="card-title">
+          {pessoaJuridica ? 'Quem atende no dia a dia' : 'Contato'}
+        </div>
+        <Linha>
+          <Campo
+            label="Falar com"
+            name="contatoNome"
+            defaultValue={cliente?.contatoNome}
+            placeholder="Quem o coletor e o balcão procuram"
+            largura={2}
+          />
           <Campo
             label="Telefone / WhatsApp"
             name="telefone"

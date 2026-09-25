@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { isAdmin } from './admin';
-import { podeVerSetor } from './setorAcesso';
+import { podeEscreverNoSetor } from './setorAcesso';
 
 const CHAVE_SETOR = 'comercial_setor_id';
 
@@ -35,12 +35,26 @@ export async function getSetorComercial(): Promise<{ id: string; nome: string } 
  * setor Comercial — a mesma que eles já usam no checklist de POPs. Sem senha
  * nova para decorar.
  *
- * Se o setor Comercial não tiver senha, a área fica aberta, como acontece com
- * os POPs. É de propósito: pedir uma senha que não existe daria uma tela sem
- * saída, e quem configura senha de setor é o admin, em Configurações.
+ * Aqui a senha é obrigatória, diferente dos POPs, onde setor sem senha é aberto
+ * a qualquer um. A ficha do cliente guarda a senha do ID Correios dele: setor
+ * sem senha deixaria isso à vista de qualquer pessoa logada. Quando não houver
+ * senha cadastrada, a tela manda cadastrar em vez de pedir uma senha que não
+ * existe.
  */
 export async function podeUsarComercial(): Promise<boolean> {
   if (await isAdmin()) return true;
   const setor = await getSetorComercial();
-  return setor ? podeVerSetor(setor.id) : false;
+  return setor ? podeEscreverNoSetor(setor.id) : false;
+}
+
+/** true se o setor Comercial ainda não tem senha — a área fica fechada até ter. */
+export async function comercialSemSenha(): Promise<boolean> {
+  const setor = await getSetorComercial();
+  if (!setor) return false;
+
+  const comSenha = await prisma.setor.findUnique({
+    where: { id: setor.id },
+    select: { senha: true },
+  });
+  return !comSenha?.senha;
 }

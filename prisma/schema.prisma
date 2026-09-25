@@ -356,12 +356,16 @@ model Cliente {
   /// antes da troca: é lido junto com a lista e nunca mais recebe valor novo.
   idCorreios String?
 
-  responsavel String?
-  /// CPF de quem responde pela empresa. Empresa não assina contrato sozinha:
-  /// mesmo no cadastro de um CNPJ, os Correios pedem a pessoa física por trás.
+  /// Quem assina o contrato. Empresa não assina sozinha: mesmo no cadastro de
+  /// um CNPJ, os Correios pedem a pessoa física por trás dela.
+  responsavel    String?
   cpfResponsavel String?
-  telefone       String?
-  email          String?
+
+  /// Quem atende no dia a dia — quase nunca é quem assinou o contrato, e é a
+  /// pessoa que o coletor e o balcão de fato procuram.
+  contatoNome String?
+  telefone    String?
+  email       String?
 
   cep         String?
   rua         String?
@@ -394,6 +398,13 @@ model IdCorreios {
 
   numero  String
   apelido String? // "Sedex", "Contrato 9912", "Cartão do escritório"…
+
+  /// Senha do ID no site dos Correios, em texto legível.
+  ///
+  /// Não dá para guardar embaralhada como a senha de um login: o balcão precisa
+  /// LER esta senha e digitar no site dos Correios. Por isso a área Comercial
+  /// exige a senha do setor — sem ela, qualquer um veria a senha de todo mundo.
+  senha String?
 
   createdAt DateTime @default(now())
 

@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { buscarClientes } from '@/actions/clientes';
-import { podeUsarComercial, getSetorComercial } from '@/actions/comercialAcesso';
-import PasswordPrompt from '@/components/PasswordPrompt';
+import { portaoComercial } from './portao';
 
 export const dynamic = 'force-dynamic';
 
@@ -10,18 +9,8 @@ export default async function ComercialPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
-  if (!(await podeUsarComercial())) {
-    const setor = await getSetorComercial();
-    if (!setor) {
-      return (
-        <div className="alert alert-info">
-          A área Comercial ainda não foi ligada a um setor. Peça ao administrador
-          para criar o setor Comercial.
-        </div>
-      );
-    }
-    return <PasswordPrompt setorId={setor.id} setorNome={setor.nome} />;
-  }
+  const fechado = await portaoComercial();
+  if (fechado) return fechado;
 
   const sp = await searchParams;
   const termo = (sp.q ?? '').trim();

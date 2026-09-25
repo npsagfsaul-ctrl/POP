@@ -32,14 +32,20 @@ export async function getClientePorId(id: string) {
  */
 function juntarComOIdAntigo(cliente: {
   idCorreios: string | null;
-  idsCorreios: { numero: string; apelido: string | null }[];
+  idsCorreios: { numero: string; apelido: string | null; senha: string | null }[];
 }) {
+  const lista = cliente.idsCorreios.map((i) => ({
+    numero: i.numero,
+    apelido: i.apelido,
+    senha: i.senha,
+  }));
+
   const antigo = cliente.idCorreios?.trim();
-  const jaEstaNaLista = antigo && cliente.idsCorreios.some((i) => i.numero === antigo);
+  const jaEstaNaLista = antigo && lista.some((i) => i.numero === antigo);
 
   return antigo && !jaEstaNaLista
-    ? [{ numero: antigo, apelido: null }, ...cliente.idsCorreios]
-    : cliente.idsCorreios.map((i) => ({ numero: i.numero, apelido: i.apelido }));
+    ? [{ numero: antigo, apelido: null, senha: null }, ...lista]
+    : lista;
 }
 
 /**
@@ -59,6 +65,8 @@ export async function buscarClientes(termo: string, apenasAtivos = false) {
             { codigo: { contains: t, mode: 'insensitive' as const } },
             { documento: { contains: t, mode: 'insensitive' as const } },
             { cpfResponsavel: { contains: t, mode: 'insensitive' as const } },
+            { responsavel: { contains: t, mode: 'insensitive' as const } },
+            { contatoNome: { contains: t, mode: 'insensitive' as const } },
             { telefone: { contains: t, mode: 'insensitive' as const } },
             { idCorreios: { contains: t, mode: 'insensitive' as const } },
             { idsCorreios: { some: { numero: { contains: t, mode: 'insensitive' as const } } } },
@@ -75,7 +83,7 @@ export async function buscarClientes(termo: string, apenasAtivos = false) {
 // `sincronizarIdsCorreios`. O campo antigo não recebe valor novo.
 const CAMPOS_TEXTO = [
   'codigo', 'nomeFantasia', 'documento', 'inscricaoEstadual',
-  'responsavel', 'cpfResponsavel', 'telefone', 'email',
+  'responsavel', 'cpfResponsavel', 'contatoNome', 'telefone', 'email',
   'cep', 'rua', 'numero', 'complemento', 'bairro', 'cidade', 'uf', 'observacao',
 ] as const;
 
@@ -143,9 +151,16 @@ async function sincronizarIdsCorreios(clienteId: string, formData: FormData) {
 
   const numeros = formData.getAll('idNumero').map((v) => String(v).trim());
   const apelidos = formData.getAll('idApelido').map((v) => String(v).trim());
+  // A senha não leva trim: espaço no começo ou no fim pode fazer parte dela.
+  const senhas = formData.getAll('idSenha').map((v) => String(v));
 
   const linhas = numeros
-    .map((numero, i) => ({ clienteId, numero, apelido: apelidos[i] || null }))
+    .map((numero, i) => ({
+      clienteId,
+      numero,
+      apelido: apelidos[i] || null,
+      senha: senhas[i] || null,
+    }))
     .filter((l) => l.numero !== '');
 
   await prisma.$transaction([

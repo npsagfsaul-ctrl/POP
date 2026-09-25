@@ -1,23 +1,12 @@
 import Link from 'next/link';
-import { podeUsarComercial, getSetorComercial } from '@/actions/comercialAcesso';
-import PasswordPrompt from '@/components/PasswordPrompt';
 import ClienteForm from '@/components/ClienteForm';
+import { portaoComercial } from '../portao';
 
 export const dynamic = 'force-dynamic';
 
 export default async function NovoClientePage() {
-  if (!(await podeUsarComercial())) {
-    const setor = await getSetorComercial();
-    if (!setor) {
-      return (
-        <div className="alert alert-info">
-          A área Comercial ainda não foi ligada a um setor. Peça ao administrador
-          para criar o setor Comercial.
-        </div>
-      );
-    }
-    return <PasswordPrompt setorId={setor.id} setorNome={setor.nome} />;
-  }
+  const fechado = await portaoComercial();
+  if (fechado) return fechado;
 
   return (
     <div>
