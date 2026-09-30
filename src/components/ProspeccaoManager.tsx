@@ -41,6 +41,7 @@ interface Props {
   filtroStatus?: string;
   mes: number;
   ano: number;
+  mesesDisponiveis: { mes: number; ano: number; rotulo: string }[];
   /** Só o Comercial (ou o admin) escreve a observação. */
   podeObservar: boolean;
 }
@@ -70,6 +71,7 @@ export default function ProspeccaoManager({
   filtroStatus,
   mes,
   ano,
+  mesesDisponiveis,
   podeObservar,
 }: Props) {
   const router = useRouter();
@@ -83,6 +85,11 @@ export default function ProspeccaoManager({
 
   const semCadastro = setores.length === 0 || atendentes.length === 0;
 
+  // Dizer QUAL mês está vazio, em vez de "nenhuma prospecção encontrada": mês
+  // sem lançamento é normal, e a frase genérica parece defeito.
+  const rotuloDoMes =
+    mesesDisponiveis.find((m) => m.mes === mes && m.ano === ano)?.rotulo ?? `${mes}/${ano}`;
+
   function atualizarFiltro(chave: 'setorId' | 'atendenteId' | 'status', valor: string) {
     const params = new URLSearchParams();
     if (chave === 'setorId' ? valor : filtroSetorId) params.set('setorId', chave === 'setorId' ? valor : filtroSetorId!);
@@ -92,6 +99,17 @@ export default function ProspeccaoManager({
     // de hoje se ela estava olhando outro.
     params.set('mes', String(mes));
     params.set('ano', String(ano));
+    router.push(`/prospeccao?${params.toString()}`);
+  }
+
+  function trocarMes(valor: string) {
+    const [novoAno, novoMes] = valor.split('-');
+    const params = new URLSearchParams();
+    if (filtroSetorId) params.set('setorId', filtroSetorId);
+    if (filtroAtendenteId) params.set('atendenteId', filtroAtendenteId);
+    if (filtroStatus) params.set('status', filtroStatus);
+    params.set('mes', String(Number(novoMes)));
+    params.set('ano', novoAno);
     router.push(`/prospeccao?${params.toString()}`);
   }
 
@@ -185,6 +203,21 @@ export default function ProspeccaoManager({
       {/* Filtros + Nova */}
       <div className="card" style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 16 }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
+          {/* O mês vem primeiro: é o recorte de tudo o que aparece abaixo. */}
+          <div>
+            <label className="form-label" style={{ fontSize: '0.75rem' }}>Mês</label>
+            <select
+              className="form-select"
+              value={`${ano}-${String(mes).padStart(2, '0')}`}
+              onChange={(e) => trocarMes(e.target.value)}
+            >
+              {mesesDisponiveis.map((m) => (
+                <option key={`${m.ano}-${m.mes}`} value={`${m.ano}-${String(m.mes).padStart(2, '0')}`}>
+                  {m.rotulo}
+                </option>
+              ))}
+            </select>
+          </div>
           <div>
             <label className="form-label" style={{ fontSize: '0.75rem' }}>Setor</label>
             <select className="form-select" value={filtroSetorId || ''} onChange={(e) => atualizarFiltro('setorId', e.target.value)}>
@@ -284,7 +317,7 @@ export default function ProspeccaoManager({
               {prospeccoes.length === 0 && (
                 <tr>
                   <td colSpan={8} style={{ textAlign: 'center', padding: 24, color: 'var(--text-muted)' }}>
-                    Nenhuma prospecção neste mês.
+                    Nenhuma prospecção em {rotuloDoMes}.
                   </td>
                 </tr>
               )}

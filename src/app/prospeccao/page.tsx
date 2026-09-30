@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { getSetores } from '@/actions/setores';
 import { getAtendentes } from '@/actions/atendentes';
-import { getProspeccoes, FiltrosProspeccao } from '@/actions/prospeccao';
+import { getProspeccoes, getMesesDeProspeccao, FiltrosProspeccao } from '@/actions/prospeccao';
 import { podeEditarComercial } from '@/actions/comercialAcesso';
 import { hojeISOSaoPaulo } from '@/lib/data';
 import ProspeccaoManager from '@/components/ProspeccaoManager';
@@ -40,10 +40,11 @@ export default async function ProspeccaoPage({
     ano,
   };
 
-  const [setores, atendentes, prospeccoes, podeObservar] = await Promise.all([
+  const [setores, atendentes, prospeccoes, mesesDisponiveis, podeObservar] = await Promise.all([
     getSetores(),
     getAtendentes(true),
     getProspeccoes(filtros),
+    getMesesDeProspeccao({ mes, ano }),
     // Se a checagem do Comercial falhar, a tela abre sem o botão de observação
     // em vez de não abrir: a Prospecção é usada pela agência inteira, e ela
     // não pode cair por causa de uma consulta que é só para liberar um botão.
@@ -135,6 +136,10 @@ export default async function ProspeccaoPage({
         filtroStatus={sp.status}
         mes={mes}
         ano={ano}
+        mesesDisponiveis={mesesDisponiveis.map((m) => ({
+          ...m,
+          rotulo: `${NOMES_MESES[m.mes - 1]} de ${m.ano}`,
+        }))}
         podeObservar={podeObservar}
       />
     </div>
