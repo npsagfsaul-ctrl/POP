@@ -522,6 +522,13 @@ model Prospeccao {
   oQueVende   String?
   status      StatusProspeccao @default(NOVO)
 
+  /// Anotação do setor Comercial sobre esta prospecção.
+  ///
+  /// Fica separada do resto do cadastro porque só o Comercial escreve aqui —
+  /// os outros setores lançam a prospecção e leem a observação, mas não mexem
+  /// nela. Por isso tem ação própria, e não entra no formulário de edição.
+  observacao String?
+
   setorId String
   setor   Setor  @relation(fields: [setorId], references: [id], onDelete: Cascade)
 

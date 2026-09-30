@@ -2,7 +2,13 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { criarProspeccao, atualizarProspeccao, deletarProspeccao } from '@/actions/prospeccao';
+import Link from 'next/link';
+import {
+  criarProspeccao,
+  atualizarProspeccao,
+  deletarProspeccao,
+  salvarObservacaoProspeccao,
+} from '@/actions/prospeccao';
 import { STATUS_PROSPECCAO_LABEL, StatusProspeccaoTexto } from '@/lib/prospeccaoStatus';
 
 type Status = StatusProspeccaoTexto;
@@ -14,6 +20,7 @@ interface ProspeccaoItem {
   telefone: string | null;
   oQueVende: string | null;
   status: Status;
+  observacao: string | null;
   setorId: string;
   atendenteId: string;
   setorNome: string;
@@ -32,6 +39,10 @@ interface Props {
   filtroSetorId?: string;
   filtroAtendenteId?: string;
   filtroStatus?: string;
+  mes: number;
+  ano: number;
+  /** Só o Comercial (ou o admin) escreve a observação. */
+  podeObservar: boolean;
 }
 
 const STATUS_CONFIG: Record<Status, { label: string; badge: string }> = {
@@ -57,12 +68,18 @@ export default function ProspeccaoManager({
   filtroSetorId,
   filtroAtendenteId,
   filtroStatus,
+  mes,
+  ano,
+  podeObservar,
 }: Props) {
   const router = useRouter();
   const [aberto, setAberto] = useState(false);
   const [editando, setEditando] = useState<ProspeccaoItem | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const [observando, setObservando] = useState<ProspeccaoItem | null>(null);
+  const [textoObs, setTextoObs] = useState('');
 
   const semCadastro = setores.length === 0 || atendentes.length === 0;
 
@@ -71,7 +88,32 @@ export default function ProspeccaoManager({
     if (chave === 'setorId' ? valor : filtroSetorId) params.set('setorId', chave === 'setorId' ? valor : filtroSetorId!);
     if (chave === 'atendenteId' ? valor : filtroAtendenteId) params.set('atendenteId', chave === 'atendenteId' ? valor : filtroAtendenteId!);
     if (chave === 'status' ? valor : filtroStatus) params.set('status', chave === 'status' ? valor : filtroStatus!);
+    // O mês vai junto: mudar o filtro não deve devolver a pessoa para o mês
+    // de hoje se ela estava olhando outro.
+    params.set('mes', String(mes));
+    params.set('ano', String(ano));
     router.push(`/prospeccao?${params.toString()}`);
+  }
+
+  function abrirObservacao(item: ProspeccaoItem) {
+    setObservando(item);
+    setTextoObs(item.observacao ?? '');
+    setErro(null);
+  }
+
+  async function salvarObservacao() {
+    if (!observando) return;
+    setLoading(true);
+    setErro(null);
+    try {
+      await salvarObservacaoProspeccao(observando.id, textoObs);
+      setObservando(null);
+      router.refresh();
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : 'Não foi possível salvar a observação.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   const abrirAdicionar = () => {
@@ -168,9 +210,19 @@ export default function ProspeccaoManager({
           </div>
         </div>
 
-        <button className="btn btn-primary btn-sm" disabled={semCadastro} onClick={abrirAdicionar}>
-          + Nova Prospecção
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {/* Aparece só para quem ainda não entrou pelo Comercial, e some
+              depois disso: sem esta linha a pessoa não descobre por que o
+              botão de observação não está lá. */}
+          {!podeObservar && (
+            <Link href="/comercial" className="text-muted" style={{ fontSize: '0.8125rem', textDecoration: 'underline' }}>
+              Entrar como Comercial para anotar
+            </Link>
+          )}
+          <button className="btn btn-primary btn-sm" disabled={semCadastro} onClick={abrirAdicionar}>
+            + Nova Prospecção
+          </button>
+        </div>
       </div>
 
       {semCadastro && (
@@ -199,7 +251,18 @@ export default function ProspeccaoManager({
               {prospeccoes.map((p) => (
                 <tr key={p.id}>
                   <td>{new Date(`${p.data}T00:00:00`).toLocaleDateString('pt-BR')}</td>
-                  <td style={{ fontWeight: 600 }}>{p.nomeCliente}</td>
+                  {/* Largura mínima para a observação não sair quebrando uma
+                      palavra por linha: são muitas colunas disputando espaço. */}
+                  <td style={{ fontWeight: 600, minWidth: 240 }}>
+                    {p.nomeCliente}
+                    {/* A observação vive embaixo do nome, e só ocupa espaço
+                        quando existe — sem coluna nova esticando a tabela. */}
+                    {p.observacao && (
+                      <div style={{ fontWeight: 400, fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: 2, whiteSpace: 'pre-wrap' }}>
+                        📝 {p.observacao}
+                      </div>
+                    )}
+                  </td>
                   <td>{p.telefone || '—'}</td>
                   <td>{p.oQueVende || '—'}</td>
                   <td>{p.setorNome}</td>
@@ -207,6 +270,11 @@ export default function ProspeccaoManager({
                   <td><span className={`badge ${STATUS_CONFIG[p.status].badge}`}>{STATUS_CONFIG[p.status].label}</span></td>
                   <td>
                     <div style={{ display: 'flex', gap: 6 }}>
+                      {podeObservar && (
+                        <button className="btn btn-outline btn-sm" onClick={() => abrirObservacao(p)}>
+                          {p.observacao ? 'Observação' : '+ Observação'}
+                        </button>
+                      )}
                       <button className="btn btn-secondary btn-sm" onClick={() => abrirEditar(p)}>Editar</button>
                       <button className="btn btn-danger btn-sm" disabled={loading} onClick={() => handleExcluir(p)}>Excluir</button>
                     </div>
@@ -216,7 +284,7 @@ export default function ProspeccaoManager({
               {prospeccoes.length === 0 && (
                 <tr>
                   <td colSpan={8} style={{ textAlign: 'center', padding: 24, color: 'var(--text-muted)' }}>
-                    Nenhuma prospecção encontrada.
+                    Nenhuma prospecção neste mês.
                   </td>
                 </tr>
               )}
@@ -224,6 +292,43 @@ export default function ProspeccaoManager({
           </table>
         </div>
       </div>
+
+      {/* Observação do Comercial */}
+      {observando && (
+        <div className="modal-overlay" onClick={() => setObservando(null)}>
+          <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Observação — {observando.nomeCliente}</h3>
+              <button className="modal-close" onClick={() => setObservando(null)}>✕</button>
+            </div>
+
+            <div className="form-group">
+              <textarea
+                className="form-textarea"
+                value={textoObs}
+                onChange={(e) => setTextoObs(e.target.value)}
+                placeholder="O que o Comercial precisa registrar sobre este cliente…"
+                rows={4}
+                autoFocus
+              />
+              <div className="form-hint">
+                Todo mundo lê esta observação na lista. Escrever, só o Comercial.
+              </div>
+            </div>
+
+            {erro && <div className="alert alert-danger" style={{ marginBottom: 12 }}>{erro}</div>}
+
+            <div className="modal-actions">
+              <button type="button" className="btn btn-secondary" onClick={() => setObservando(null)}>
+                Cancelar
+              </button>
+              <button type="button" className="btn btn-primary" disabled={loading} onClick={salvarObservacao}>
+                {loading ? 'Salvando…' : 'Salvar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de adicionar/editar */}
       {aberto && (

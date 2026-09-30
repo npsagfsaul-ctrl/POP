@@ -24,7 +24,7 @@ export async function GET() {
 
   const hoje = hojeISOSaoPaulo();
   const linhas = [
-    csvLinha(['Data', 'Cliente', 'Telefone', 'O que Vende', 'Setor', 'Funcionário', 'Status']),
+    csvLinha(['Data', 'Cliente', 'Telefone', 'O que Vende', 'Setor', 'Funcionário', 'Status', 'Observação do Comercial']),
     ...prospeccoes.map((p) =>
       csvLinha([
         dataBR(p.data),
@@ -34,6 +34,7 @@ export async function GET() {
         p.setor.nome,
         p.atendente.nome,
         STATUS_PROSPECCAO_LABEL[p.status as StatusProspeccaoTexto],
+        p.observacao ? normalizarQuebrasDeLinha(p.observacao) : null,
       ]),
     ),
   ];
