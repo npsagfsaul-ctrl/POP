@@ -65,6 +65,29 @@ export default async function VisualizarSetor({
 
   const registros = await getRegistrosMensais(resolvedParams.id, mesAtual, anoAtual);
 
+  /**
+   * Os POPs que a lista do mês mostra.
+   *
+   * Entra o que já foi respondido no mês E o que existia durante o mês. A
+   * segunda parte faltava: a lista só mostrava POP já respondido, então um POP
+   * recém-cadastrado ficava invisível justamente no dia em que a pessoa o
+   * criou — parecia que o cadastro não tinha funcionado.
+   *
+   * Mês passado continua honesto: POP criado depois do fim daquele mês não
+   * aparece lá, e POP aposentado antes de o mês começar também não.
+   */
+  const inicioDoMesSelecionado = new Date(Date.UTC(anoAtual, mesAtual - 1, 1));
+  const fimDoMesSelecionado = new Date(Date.UTC(anoAtual, mesAtual, 0, 23, 59, 59));
+
+  const popsDoMes = pops.filter((pop) => {
+    const respondido = registros.some(
+      (reg) => (reg.respostas as Record<string, boolean>)?.[pop.id] !== undefined,
+    );
+    if (respondido) return true;
+    if (new Date(pop.createdAt) > fimDoMesSelecionado) return false;
+    return pop.desativadoEm === null || new Date(pop.desativadoEm) >= inicioDoMesSelecionado;
+  });
+
   // Calcular métricas (dias úteis até hoje, a partir da criação do setor; dia útil sem checklist = 0%)
   // Métrica oficial da meta: percentualPerfeitos (dias 100% ÷ dias úteis).
   // Dias em que este setor abre, e os dias em que a agência não abriu.
@@ -389,9 +412,9 @@ export default async function VisualizarSetor({
           <div className="card" style={{ marginTop: 24 }}>
             <div className="card-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
               <span>
-                POPs Cadastrados (Preenchidos no Mês)
+                POPs do setor
                 <span className="badge badge-primary" style={{ marginLeft: 8, fontSize: '0.75rem' }}>
-                  {pops.filter(pop => registros.some(reg => (reg.respostas as Record<string, boolean>)?.[pop.id] !== undefined)).length}
+                  {popsDoMes.length}
                 </span>
               </span>
 
@@ -414,7 +437,7 @@ export default async function VisualizarSetor({
               )}
             </div>
 
-            {pops.filter(pop => pop.desativadoEm !== null || registros.some(reg => (reg.respostas as Record<string, boolean>)?.[pop.id] !== undefined)).map((pop) => (
+            {popsDoMes.map((pop) => (
               <div key={pop.id} style={{
                 padding: '14px 0',
                 borderBottom: '1px solid var(--border)',
