@@ -153,15 +153,22 @@ export default function AgendaSetor({ setorId, itens, mes, ano, hojeISO, podeEdi
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 4 }}>
+        {/*
+          Cabeçalho e dias na MESMA grade, de propósito.
+
+          Eram duas grades separadas, e elas desalinhavam: as colunas são
+          `minmax(0, 1fr)` e não `1fr` porque, com `1fr`, a coluna de domingo
+          (sempre vazia) encolhia e as outras, com títulos longos, tomavam o
+          espaço — o rótulo "Dom" acabava em cima da segunda-feira. Numa grade
+          só, com colunas de largura fixa, o rótulo não tem como sair do lugar.
+        */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 4 }}>
           {DIAS_SEMANA.map((d) => (
             <div key={d} style={{ fontSize: '0.6875rem', color: 'var(--text-muted)', textAlign: 'center', fontWeight: 600 }}>
               {d}
             </div>
           ))}
-        </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
           {Array.from({ length: primeiroDiaSemana }, (_, i) => (
             <div key={`vazio-${i}`} />
           ))}
@@ -187,6 +194,9 @@ export default function AgendaSetor({ setorId, itens, mes, ano, hojeISO, podeEdi
                 }
                 style={{
                   minHeight: 84,
+                  // Deixa a coluna mandar na largura: sem isso, um título longo
+                  // de processo estica a célula e desalinha a grade.
+                  minWidth: 0,
                   border: `1px solid ${ehHoje ? 'var(--primary)' : 'var(--border)'}`,
                   borderRadius: 'var(--radius-sm)',
                   padding: 4,
