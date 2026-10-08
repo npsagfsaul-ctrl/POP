@@ -58,11 +58,6 @@ export default async function HorasPage() {
           )}
         </div>
 
-        <p className="form-hint" style={{ marginTop: -8, marginBottom: 14 }}>
-          O saldo oficial é o do sistema de ponto. Aqui você registra o que foi
-          acertado a partir dele — quem compensou, quem faltou, o que foi abonado.
-        </p>
-
         {colaboradores.length === 0 ? (
           <p className="text-muted">
             Nenhum colaborador cadastrado.{' '}
@@ -74,9 +69,7 @@ export default async function HorasPage() {
               <thead>
                 <tr>
                   <th style={{ textAlign: 'left' }}>Colaborador</th>
-                  <th style={{ textAlign: 'left' }}>Jornada</th>
                   <th style={{ textAlign: 'right' }}>Saldo</th>
-                  <th style={{ textAlign: 'right' }}>Lançamentos</th>
                   <th />
                 </tr>
               </thead>
@@ -85,7 +78,7 @@ export default async function HorasPage() {
                   <Fragment key={setorNome || 'sem-setor'}>
                     <tr>
                       <td
-                        colSpan={5}
+                        colSpan={3}
                         style={{
                           background: 'var(--surface-2)',
                           fontSize: '0.75rem',
@@ -118,9 +111,6 @@ export default async function HorasPage() {
                   return (
                     <tr key={c.id}>
                       <td style={{ fontWeight: 600 }}>{c.nome}</td>
-                      <td style={{ color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
-                        {c.jornadaResumo || '—'}
-                      </td>
                       <td style={{
                         textAlign: 'right',
                         fontFamily: 'monospace',
@@ -130,7 +120,6 @@ export default async function HorasPage() {
                       }}>
                         {formatarHoras(c.saldoMinutos, true)}
                       </td>
-                      <td style={{ textAlign: 'right', color: 'var(--text-muted)' }}>{c.lancamentos}</td>
                       <td style={{ textAlign: 'right' }}>
                         <Link href={`/horas/${c.id}`} className="btn btn-outline btn-sm">Abrir</Link>
                       </td>
