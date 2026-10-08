@@ -324,8 +324,46 @@ model Atendente {
   ativo       Boolean      @default(true)
   coletas     Coleta[]
   prospeccoes Prospeccao[]
+
+  /// A jornada em uma linha, escrita à mão: "Seg a Sex, 8h", "Seg a Sáb, 8h",
+  /// "Estagiária, 6h". É só para a pessoa do DP enxergar de quem é cada regra
+  /// — o Portal não calcula nada com isso, quem conhece a jornada de cada um
+  /// é o sistema de ponto.
+  jornada String?
+
+  /// Banco de horas: o ponto de partida, COPIADO do relatório do sistema de
+  /// ponto. É digitado de propósito — o ponto é o registro que vale, e refazer
+  /// a conta dele aqui criaria dois números para a mesma coisa.
+  saldoInicialMinutos Int     @default(0)
+  /// A que data aquele saldo se refere ("aaaa-mm-dd"), para saber de onde a
+  /// conta do Portal começa.
+  saldoInicialEm      String?
+
+  lancamentosHoras LancamentoHoras[]
+
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
+}
+
+/// Um movimento no banco de horas de um colaborador.
+///
+/// Guarda MINUTOS com sinal: negativo é hora devida, positivo é hora a
+/// receber. Minuto e não hora decimal porque o saldo é conferido batendo com o
+/// relatório do ponto, e decimal perde um pedacinho a cada conta.
+model LancamentoHoras {
+  id          String    @id @default(cuid())
+  atendenteId String
+  atendente   Atendente @relation(fields: [atendenteId], references: [id], onDelete: Cascade)
+
+  /// "aaaa-mm-dd" como texto: data sem hora vira o dia anterior com facilidade
+  /// num servidor que roda em UTC.
+  data    String
+  minutos Int
+  motivo  String?
+
+  createdAt DateTime @default(now())
+
+  @@index([atendenteId])
 }
 
 enum TipoCliente {
