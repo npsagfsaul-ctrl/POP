@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import Link from 'next/link';
 import { isAdmin } from '@/actions/admin';
 import { getColaboradoresComSaldo } from '@/actions/horas';
@@ -17,6 +18,22 @@ export default async function HorasPage() {
 
   const colaboradores = await getColaboradoresComSaldo();
   const devendo = colaboradores.filter((c) => c.saldoMinutos < 0);
+
+  /**
+   * Agrupado por setor: são mais de vinte pessoas, e numa lista só o DP fica
+   * procurando quem é de onde. Quem está sem setor cai num grupo próprio no
+   * fim, em vez de sumir no meio.
+   */
+  const porSetor = new Map<string, typeof colaboradores>();
+  for (const c of colaboradores) {
+    const chave = c.setorNome ?? '';
+    porSetor.set(chave, [...(porSetor.get(chave) ?? []), c]);
+  }
+  const grupos = [...porSetor.entries()].sort(([a], [b]) => {
+    if (a === '') return 1;
+    if (b === '') return -1;
+    return a.localeCompare(b, 'pt-BR');
+  });
 
   return (
     <div>
@@ -64,7 +81,38 @@ export default async function HorasPage() {
                 </tr>
               </thead>
               <tbody>
-                {colaboradores.map((c) => {
+                {grupos.map(([setorNome, doSetor]) => (
+                  <Fragment key={setorNome || 'sem-setor'}>
+                    <tr>
+                      <td
+                        colSpan={5}
+                        style={{
+                          background: 'var(--surface-2)',
+                          fontSize: '0.75rem',
+                          fontWeight: 700,
+                          letterSpacing: '0.04em',
+                          textTransform: 'uppercase',
+                          color: 'var(--text-muted)',
+                        }}
+                      >
+                        {setorNome || 'Sem setor'}
+                        <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>
+                          {' '}· {doSetor.length} pessoa(s)
+                          {doSetor.some((c) => c.saldoMinutos < 0) &&
+                            `, ${doSetor.filter((c) => c.saldoMinutos < 0).length} devendo`}
+                        </span>
+                        {!setorNome && (
+                          <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>
+                            {' '}—{' '}
+                            <Link href="/prospeccao/cadastros" style={{ textDecoration: 'underline' }}>
+                              defina o setor no cadastro
+                            </Link>
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+
+                    {doSetor.map((c) => {
                   const deve = c.saldoMinutos < 0;
                   const zerado = c.saldoMinutos === 0;
                   return (
@@ -88,7 +136,9 @@ export default async function HorasPage() {
                       </td>
                     </tr>
                   );
-                })}
+                    })}
+                  </Fragment>
+                ))}
               </tbody>
             </table>
           </div>

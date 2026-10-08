@@ -22,13 +22,17 @@ export async function getColaboradoresComSaldo() {
 
   const colaboradores = await prisma.atendente.findMany({
     where: { ativo: true },
-    include: { lancamentosHoras: { select: { minutos: true } } },
+    include: {
+      setor: { select: { nome: true } },
+      lancamentosHoras: { select: { minutos: true } },
+    },
     orderBy: { nome: 'asc' },
   });
 
   return colaboradores.map((c) => ({
     id: c.id,
     nome: c.nome,
+    setorNome: c.setor?.nome ?? null,
     jornada: c.jornada,
     saldoMinutos: saldoDe(c.saldoInicialMinutos, c.lancamentosHoras),
     lancamentos: c.lancamentosHoras.length,
