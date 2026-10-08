@@ -325,11 +325,17 @@ model Atendente {
   coletas     Coleta[]
   prospeccoes Prospeccao[]
 
-  /// A jornada em uma linha, escrita à mão: "Seg a Sex, 8h", "Seg a Sáb, 8h",
-  /// "Estagiária, 6h". É só para a pessoa do DP enxergar de quem é cada regra
-  /// — o Portal não calcula nada com isso, quem conhece a jornada de cada um
-  /// é o sistema de ponto.
+  /// Uma observação curta sobre a jornada: "Estagiária", "Contrato 44h".
+  /// Complementa `jornadaDetalhe`, não substitui.
   jornada String?
+
+  /// A jornada CONTRATADA, em dois blocos ("segunda a sexta" e "sábado"), cada
+  /// um com até dois períodos por causa do almoço. Ex.: Seg–Sex 09:00–12:00 e
+  /// 14:00–19:00, Sáb 08:00–12:00.
+  ///
+  /// Serve para o DP saber qual é a regra de cada um e conferir a carga
+  /// semanal. NÃO é o que foi trabalhado — isso é do sistema de ponto.
+  jornadaDetalhe Json?
 
   /// Banco de horas: o ponto de partida, COPIADO do relatório do sistema de
   /// ponto. É digitado de propósito — o ponto é o registro que vale, e refazer

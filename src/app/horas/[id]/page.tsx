@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { isAdmin } from '@/actions/admin';
 import { getColaboradorComHoras } from '@/actions/horas';
+import { resumoJornada } from '@/lib/jornada';
 import ControleHorasColaborador from '@/components/ControleHorasColaborador';
 
 export const dynamic = 'force-dynamic';
@@ -33,7 +34,9 @@ export default async function ColaboradorHorasPage({
             <Link href="/horas" className="breadcrumb-link">Controle de Horas</Link>
             <span className="breadcrumb-sep">›</span>
             <span className="breadcrumb-current">
-              {colaborador.jornada || colaborador.setorNome || colaborador.nome}
+              {[colaborador.setorNome, resumoJornada(colaborador.jornada)]
+                .filter(Boolean)
+                .join(' · ') || colaborador.nome}
             </span>
           </nav>
         </div>

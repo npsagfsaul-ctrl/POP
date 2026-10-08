@@ -119,7 +119,7 @@ export default async function HorasPage() {
                     <tr key={c.id}>
                       <td style={{ fontWeight: 600 }}>{c.nome}</td>
                       <td style={{ color: 'var(--text-muted)', fontSize: '0.8125rem' }}>
-                        {c.jornada || '—'}
+                        {c.jornadaResumo || '—'}
                       </td>
                       <td style={{
                         textAlign: 'right',

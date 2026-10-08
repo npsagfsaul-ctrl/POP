@@ -1,9 +1,11 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { isAdmin } from './admin';
 import { parseHoras, saldoDe } from '@/lib/horas';
+import { lerJornada, minutosDoPeriodo, resumoJornada, type Jornada, type Periodo } from '@/lib/jornada';
 
 /**
  * Banco de horas é dado pessoal de colaborador: quem deve hora, quem faltou,
@@ -33,7 +35,9 @@ export async function getColaboradoresComSaldo() {
     id: c.id,
     nome: c.nome,
     setorNome: c.setor?.nome ?? null,
-    jornada: c.jornada,
+    // Na lista basta a carga semanal ("44h · Seg a Sáb"); os horários ficam na
+    // ficha. Sem jornada preenchida, mostra a observação, se houver.
+    jornadaResumo: resumoJornada(lerJornada(c.jornadaDetalhe)) || (c.jornada ?? ''),
     saldoMinutos: saldoDe(c.saldoInicialMinutos, c.lancamentosHoras),
     lancamentos: c.lancamentosHoras.length,
   }));
@@ -56,7 +60,8 @@ export async function getColaboradorComHoras(id: string) {
     id: c.id,
     nome: c.nome,
     setorNome: c.setor?.nome ?? null,
-    jornada: c.jornada,
+    jornadaNota: c.jornada,
+    jornada: lerJornada(c.jornadaDetalhe) ?? { semana: [], sabado: [] },
     saldoInicialMinutos: c.saldoInicialMinutos,
     saldoInicialEm: c.saldoInicialEm,
     lancamentos: c.lancamentosHoras.map((l) => ({
@@ -90,12 +95,30 @@ export async function definirSaldoInicial(id: string, texto: string, dataISO: st
   revalidar(id);
 }
 
-/** Lembrete da regra desta pessoa. Texto livre: o Portal não calcula com ele. */
-export async function definirJornada(id: string, texto: string) {
+/**
+ * A jornada contratada: os horários em dois blocos mais uma observação curta.
+ *
+ * Guarda só períodos completos e bem formados. Meio período digitado some em
+ * vez de ser gravado pela metade — na tela ele reaparece em branco, que é mais
+ * honesto do que mostrar um horário que não vale.
+ */
+export async function definirJornada(id: string, jornada: Jornada, nota: string) {
   await exigirAdmin();
+
+  const limpar = (ps: Periodo[]) =>
+    (ps ?? [])
+      .map((p) => ({ entrada: (p.entrada ?? '').trim(), saida: (p.saida ?? '').trim() }))
+      .filter((p) => minutosDoPeriodo(p) !== null);
+
+  const detalhe = { semana: limpar(jornada?.semana ?? []), sabado: limpar(jornada?.sabado ?? []) };
+  const vazia = detalhe.semana.length === 0 && detalhe.sabado.length === 0;
+
   await prisma.atendente.update({
     where: { id },
-    data: { jornada: texto.trim() || null },
+    data: {
+      jornada: nota.trim() || null,
+      jornadaDetalhe: vazia ? Prisma.DbNull : detalhe,
+    },
   });
   revalidar(id);
 }

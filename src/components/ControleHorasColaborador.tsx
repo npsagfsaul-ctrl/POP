@@ -9,12 +9,82 @@ import {
   definirJornada,
 } from '@/actions/horas';
 import { formatarHoras } from '@/lib/horas';
+import {
+  formatarBloco,
+  minutosDaSemana,
+  resumoJornada,
+  type Jornada,
+  type Periodo,
+} from '@/lib/jornada';
+
+/**
+ * Um bloco da jornada: até dois períodos, com o total do dia ao lado.
+ *
+ * O total aparece enquanto a pessoa digita porque é assim que ela percebe o
+ * erro na hora — 8h virou 7h porque trocou 19:00 por 18:00.
+ */
+function BlocoJornada({
+  titulo,
+  periodos,
+  onChange,
+}: {
+  titulo: string;
+  periodos: Periodo[];
+  onChange: (p: Periodo[]) => void;
+}) {
+  const linhas: Periodo[] = [0, 1].map((i) => periodos[i] ?? { entrada: '', saida: '' });
+
+  function trocar(indice: number, campo: 'entrada' | 'saida', valor: string) {
+    const novos = linhas.map((p, i) => (i === indice ? { ...p, [campo]: valor } : p));
+    // Períodos em branco não vão para o banco; a limpeza final é no servidor.
+    onChange(novos);
+  }
+
+  return (
+    <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 12 }}>
+      <div style={{ flex: '1 1 130px', fontWeight: 600, fontSize: '0.875rem', paddingBottom: 10 }}>
+        {titulo}
+      </div>
+
+      {linhas.map((p, i) => (
+        <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            {i === 0 && <label className="form-label" style={{ fontSize: '0.7rem' }}>Entrada</label>}
+            <input
+              type="time"
+              className="form-input"
+              value={p.entrada}
+              onChange={(e) => trocar(i, 'entrada', e.target.value)}
+              style={{ width: 110 }}
+            />
+          </div>
+          <span style={{ paddingBottom: 10, color: 'var(--text-muted)' }}>às</span>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            {i === 0 && <label className="form-label" style={{ fontSize: '0.7rem' }}>Saída</label>}
+            <input
+              type="time"
+              className="form-input"
+              value={p.saida}
+              onChange={(e) => trocar(i, 'saida', e.target.value)}
+              style={{ width: 110 }}
+            />
+          </div>
+        </div>
+      ))}
+
+      <div style={{ paddingBottom: 10, fontFamily: 'monospace', fontWeight: 700, minWidth: 60, textAlign: 'right' }}>
+        {formatarBloco(linhas)}
+      </div>
+    </div>
+  );
+}
 
 export interface ColaboradorHoras {
   id: string;
   nome: string;
   setorNome: string | null;
-  jornada: string | null;
+  jornadaNota: string | null;
+  jornada: Jornada;
   saldoInicialMinutos: number;
   saldoInicialEm: string | null;
   saldoMinutos: number;
@@ -39,7 +109,8 @@ export default function ControleHorasColaborador({ c }: { c: ColaboradorHoras })
 
   const [saldoTexto, setSaldoTexto] = useState(formatarHoras(c.saldoInicialMinutos, true));
   const [saldoData, setSaldoData] = useState(c.saldoInicialEm ?? '');
-  const [jornada, setJornada] = useState(c.jornada ?? '');
+  const [jornada, setJornada] = useState<Jornada>(c.jornada);
+  const [nota, setNota] = useState(c.jornadaNota ?? '');
 
   async function executar(fn: () => Promise<unknown>) {
     setErro(null);
@@ -134,27 +205,48 @@ export default function ControleHorasColaborador({ c }: { c: ColaboradorHoras })
       </div>
 
       <div className="card" style={{ marginBottom: 20 }}>
-        <div className="card-title">Jornada</div>
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-          <div className="form-group" style={{ marginBottom: 0, flex: '1 1 260px' }}>
+        <div className="card-title">
+          Jornada contratada
+          {minutosDaSemana(jornada) > 0 && (
+            <span className="badge badge-primary" style={{ marginLeft: 8, fontSize: '0.75rem' }}>
+              {resumoJornada(jornada)}
+            </span>
+          )}
+        </div>
+        <p className="form-hint" style={{ marginTop: -8, marginBottom: 14 }}>
+          O horário combinado desta pessoa. Dois períodos por causa do almoço;
+          deixe o segundo em branco se ela não tiver intervalo.
+        </p>
+
+        <BlocoJornada
+          titulo="Segunda a sexta"
+          periodos={jornada.semana}
+          onChange={(semana) => setJornada((j) => ({ ...j, semana }))}
+        />
+        <BlocoJornada
+          titulo="Sábado"
+          periodos={jornada.sabado}
+          onChange={(sabado) => setJornada((j) => ({ ...j, sabado }))}
+        />
+
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end', marginTop: 8 }}>
+          <div className="form-group" style={{ marginBottom: 0, flex: '1 1 240px' }}>
+            <label className="form-label" htmlFor="nota">Observação</label>
             <input
+              id="nota"
               className="form-input"
-              value={jornada}
-              onChange={(e) => setJornada(e.target.value)}
-              placeholder="Ex: Seg a Sáb, 8h · Estagiária, 6h"
+              value={nota}
+              onChange={(e) => setNota(e.target.value)}
+              placeholder="Ex: Estagiária · Contrato 44h"
             />
-            <div className="form-hint">
-              Só um lembrete de qual é a regra desta pessoa. Quem calcula a jornada
-              é o sistema de ponto.
-            </div>
           </div>
           <button
             type="button"
             className="btn btn-secondary"
             disabled={ocupado}
-            onClick={() => executar(() => definirJornada(c.id, jornada))}
+            onClick={() => executar(() => definirJornada(c.id, jornada, nota))}
           >
-            Salvar
+            Salvar jornada
           </button>
         </div>
       </div>
