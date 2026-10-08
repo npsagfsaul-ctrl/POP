@@ -1,8 +1,7 @@
-import { Fragment } from 'react';
 import Link from 'next/link';
 import { isAdmin } from '@/actions/admin';
 import { getColaboradoresComSaldo } from '@/actions/horas';
-import { formatarHoras } from '@/lib/horas';
+import SaldosEmLote from '@/components/SaldosEmLote';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,11 +28,16 @@ export default async function HorasPage() {
     const chave = c.setorNome ?? '';
     porSetor.set(chave, [...(porSetor.get(chave) ?? []), c]);
   }
-  const grupos = [...porSetor.entries()].sort(([a], [b]) => {
-    if (a === '') return 1;
-    if (b === '') return -1;
-    return a.localeCompare(b, 'pt-BR');
-  });
+  const grupos = [...porSetor.entries()]
+    .sort(([a], [b]) => {
+      if (a === '') return 1;
+      if (b === '') return -1;
+      return a.localeCompare(b, 'pt-BR');
+    })
+    .map(([setor, lista]) => ({
+      setor,
+      colaboradores: lista.map((c) => ({ id: c.id, nome: c.nome, saldoMinutos: c.saldoMinutos })),
+    }));
 
   return (
     <div>
@@ -43,96 +47,23 @@ export default async function HorasPage() {
           <nav className="breadcrumb">
             <Link href="/" className="breadcrumb-link">Mural</Link>
             <span className="breadcrumb-sep">›</span>
-            <span className="breadcrumb-current">Controle de Horas</span>
+            <span className="breadcrumb-current">
+              {devendo.length > 0 ? `${devendo.length} devendo` : 'Todos em dia'}
+            </span>
           </nav>
         </div>
       </div>
 
-      <div className="card">
-        <div className="card-title">
-          Saldo por colaborador
-          {devendo.length > 0 && (
-            <span className="badge badge-danger" style={{ marginLeft: 8, fontSize: '0.75rem' }}>
-              {devendo.length} devendo
-            </span>
-          )}
-        </div>
-
-        {colaboradores.length === 0 ? (
-          <p className="text-muted">
+      {colaboradores.length === 0 ? (
+        <div className="card">
+          <p className="text-muted" style={{ margin: 0 }}>
             Nenhum colaborador cadastrado.{' '}
             <Link href="/prospeccao/cadastros" style={{ textDecoration: 'underline' }}>Cadastre os funcionários</Link>.
           </p>
-        ) : (
-          <div className="table-wrapper">
-            <table>
-              <thead>
-                <tr>
-                  <th style={{ textAlign: 'left' }}>Colaborador</th>
-                  <th style={{ textAlign: 'right' }}>Saldo</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {grupos.map(([setorNome, doSetor]) => (
-                  <Fragment key={setorNome || 'sem-setor'}>
-                    <tr>
-                      <td
-                        colSpan={3}
-                        style={{
-                          background: 'var(--surface-2)',
-                          fontSize: '0.75rem',
-                          fontWeight: 700,
-                          letterSpacing: '0.04em',
-                          textTransform: 'uppercase',
-                          color: 'var(--text-muted)',
-                        }}
-                      >
-                        {setorNome || 'Sem setor'}
-                        <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>
-                          {' '}· {doSetor.length} pessoa(s)
-                          {doSetor.some((c) => c.saldoMinutos < 0) &&
-                            `, ${doSetor.filter((c) => c.saldoMinutos < 0).length} devendo`}
-                        </span>
-                        {!setorNome && (
-                          <span style={{ fontWeight: 400, textTransform: 'none', letterSpacing: 0 }}>
-                            {' '}—{' '}
-                            <Link href="/prospeccao/cadastros" style={{ textDecoration: 'underline' }}>
-                              defina o setor no cadastro
-                            </Link>
-                          </span>
-                        )}
-                      </td>
-                    </tr>
-
-                    {doSetor.map((c) => {
-                  const deve = c.saldoMinutos < 0;
-                  const zerado = c.saldoMinutos === 0;
-                  return (
-                    <tr key={c.id}>
-                      <td style={{ fontWeight: 600 }}>{c.nome}</td>
-                      <td style={{
-                        textAlign: 'right',
-                        fontFamily: 'monospace',
-                        fontSize: '0.95rem',
-                        fontWeight: 700,
-                        color: zerado ? 'var(--text-muted)' : deve ? 'var(--danger)' : 'var(--success)',
-                      }}>
-                        {formatarHoras(c.saldoMinutos, true)}
-                      </td>
-                      <td style={{ textAlign: 'right' }}>
-                        <Link href={`/horas/${c.id}`} className="btn btn-outline btn-sm">Abrir</Link>
-                      </td>
-                    </tr>
-                  );
-                    })}
-                  </Fragment>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+        </div>
+      ) : (
+        <SaldosEmLote grupos={grupos} />
+      )}
     </div>
   );
 }

@@ -123,6 +123,56 @@ export async function definirJornada(id: string, jornada: Jornada, nota: string)
   revalidar(id);
 }
 
+/**
+ * Os saldos de todo mundo de uma vez, no fechamento.
+ *
+ * É assim que o trabalho realmente acontece: uma vez por mês, com o relatório
+ * do ponto aberto do lado, digitando de cima para baixo. Abrir e fechar a
+ * ficha de vinte pessoas para trocar um número cada era o atrito que sobrava.
+ *
+ * Ou grava tudo ou não grava nada: com um valor mal escrito no meio, gravar
+ * os outros deixaria o fechamento pela metade sem ninguém perceber qual faltou.
+ */
+export async function salvarSaldosEmLote(
+  dataISO: string,
+  entradas: { id: string; nome: string; texto: string }[],
+) {
+  await exigirAdmin();
+
+  const invalidos: string[] = [];
+  const validos: { id: string; minutos: number }[] = [];
+
+  for (const e of entradas) {
+    const texto = (e.texto ?? '').trim();
+    if (!texto) continue; // em branco = não mexe neste colaborador
+    const minutos = parseHoras(texto);
+    if (minutos === null) invalidos.push(e.nome);
+    else validos.push({ id: e.id, minutos });
+  }
+
+  if (invalidos.length > 0) {
+    throw new Error(
+      `Saldo mal escrito em: ${invalidos.join(', ')}. Use horas:minutos, como -03:14.`,
+    );
+  }
+  if (validos.length === 0) {
+    throw new Error('Nenhum saldo preenchido.');
+  }
+
+  const data = dataISO.trim() || null;
+  await prisma.$transaction(
+    validos.map((v) =>
+      prisma.atendente.update({
+        where: { id: v.id },
+        data: { saldoInicialMinutos: v.minutos, saldoInicialEm: data },
+      }),
+    ),
+  );
+
+  revalidatePath('/horas');
+  return validos.length;
+}
+
 export async function criarLancamentoHoras(atendenteId: string, formData: FormData) {
   await exigirAdmin();
 
