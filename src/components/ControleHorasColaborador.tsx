@@ -18,6 +18,15 @@ import {
 } from '@/lib/jornada';
 
 /**
+ * As quatro batidas do dia, pelos nomes que a agência usa.
+ *
+ * São os dois períodos da jornada vistos do jeito de quem bate o ponto:
+ * chega, sai para o almoço, volta, vai embora. Chamar as quatro de
+ * "entrada" e "saída" duas vezes não dizia nada.
+ */
+const ROTULOS = ['Entrada', 'Saída p/ almoço', 'Volta do almoço', 'Saída'];
+
+/**
  * Um bloco da jornada: até dois períodos, com o total do dia ao lado.
  *
  * O total aparece enquanto a pessoa digita porque é assim que ela percebe o
@@ -49,7 +58,7 @@ function BlocoJornada({
       {linhas.map((p, i) => (
         <div key={i} style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            {i === 0 && <label className="form-label" style={{ fontSize: '0.7rem' }}>Entrada</label>}
+            <label className="form-label" style={{ fontSize: '0.7rem' }}>{ROTULOS[i * 2]}</label>
             <input
               type="time"
               className="form-input"
@@ -58,9 +67,8 @@ function BlocoJornada({
               style={{ width: 110 }}
             />
           </div>
-          <span style={{ paddingBottom: 10, color: 'var(--text-muted)' }}>às</span>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            {i === 0 && <label className="form-label" style={{ fontSize: '0.7rem' }}>Saída</label>}
+            <label className="form-label" style={{ fontSize: '0.7rem' }}>{ROTULOS[i * 2 + 1]}</label>
             <input
               type="time"
               className="form-input"
@@ -214,8 +222,8 @@ export default function ControleHorasColaborador({ c }: { c: ColaboradorHoras })
           )}
         </div>
         <p className="form-hint" style={{ marginTop: -8, marginBottom: 14 }}>
-          O horário combinado desta pessoa. Dois períodos por causa do almoço;
-          deixe o segundo em branco se ela não tiver intervalo.
+          As quatro batidas do dia, nos dois blocos. Quem não sai para o almoço
+          naquele dia preenche só as duas primeiras e deixa o resto em branco.
         </p>
 
         <BlocoJornada
