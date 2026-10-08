@@ -134,8 +134,21 @@ export default function SaldosEmLote({ grupos }: { grupos: GrupoSetor[] }) {
 
                   {g.colaboradores.map((c) => {
                     const valor = valores[c.id] ?? '';
-                    const ruim = valor.trim() !== '' && parseHoras(valor) === null;
+                    const digitado = valor.trim() === '' ? null : parseHoras(valor);
+                    const ruim = valor.trim() !== '' && digitado === null;
                     const deve = c.saldoMinutos < 0;
+
+                    /**
+                     * O que foi digitado já sai colorido, na mesma regra do
+                     * saldo atual: esquecer o sinal de menos é o erro fácil de
+                     * cometer aqui, e ele vira verde onde devia ser vermelho.
+                     * Lado a lado, a cor trocada salta aos olhos.
+                     */
+                    const corDigitada =
+                      digitado === null ? undefined
+                        : digitado < 0 ? 'var(--danger)'
+                        : digitado > 0 ? 'var(--success)'
+                        : 'var(--text-muted)';
                     return (
                       <tr key={c.id}>
                         <td style={{ fontWeight: 600 }}>{c.nome}</td>
@@ -156,10 +169,17 @@ export default function SaldosEmLote({ grupos }: { grupos: GrupoSetor[] }) {
                             aria-label={`Novo saldo de ${c.nome}`}
                             style={{
                               fontFamily: 'monospace',
+                              fontWeight: 700,
                               width: 110,
+                              color: corDigitada,
                               borderColor: ruim ? 'var(--danger)' : undefined,
                             }}
                           />
+                          {digitado !== null && digitado > 0 && (
+                            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 2 }}>
+                              a receber
+                            </div>
+                          )}
                         </td>
                         <td style={{ textAlign: 'right' }}>
                           <Link href={`/horas/${c.id}`} className="btn btn-outline btn-sm">Abrir</Link>
