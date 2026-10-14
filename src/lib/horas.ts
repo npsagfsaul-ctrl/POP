@@ -37,12 +37,31 @@ export function formatarHoras(minutos: number, comSinal = false): string {
 }
 
 /**
- * O saldo é o que veio do relatório oficial mais o que foi lançado aqui.
+ * O saldo é o que veio do relatório oficial mais o que foi lançado DEPOIS dele.
  *
  * O saldo inicial é digitado, copiado do sistema de ponto, de propósito: o
  * ponto é o registro que vale, e refazer a conta dele aqui criaria dois
  * números para a mesma coisa. O Portal continua a conta, não a refaz.
+ *
+ * O corte pela data existe porque o número do relatório JÁ É um acumulado de
+ * tudo até aquele dia. Sem o corte, um lançamento anterior entraria duas
+ * vezes: uma dentro do número copiado e outra por fora. No fechamento
+ * seguinte, quando o saldo novo for digitado, os lançamentos velhos param de
+ * contar sozinhos — o relatório novo já os inclui.
+ *
+ * Sem data de referência, conta tudo: não há de onde cortar.
  */
-export function saldoDe(saldoInicialMinutos: number, lancamentos: { minutos: number }[]): number {
-  return lancamentos.reduce((total, l) => total + l.minutos, saldoInicialMinutos);
+export function saldoDe(
+  saldoInicialMinutos: number,
+  lancamentos: { minutos: number; data?: string }[],
+  saldoInicialEm?: string | null,
+): number {
+  return lancamentos
+    .filter((l) => !saldoInicialEm || !l.data || l.data > saldoInicialEm)
+    .reduce((total, l) => total + l.minutos, saldoInicialMinutos);
+}
+
+/** true se este lançamento já está dentro do número copiado do relatório. */
+export function jaEstaNoRelatorio(dataDoLancamento: string, saldoInicialEm?: string | null): boolean {
+  return !!saldoInicialEm && dataDoLancamento <= saldoInicialEm;
 }

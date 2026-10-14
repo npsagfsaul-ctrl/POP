@@ -26,7 +26,7 @@ export async function getColaboradoresComSaldo() {
     where: { ativo: true },
     include: {
       setor: { select: { nome: true } },
-      lancamentosHoras: { select: { minutos: true } },
+      lancamentosHoras: { select: { minutos: true, data: true } },
     },
     orderBy: { nome: 'asc' },
   });
@@ -38,7 +38,7 @@ export async function getColaboradoresComSaldo() {
     // Na lista basta a carga semanal ("44h · Seg a Sáb"); os horários ficam na
     // ficha. Sem jornada preenchida, mostra a observação, se houver.
     jornadaResumo: resumoJornada(lerJornada(c.jornadaDetalhe)) || (c.jornada ?? ''),
-    saldoMinutos: saldoDe(c.saldoInicialMinutos, c.lancamentosHoras),
+    saldoMinutos: saldoDe(c.saldoInicialMinutos, c.lancamentosHoras, c.saldoInicialEm),
     lancamentos: c.lancamentosHoras.length,
   }));
 }
@@ -70,7 +70,7 @@ export async function getColaboradorComHoras(id: string) {
       minutos: l.minutos,
       motivo: l.motivo,
     })),
-    saldoMinutos: saldoDe(c.saldoInicialMinutos, c.lancamentosHoras),
+    saldoMinutos: saldoDe(c.saldoInicialMinutos, c.lancamentosHoras, c.saldoInicialEm),
   };
 }
 

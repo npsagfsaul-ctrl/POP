@@ -8,7 +8,7 @@ import {
   definirSaldoInicial,
   definirJornada,
 } from '@/actions/horas';
-import { formatarHoras } from '@/lib/horas';
+import { formatarHoras, jaEstaNoRelatorio } from '@/lib/horas';
 import {
   formatarBloco,
   minutosDaSemana,
@@ -144,6 +144,9 @@ export default function ControleHorasColaborador({ c }: { c: ColaboradorHoras })
   }
 
   const deve = c.saldoMinutos < 0;
+  // Quantos lançamentos ainda contam: os anteriores ao relatório já estão
+  // dentro do número que foi copiado dele.
+  const contados = c.lancamentos.filter((l) => !jaEstaNoRelatorio(l.data, c.saldoInicialEm)).length;
 
   return (
     <div>
@@ -207,9 +210,11 @@ export default function ControleHorasColaborador({ c }: { c: ColaboradorHoras })
         {c.lancamentos.length > 0 && (
           <div className="form-hint" style={{ marginTop: 10 }}>
             {formatarHoras(c.saldoInicialMinutos, true)} do relatório
-            {c.saldoInicialEm && ` de ${dataBR(c.saldoInicialEm)}`}, mais{' '}
-            {c.lancamentos.length} lançamento(s) ={' '}
-            <strong>{formatarHoras(c.saldoMinutos, true)}</strong>.
+            {c.saldoInicialEm && ` de ${dataBR(c.saldoInicialEm)}`}
+            {contados > 0
+              ? `, mais ${contados} lançamento(s) depois dessa data`
+              : ', sem lançamento depois dessa data'}{' '}
+            = <strong>{formatarHoras(c.saldoMinutos, true)}</strong>.
           </div>
         )}
       </div>
@@ -257,18 +262,33 @@ export default function ControleHorasColaborador({ c }: { c: ColaboradorHoras })
           <div className="table-wrapper" style={{ marginTop: 16 }}>
             <table>
               <tbody>
-                {c.lancamentos.map((l) => (
-                  <tr key={l.id}>
+                {c.lancamentos.map((l) => {
+                  // Lançamento anterior ao relatório já está dentro do número
+                  // copiado. Fica na lista como histórico, apagado, em vez de
+                  // sumir — sumir pareceria que a anotação se perdeu.
+                  const jaContado = jaEstaNoRelatorio(l.data, c.saldoInicialEm);
+                  return (
+                  <tr key={l.id} style={jaContado ? { opacity: 0.5 } : undefined}>
                     <td>{dataBR(l.data)}</td>
                     <td style={{
                       textAlign: 'right',
                       fontFamily: 'monospace',
                       fontWeight: 600,
-                      color: l.minutos < 0 ? 'var(--danger)' : 'var(--success)',
+                      color: jaContado
+                        ? 'var(--text-muted)'
+                        : l.minutos < 0 ? 'var(--danger)' : 'var(--success)',
+                      textDecoration: jaContado ? 'line-through' : undefined,
                     }}>
                       {formatarHoras(l.minutos, true)}
                     </td>
-                    <td>{l.motivo || '—'}</td>
+                    <td>
+                      {l.motivo || '—'}
+                      {jaContado && (
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                          já incluído no relatório
+                        </div>
+                      )}
+                    </td>
                     <td style={{ textAlign: 'right' }}>
                       <button
                         type="button"
@@ -283,7 +303,8 @@ export default function ControleHorasColaborador({ c }: { c: ColaboradorHoras })
                       </button>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>
