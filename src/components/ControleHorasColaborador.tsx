@@ -208,14 +208,17 @@ export default function ControleHorasColaborador({ c }: { c: ColaboradorHoras })
           <div className="form-hint" style={{ marginTop: 10 }}>
             {formatarHoras(c.saldoInicialMinutos, true)} do relatório
             {c.saldoInicialEm && ` de ${dataBR(c.saldoInicialEm)}`}, mais{' '}
-            {c.lancamentos.length} lançamento(s).
+            {c.lancamentos.length} lançamento(s) ={' '}
+            <strong>{formatarHoras(c.saldoMinutos, true)}</strong>.
           </div>
         )}
       </div>
 
       {erro && <div className="alert alert-danger" style={{ marginBottom: 16 }}>{erro}</div>}
 
-      <details className="card" style={{ marginBottom: 12 }}>
+      {/* Aberta por padrão: lançar hora dia a dia virou o uso principal daqui.
+          A Jornada continua fechada, que é coisa de cadastrar uma vez. */}
+      <details className="card" style={{ marginBottom: 12 }} open>
         <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: '0.9375rem' }}>
           Lançamentos
           {c.lancamentos.length > 0 && (
