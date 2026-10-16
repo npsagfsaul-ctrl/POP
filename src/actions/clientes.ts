@@ -1,5 +1,6 @@
 'use server';
 
+import { del } from '@vercel/blob';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { TipoCliente } from '@prisma/client';
@@ -15,7 +16,10 @@ export async function getClientes(apenasAtivos = false) {
 export async function getClientePorId(id: string) {
   const cliente = await prisma.cliente.findUnique({
     where: { id },
-    include: { idsCorreios: { orderBy: { createdAt: 'asc' } } },
+    include: {
+      idsCorreios: { orderBy: { createdAt: 'asc' } },
+      anexos: { orderBy: { createdAt: 'asc' } },
+    },
   });
   if (!cliente) return null;
 
@@ -199,10 +203,21 @@ export async function alternarClienteAtivo(id: string, ativo: boolean) {
 
 export async function deletarCliente(id: string) {
   await exigirComercial();
+
+  // Pega as URLs antes de apagar: o cliente sai com os anexos por cascade, e
+  // depois não haveria mais como saber quais arquivos limpar no Blob.
+  const anexos = await prisma.anexo.findMany({ where: { clienteId: id }, select: { url: true } });
+
   try {
     await prisma.cliente.delete({ where: { id } });
   } catch {
     throw new Error('Não dá para excluir: este cliente já tem coletas ou rotas fixas registradas. Use "Desativar".');
   }
+
+  // Lixo pago não deve ficar para trás; se a limpeza falhar, o cadastro já foi.
+  if (anexos.length) {
+    try { await del(anexos.map((a) => a.url)); } catch {}
+  }
+
   revalidar();
 }

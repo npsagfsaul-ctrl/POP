@@ -429,10 +429,31 @@ model Cliente {
   coletas     Coleta[]
   rotasFixas  RotaFixa[]
   idsCorreios IdCorreios[]
+  anexos      Anexo[]
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
   @@index([nome])
+}
+
+/// Um arquivo anexado à ficha do cliente (imagem ou PDF).
+///
+/// O arquivo em si fica no Vercel Blob; aqui guardamos só a URL e os dados para
+/// listar — assim o banco não engorda com o conteúdo dos arquivos. O limite de
+/// tamanho é imposto na hora do upload (ver `actions/anexos.ts`).
+model Anexo {
+  id        String  @id @default(cuid())
+  clienteId String
+  cliente   Cliente @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+
+  url     String // endereço do arquivo no Vercel Blob
+  nome    String // nome original do arquivo, para mostrar na lista
+  tipo    String // mime type (image/png, application/pdf…)
+  tamanho Int // bytes, para mostrar o tamanho e conferir o limite
+
+  createdAt DateTime @default(now())
+
+  @@index([clienteId])
 }
 
 /// Um ID do cliente nos Correios.

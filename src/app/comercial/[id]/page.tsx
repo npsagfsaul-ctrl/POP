@@ -55,6 +55,7 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
           cidade: cliente.cidade,
           uf: cliente.uf,
           observacao: cliente.observacao,
+          anexos: cliente.anexos,
           ativo: cliente.ativo,
         }}
       />

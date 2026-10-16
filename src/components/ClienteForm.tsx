@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { criarCliente, atualizarCliente, alternarClienteAtivo, deletarCliente } from '@/actions/clientes';
+import { adicionarAnexo, removerAnexo } from '@/actions/anexos';
 
 export interface ClienteFormDados {
   id: string;
@@ -30,6 +31,7 @@ export interface ClienteFormDados {
   cidade: string | null;
   uf: string | null;
   observacao: string | null;
+  anexos: { id: string; url: string; nome: string; tipo: string; tamanho: number }[];
   ativo: boolean;
 }
 
@@ -264,6 +266,123 @@ function Bloco({
       <div className="card-title">{titulo}</div>
       {children}
     </fieldset>
+  );
+}
+
+type AnexoView = { id: string; url: string; nome: string; tipo: string; tamanho: number };
+
+const MAX_BYTES_UI = 5 * 1024 * 1024;
+const TIPOS_UI = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'];
+
+function formatarTamanho(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/**
+ * Lista e sobe anexos (imagem/PDF) do cliente.
+ *
+ * O upload é um caminho à parte do "Salvar" da ficha: sobe na hora e atualiza a
+ * lista, sem depender do botão que grava os campos de texto. Por isso o <input>
+ * não tem `name` — ele não entra no FormData do formulário principal.
+ */
+function Anexos({
+  clienteId,
+  lista,
+  somenteLeitura,
+}: {
+  clienteId: string | null;
+  lista: AnexoView[];
+  somenteLeitura: boolean;
+}) {
+  const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [enviando, setEnviando] = useState(false);
+  const [erro, setErro] = useState<string | null>(null);
+
+  // Cliente ainda não salvo: não há id para pendurar o arquivo.
+  if (!clienteId) {
+    return (
+      <p className="form-hint" style={{ margin: '14px 0 0' }}>
+        Salve o cliente para poder anexar imagens e PDFs.
+      </p>
+    );
+  }
+
+  async function aoEscolher(e: React.ChangeEvent<HTMLInputElement>) {
+    const arquivo = e.target.files?.[0];
+    if (inputRef.current) inputRef.current.value = '';
+    if (!arquivo) return;
+
+    setErro(null);
+    if (arquivo.size > MAX_BYTES_UI) { setErro('Arquivo acima de 5 MB. Reduza ou comprima antes de anexar.'); return; }
+    if (!TIPOS_UI.includes(arquivo.type)) { setErro('Só dá para anexar imagem (JPG, PNG, WebP, GIF) ou PDF.'); return; }
+
+    const fd = new FormData();
+    fd.set('arquivo', arquivo);
+    setEnviando(true);
+    try {
+      await adicionarAnexo(clienteId!, fd);
+      router.refresh();
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : 'Não foi possível anexar.');
+    } finally {
+      setEnviando(false);
+    }
+  }
+
+  async function aoRemover(id: string) {
+    if (!confirm('Remover este anexo?')) return;
+    setErro(null);
+    try {
+      await removerAnexo(id);
+      router.refresh();
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : 'Não foi possível remover.');
+    }
+  }
+
+  return (
+    <div style={{ marginTop: 18 }}>
+      <label className="form-label">Anexos — imagens e PDFs, até 5 MB cada</label>
+
+      {lista.length === 0 ? (
+        <p className="form-hint" style={{ marginTop: 0 }}>Nenhum arquivo anexado.</p>
+      ) : (
+        <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0 0', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {lista.map((a) => (
+            <li key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              <span aria-hidden>{a.tipo === 'application/pdf' ? '📄' : '🖼️'}</span>
+              <a href={a.url} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 600 }}>{a.nome}</a>
+              <span className="text-muted" style={{ fontSize: 12 }}>{formatarTamanho(a.tamanho)}</span>
+              {!somenteLeitura && (
+                <button type="button" className="btn btn-outline btn-sm" onClick={() => aoRemover(a.id)} style={{ marginLeft: 'auto' }}>
+                  Remover
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {!somenteLeitura && (
+        <div style={{ marginTop: 12 }}>
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
+            onChange={aoEscolher}
+            disabled={enviando}
+            style={{ display: 'none' }}
+          />
+          <button type="button" className="btn btn-outline btn-sm" onClick={() => inputRef.current?.click()} disabled={enviando}>
+            {enviando ? 'Enviando…' : '+ Anexar arquivo'}
+          </button>
+          {erro && <p className="form-hint" style={{ color: 'var(--danger, #d64545)', marginTop: 8 }}>{erro}</p>}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -582,6 +701,12 @@ export default function ClienteForm({ cliente, somenteLeitura = false }: Props) 
             rows={3}
           />
         </div>
+
+        <Anexos
+          clienteId={cliente?.id ?? null}
+          lista={cliente?.anexos ?? []}
+          somenteLeitura={somenteLeitura}
+        />
       </Bloco>
 
       {erro && <div className="alert alert-danger" style={{ marginBottom: 16 }}>{erro}</div>}
