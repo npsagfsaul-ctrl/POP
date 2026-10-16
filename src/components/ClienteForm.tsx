@@ -557,35 +557,6 @@ export default function ClienteForm({ cliente, somenteLeitura = false }: Props) 
         </Bloco>
       )}
 
-      <Bloco
-        titulo={pessoaJuridica ? 'Quem atende no dia a dia' : 'Contato'}
-        desabilitado={somenteLeitura}
-      >
-        <Linha>
-          <Campo
-            label="Falar com"
-            name="contatoNome"
-            defaultValue={cliente?.contatoNome}
-            placeholder="Quem o coletor e o balcão procuram"
-            largura={2}
-          />
-          <Campo
-            label="Telefone / WhatsApp"
-            name="telefone"
-            defaultValue={cliente?.telefone}
-            placeholder="(31) 90000-0000"
-          />
-          <Campo
-            label="E-mail"
-            name="email"
-            tipo="email"
-            defaultValue={cliente?.email}
-            placeholder="contato@empresa.com.br"
-            largura={2}
-          />
-        </Linha>
-      </Bloco>
-
       <Bloco titulo="Endereço da coleta" desabilitado={somenteLeitura}>
         <Linha>
           <Campo label="CEP" name="cep" defaultValue={cliente?.cep} placeholder="00000-000" />
