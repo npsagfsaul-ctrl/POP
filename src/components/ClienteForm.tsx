@@ -416,6 +416,67 @@ export default function ClienteForm({ cliente, somenteLeitura = false }: Props) 
         </Linha>
       </Bloco>
 
+      {/* Quem assina e quem atende quase nunca são a mesma pessoa: o contrato
+          sai no nome do dono, e quem recebe o coletor é outra. Por isso são
+          dois blocos, e não um "responsável" que serve para as duas coisas. */}
+      {pessoaJuridica && (
+        <Bloco titulo="Quem assina o contrato" desabilitado={somenteLeitura}>
+          <p className="form-hint" style={{ marginTop: -8, marginBottom: 14 }}>
+            A pessoa física por trás do CNPJ — é dela que os Correios pedem o CPF.
+          </p>
+          <Linha>
+            <Campo
+              label="Nome"
+              name="responsavel"
+              defaultValue={cliente?.responsavel}
+              placeholder="Quem responde pela empresa"
+              largura={2}
+            />
+            <Campo
+              label="CPF"
+              name="cpfResponsavel"
+              defaultValue={cliente?.cpfResponsavel}
+              placeholder="000.000.000-00"
+            />
+            <Campo
+              label="RG"
+              name="rgResponsavel"
+              defaultValue={cliente?.rgResponsavel}
+              placeholder="MG-00.000.000"
+            />
+          </Linha>
+          <Linha>
+            <Campo
+              label="Data de nascimento"
+              name="nascimentoResponsavel"
+              tipo="date"
+              defaultValue={cliente?.nascimentoResponsavel}
+            />
+            <Campo
+              label="Nome da mãe"
+              name="nomeMaeResponsavel"
+              defaultValue={cliente?.nomeMaeResponsavel}
+              placeholder="Como está no documento"
+              largura={2}
+            />
+          </Linha>
+        </Bloco>
+      )}
+
+      <Bloco titulo="Endereço da coleta" desabilitado={somenteLeitura}>
+        <Linha>
+          <Campo label="CEP" name="cep" defaultValue={cliente?.cep} placeholder="00000-000" />
+          <Campo label="Rua" name="rua" defaultValue={cliente?.rua} placeholder="Ex: Rua Sete de Setembro" largura={3} />
+          <Campo label="Número" name="numero" defaultValue={cliente?.numero} placeholder="Ex: 120" />
+        </Linha>
+        <Linha>
+          <Campo label="Complemento" name="complemento" defaultValue={cliente?.complemento} placeholder="Sala, loja, galpão" largura={2} />
+          <Campo label="Bairro" name="bairro" defaultValue={cliente?.bairro} placeholder="Ex: Centro" largura={2} />
+          <Campo label="Cidade" name="cidade" defaultValue={cliente?.cidade} placeholder="Ex: Itabira" largura={2} />
+          <Campo label="UF" name="uf" defaultValue={cliente?.uf} placeholder="MG" />
+        </Linha>
+      </Bloco>
+
       {/* Este bloco não usa <Bloco> porque o "Mostrar as senhas" precisa
           continuar clicável para quem só consulta: dentro de um fieldset
           desabilitado ele morreria junto com os campos. Só as linhas dos IDs
@@ -509,67 +570,6 @@ export default function ClienteForm({ cliente, somenteLeitura = false }: Props) 
         </>
         )}
       </div>
-
-      {/* Quem assina e quem atende quase nunca são a mesma pessoa: o contrato
-          sai no nome do dono, e quem recebe o coletor é outra. Por isso são
-          dois blocos, e não um "responsável" que serve para as duas coisas. */}
-      {pessoaJuridica && (
-        <Bloco titulo="Quem assina o contrato" desabilitado={somenteLeitura}>
-          <p className="form-hint" style={{ marginTop: -8, marginBottom: 14 }}>
-            A pessoa física por trás do CNPJ — é dela que os Correios pedem o CPF.
-          </p>
-          <Linha>
-            <Campo
-              label="Nome"
-              name="responsavel"
-              defaultValue={cliente?.responsavel}
-              placeholder="Quem responde pela empresa"
-              largura={2}
-            />
-            <Campo
-              label="CPF"
-              name="cpfResponsavel"
-              defaultValue={cliente?.cpfResponsavel}
-              placeholder="000.000.000-00"
-            />
-            <Campo
-              label="RG"
-              name="rgResponsavel"
-              defaultValue={cliente?.rgResponsavel}
-              placeholder="MG-00.000.000"
-            />
-          </Linha>
-          <Linha>
-            <Campo
-              label="Data de nascimento"
-              name="nascimentoResponsavel"
-              tipo="date"
-              defaultValue={cliente?.nascimentoResponsavel}
-            />
-            <Campo
-              label="Nome da mãe"
-              name="nomeMaeResponsavel"
-              defaultValue={cliente?.nomeMaeResponsavel}
-              placeholder="Como está no documento"
-              largura={2}
-            />
-          </Linha>
-        </Bloco>
-      )}
-
-      <Bloco titulo="Endereço da coleta" desabilitado={somenteLeitura}>
-        <Linha>
-          <Campo label="CEP" name="cep" defaultValue={cliente?.cep} placeholder="00000-000" />
-          <Campo label="Rua" name="rua" defaultValue={cliente?.rua} placeholder="Ex: Rua Sete de Setembro" largura={3} />
-          <Campo label="Número" name="numero" defaultValue={cliente?.numero} placeholder="Ex: 120" />
-        </Linha>
-        <Linha>
-          <Campo label="Complemento" name="complemento" defaultValue={cliente?.complemento} placeholder="Sala, loja, galpão" largura={2} />
-          <Campo label="Bairro" name="bairro" defaultValue={cliente?.bairro} placeholder="Ex: Centro" largura={2} />
-          <Campo label="Cidade" name="cidade" defaultValue={cliente?.cidade} placeholder="Ex: Itabira" largura={2} />
-          <Campo label="UF" name="uf" defaultValue={cliente?.uf} placeholder="MG" />
-        </Linha>
-      </Bloco>
 
       <Bloco titulo="Observação" desabilitado={somenteLeitura}>
         <div className="form-group" style={{ marginBottom: 0 }}>
