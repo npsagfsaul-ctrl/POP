@@ -34,6 +34,7 @@ export async function getColaboradoresComSaldo() {
   return colaboradores.map((c) => ({
     id: c.id,
     nome: c.nome,
+    controlaHoras: c.controlaHoras,
     setorNome: c.setor?.nome ?? null,
     // Na lista basta a carga semanal ("44h · Seg a Sáb"); os horários ficam na
     // ficha. Sem jornada preenchida, mostra a observação, se houver.
@@ -60,6 +61,7 @@ export async function getColaboradorComHoras(id: string) {
     id: c.id,
     nome: c.nome,
     setorNome: c.setor?.nome ?? null,
+    controlaHoras: c.controlaHoras,
     jornadaNota: c.jornada,
     jornada: lerJornada(c.jornadaDetalhe) ?? { semana: [], sabado: [] },
     saldoInicialMinutos: c.saldoInicialMinutos,
@@ -92,6 +94,19 @@ export async function definirSaldoInicial(id: string, texto: string, dataISO: st
     where: { id },
     data: { saldoInicialMinutos: minutos, saldoInicialEm: dataISO.trim() || null },
   });
+  revalidar(id);
+}
+
+/**
+ * Tira ou devolve o colaborador ao Controle de Horas.
+ *
+ * Quem tem contrato sem banco de horas não deve aparecer na tela do DP, mas
+ * continua existindo no sistema — é o mesmo cadastro usado nas Coletas e na
+ * Prospecção. Por isso aqui é só uma marca, nunca desativar a pessoa.
+ */
+export async function definirControleDeHoras(id: string, controla: boolean) {
+  await exigirAdmin();
+  await prisma.atendente.update({ where: { id }, data: { controlaHoras: controla } });
   revalidar(id);
 }
 

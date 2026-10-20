@@ -7,6 +7,7 @@ import {
   deletarLancamentoHoras,
   definirSaldoInicial,
   definirJornada,
+  definirControleDeHoras,
 } from '@/actions/horas';
 import { formatarHoras, jaEstaNoRelatorio } from '@/lib/horas';
 import {
@@ -91,6 +92,7 @@ export interface ColaboradorHoras {
   id: string;
   nome: string;
   setorNome: string | null;
+  controlaHoras: boolean;
   jornadaNota: string | null;
   jornada: Jornada;
   saldoInicialMinutos: number;
@@ -147,6 +149,30 @@ export default function ControleHorasColaborador({ c }: { c: ColaboradorHoras })
   // Quantos lançamentos ainda contam: os anteriores ao relatório já estão
   // dentro do número que foi copiado dele.
   const contados = c.lancamentos.filter((l) => !jaEstaNoRelatorio(l.data, c.saldoInicialEm)).length;
+
+  if (!c.controlaHoras) {
+    return (
+      <div className="card">
+        <p style={{ marginTop: 0 }}>
+          <strong>{c.nome}</strong> está fora do Controle de Horas — contrato sem
+          banco de horas.
+        </p>
+        <p className="form-hint">
+          Continua normalmente no sistema para Coletas e Prospecção. Só não aparece
+          na lista do fechamento.
+        </p>
+        {erro && <div className="alert alert-danger" style={{ marginBottom: 12 }}>{erro}</div>}
+        <button
+          type="button"
+          className="btn btn-secondary"
+          disabled={ocupado}
+          onClick={() => executar(() => definirControleDeHoras(c.id, true))}
+        >
+          Trazer para o controle de horas
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -353,6 +379,22 @@ export default function ControleHorasColaborador({ c }: { c: ColaboradorHoras })
           </div>
         </div>
       </details>
+
+      {/* Fica no fim, discreto: é decisão rara, de contrato, não do dia a dia. */}
+      <div style={{ marginTop: 16, textAlign: 'right' }}>
+        <button
+          type="button"
+          className="btn btn-outline btn-sm"
+          disabled={ocupado}
+          title="Para contrato sem banco de horas"
+          onClick={() => {
+            if (!confirm(`Tirar ${c.nome} do Controle de Horas? Ele continua no sistema para Coletas e Prospecção.`)) return;
+            executar(() => definirControleDeHoras(c.id, false));
+          }}
+        >
+          Tirar do controle de horas
+        </button>
+      </div>
     </div>
   );
 }

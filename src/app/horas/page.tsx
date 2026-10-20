@@ -15,7 +15,12 @@ export default async function HorasPage() {
     );
   }
 
-  const colaboradores = await getColaboradoresComSaldo();
+  const todos = await getColaboradoresComSaldo();
+
+  // Contrato sem banco de horas sai da lista do fechamento, mas não some da
+  // tela: continua embaixo, nomeado, para ninguém se perguntar onde foi parar.
+  const colaboradores = todos.filter((c) => c.controlaHoras);
+  const foraDoControle = todos.filter((c) => !c.controlaHoras);
   const devendo = colaboradores.filter((c) => c.saldoMinutos < 0);
 
   /**
@@ -63,6 +68,32 @@ export default async function HorasPage() {
         </div>
       ) : (
         <SaldosEmLote grupos={grupos} />
+      )}
+
+      {foraDoControle.length > 0 && (
+        <details className="card" style={{ marginTop: 12 }}>
+          <summary style={{ cursor: 'pointer', fontWeight: 600, fontSize: '0.9375rem' }}>
+            Fora do controle de horas
+            <span className="badge badge-primary" style={{ marginLeft: 8, fontSize: '0.75rem' }}>
+              {foraDoControle.length}
+            </span>
+          </summary>
+          <p className="form-hint" style={{ marginTop: 12 }}>
+            Contrato sem banco de horas. Continuam no sistema para Coletas e
+            Prospecção — só não entram no fechamento.
+          </p>
+          <ul style={{ margin: 0, paddingLeft: 20 }}>
+            {foraDoControle.map((c) => (
+              <li key={c.id} style={{ marginBottom: 4 }}>
+                {c.nome}
+                {c.setorNome && <span className="text-muted"> · {c.setorNome}</span>}{' '}
+                <Link href={`/horas/${c.id}`} style={{ textDecoration: 'underline', fontSize: '0.8125rem' }}>
+                  trazer de volta
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </details>
       )}
     </div>
   );

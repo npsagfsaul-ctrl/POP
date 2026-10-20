@@ -325,6 +325,13 @@ model Atendente {
   coletas     Coleta[]
   prospeccoes Prospeccao[]
 
+  /// Entra no Controle de Horas?
+  ///
+  /// Nem todo contrato tem banco de horas. Quem está fora some da tela do DP
+  /// mas continua no sistema para Coletas e Prospecção — por isso é um campo
+  /// próprio, e não desativar a pessoa.
+  controlaHoras Boolean @default(true)
+
   /// Uma observação curta sobre a jornada: "Estagiária", "Contrato 44h".
   /// Complementa `jornadaDetalhe`, não substitui.
   jornada String?
