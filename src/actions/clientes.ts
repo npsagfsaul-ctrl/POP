@@ -2,7 +2,6 @@
 
 import { del } from '@vercel/blob';
 import { prisma } from '@/lib/prisma';
-import { revalidatePath } from 'next/cache';
 import { TipoCliente } from '@prisma/client';
 import { podeEditarComercial } from './comercialAcesso';
 
@@ -137,10 +136,23 @@ async function exigirComercial() {
   }
 }
 
+/**
+ * Não revalida nada, de propósito — e isso é o conserto de um erro real.
+ *
+ * As três telas que estavam aqui (`/comercial`, `/coletas`,
+ * `/coletas/cadastros`) são todas `force-dynamic`: já são refeitas a cada
+ * acesso, então mandar revalidar não mudava nada. Em compensação, revalidar
+ * durante uma Server Action faz o Next RE-RENDERIZAR essas rotas dentro da
+ * resposta da ação. Qualquer erro num desses renders derruba a resposta
+ * inteira — e o cadastro, que tinha gravado certinho, voltava para a tela como
+ * "An error occurred in the Server Components render", sem dizer de onde veio.
+ *
+ * Quem chama já faz `router.refresh()` na volta, que é o que de fato atualiza
+ * a tela de quem está ali. Mantido como função vazia para o dia em que entrar
+ * uma rota com cache de verdade, e para este comentário não se perder.
+ */
 function revalidar() {
-  revalidatePath('/comercial');
-  revalidatePath('/coletas/cadastros');
-  revalidatePath('/coletas');
+  // intencionalmente vazio — veja o comentário acima
 }
 
 /**

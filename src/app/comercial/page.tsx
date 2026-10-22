@@ -10,7 +10,18 @@ export default async function ComercialPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
-  const fechado = await portaoComercial();
+  // A porta também pode estourar e era a última sem tratamento nesta tela.
+  let fechado: React.ReactNode;
+  try {
+    fechado = await portaoComercial();
+  } catch (e) {
+    return (
+      <div className="alert alert-danger">
+        <strong>Não foi possível abrir o Comercial.</strong>
+        <p style={{ margin: '8px 0 0' }}>{e instanceof Error ? e.message : 'Erro desconhecido.'}</p>
+      </div>
+    );
+  }
   if (fechado) return fechado;
 
   const podeEditar = (await nivelComercial()) === 'editar';
