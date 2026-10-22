@@ -17,7 +17,22 @@ export default async function ComercialPage({
 
   const sp = await searchParams;
   const termo = (sp.q ?? '').trim();
-  const clientes = await buscarClientes(termo);
+
+  // Mesma ideia da ficha: erro que escapa daqui vira um parágrafo genérico em
+  // inglês na tela. Escrito, ele diz onde olhar.
+  let clientes: Awaited<ReturnType<typeof buscarClientes>>;
+  try {
+    clientes = await buscarClientes(termo);
+  } catch (e) {
+    return (
+      <div className="alert alert-danger">
+        <strong>Não foi possível carregar a lista de clientes.</strong>
+        <p style={{ margin: '8px 0 0' }}>
+          {e instanceof Error ? e.message : 'Erro desconhecido.'}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div>

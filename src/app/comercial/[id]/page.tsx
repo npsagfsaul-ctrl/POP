@@ -12,7 +12,31 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
   if (fechado) return fechado;
 
   const { id } = await params;
-  const cliente = await getClientePorId(id);
+
+  /**
+   * Mostra o erro em vez de deixar a página cair.
+   *
+   * Em produção o Next troca qualquer erro de render por um parágrafo genérico
+   * em inglês, que não diz nada a quem está usando nem a quem vai consertar.
+   * Preferimos a ficha abrir com a mensagem de verdade escrita nela.
+   */
+  let cliente: Awaited<ReturnType<typeof getClientePorId>>;
+  try {
+    cliente = await getClientePorId(id);
+  } catch (e) {
+    return (
+      <div className="alert alert-danger">
+        <strong>Não foi possível abrir esta ficha.</strong>
+        <p style={{ margin: '8px 0 0' }}>
+          {e instanceof Error ? e.message : 'Erro desconhecido.'}
+        </p>
+        <p style={{ margin: '8px 0 0' }}>
+          <Link href="/comercial" style={{ textDecoration: 'underline' }}>Voltar para a lista</Link>
+        </p>
+      </div>
+    );
+  }
+
   if (!cliente) notFound();
 
   return (
