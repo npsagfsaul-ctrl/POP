@@ -3,7 +3,10 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { criarCliente, atualizarCliente, alternarClienteAtivo, deletarCliente } from '@/actions/clientes';
+// Criar e alterar passam pela rota /api/comercial/clientes — veja o porquê em
+// handleSubmit. Desativar e excluir continuam como Server Action: são de um
+// clique só, sem formulário, e não tiveram problema.
+import { alternarClienteAtivo, deletarCliente } from '@/actions/clientes';
 import { adicionarAnexo, removerAnexo } from '@/actions/anexos';
 
 export interface ClienteFormDados {
@@ -431,11 +434,22 @@ export default function ClienteForm({ cliente, somenteLeitura = false }: Props) 
     setErro(null);
     setSalvando(true);
     try {
-      // A action devolve o erro em vez de estourar: em produção o Next apaga a
-      // mensagem de um erro que escapa, e a pessoa ficava sem saber o que houve.
-      const r = cliente
-        ? await atualizarCliente(cliente.id, fd)
-        : await criarCliente(fd);
+      /*
+        Salva por uma rota de API, não por Server Action.
+
+        A Server Action tinha dois problemas que custaram caro aqui: o Next
+        apaga a mensagem de erro em produção, e uma falha no re-render que ele
+        faz junto com a resposta derrubava a chamada inteira. A rota devolve
+        JSON comum, então o erro chega legível e o salvar não depende de mais
+        nada dar certo.
+      */
+      if (cliente) fd.set('__id', cliente.id);
+
+      const resp = await fetch('/api/comercial/clientes', { method: 'POST', body: fd });
+      const r = (await resp.json().catch(() => ({ erro: `Resposta inesperada do servidor (${resp.status}).` }))) as {
+        erro?: string;
+        id?: string;
+      };
 
       if (r.erro) {
         setErro(r.erro);
