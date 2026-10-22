@@ -179,20 +179,51 @@ async function sincronizarIdsCorreios(clienteId: string, formData: FormData) {
   ]);
 }
 
-export async function criarCliente(formData: FormData) {
-  await exigirComercial();
-  const dados = dadosDoFormulario(formData, true) as { nome: string };
-  const cliente = await prisma.cliente.create({ data: dados });
-  await sincronizarIdsCorreios(cliente.id, formData);
-  revalidar();
-  return cliente.id;
+/**
+ * Devolve o erro em vez de deixá-lo subir — para a pessoa poder LER o que
+ * houve.
+ *
+ * O Next apaga a mensagem de qualquer erro que escape de uma Server Action em
+ * produção e manda no lugar um texto genérico em inglês sobre "Server
+ * Components render". Resultado: todo aviso escrito aqui ("a razão social é
+ * obrigatória", "este cliente já tem coletas") chegava ilegível na tela, e um
+ * problema de banco chegava idêntico a um erro de preenchimento.
+ *
+ * Capturando aqui, a mensagem volta como dado comum e a tela a mostra inteira.
+ */
+export interface Resultado {
+  erro?: string;
+  id?: string;
 }
 
-export async function atualizarCliente(id: string, formData: FormData) {
-  await exigirComercial();
-  await prisma.cliente.update({ where: { id }, data: dadosDoFormulario(formData, false) });
-  await sincronizarIdsCorreios(id, formData);
-  revalidar();
+function comoErro(e: unknown): string {
+  if (e instanceof Error && e.message) return e.message;
+  return 'Não foi possível salvar. Tente de novo em instantes.';
+}
+
+export async function criarCliente(formData: FormData): Promise<Resultado> {
+  try {
+    await exigirComercial();
+    const dados = dadosDoFormulario(formData, true) as { nome: string };
+    const cliente = await prisma.cliente.create({ data: dados });
+    await sincronizarIdsCorreios(cliente.id, formData);
+    revalidar();
+    return { id: cliente.id };
+  } catch (e) {
+    return { erro: comoErro(e) };
+  }
+}
+
+export async function atualizarCliente(id: string, formData: FormData): Promise<Resultado> {
+  try {
+    await exigirComercial();
+    await prisma.cliente.update({ where: { id }, data: dadosDoFormulario(formData, false) });
+    await sincronizarIdsCorreios(id, formData);
+    revalidar();
+    return { id };
+  } catch (e) {
+    return { erro: comoErro(e) };
+  }
 }
 
 export async function alternarClienteAtivo(id: string, ativo: boolean) {

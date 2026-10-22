@@ -55,7 +55,13 @@ export default function CadastroManager({
     setErro(null);
     setCarregando(true);
     try {
-      await fn();
+      const r = await fn();
+      // Algumas actions devolvem o erro em vez de estourar, porque o Next
+      // apaga a mensagem de erro que escapa em produção. Sem este teste, uma
+      // falha passaria por sucesso e a lista só não mudaria.
+      if (r && typeof r === 'object' && 'erro' in r && r.erro) {
+        throw new Error(String(r.erro));
+      }
       router.refresh();
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Ocorreu um erro.');

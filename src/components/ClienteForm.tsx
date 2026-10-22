@@ -431,13 +431,19 @@ export default function ClienteForm({ cliente, somenteLeitura = false }: Props) 
     setErro(null);
     setSalvando(true);
     try {
-      if (cliente) {
-        await atualizarCliente(cliente.id, fd);
-        router.push('/comercial');
-      } else {
-        await criarCliente(fd);
-        router.push('/comercial');
+      // A action devolve o erro em vez de estourar: em produção o Next apaga a
+      // mensagem de um erro que escapa, e a pessoa ficava sem saber o que houve.
+      const r = cliente
+        ? await atualizarCliente(cliente.id, fd)
+        : await criarCliente(fd);
+
+      if (r.erro) {
+        setErro(r.erro);
+        setSalvando(false);
+        return;
       }
+
+      router.push('/comercial');
       router.refresh();
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Não foi possível salvar.');
