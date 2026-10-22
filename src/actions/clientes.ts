@@ -1,6 +1,5 @@
 'use server';
 
-import { del } from '@vercel/blob';
 import { prisma } from '@/lib/prisma';
 import { TipoCliente } from '@prisma/client';
 import { podeEditarComercial } from './comercialAcesso';
@@ -259,7 +258,20 @@ export async function deletarCliente(id: string) {
 
   // Lixo pago não deve ficar para trás; se a limpeza falhar, o cadastro já foi.
   if (anexos.length) {
-    try { await del(anexos.map((a) => a.url)); } catch {}
+    /*
+      O pacote do Blob é carregado AQUI, e não no topo do arquivo.
+
+      Este arquivo é o do cadastro de cliente — a parte mais usada do
+      Comercial. Carregar o Blob lá em cima amarrava o cadastro inteiro a um
+      serviço que nem está configurado (o diagnóstico mostrou "Vercel Blob
+      configurado: NÃO"), e o cadastro parou de funcionar na mesma data em que
+      esse import entrou. Carregado aqui dentro, só quem exclui cliente com
+      anexo depende dele — e, se faltar, o cadastro segue inteiro.
+    */
+    try {
+      const { del } = await import('@vercel/blob');
+      await del(anexos.map((a) => a.url));
+    } catch {}
   }
 
   revalidar();

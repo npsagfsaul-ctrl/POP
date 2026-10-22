@@ -85,6 +85,45 @@ export async function GET() {
     }
   }));
 
+  // O teste decisivo: o MESMO caminho do botão Cadastrar, com um formulário
+  // montado igual ao da tela. O anterior prova que o banco aceita; este prova
+  // que a função que a tela chama funciona — inclusive carregar o arquivo dela,
+  // que é onde entrava o pacote do Blob.
+  linhas.push(await passo('cadastrar pelo caminho real (apagado no fim)', async () => {
+    const { criarCliente } = await import('@/actions/clientes');
+
+    const fd = new FormData();
+    fd.set('nome', 'TESTE DIAGNOSTICO — APAGAR');
+    fd.set('tipo', 'PJ');
+    fd.set('codigo', '000000');
+    fd.set('nomeFantasia', 'teste');
+    fd.set('documento', '00.000.000/0001-00');
+    fd.set('inscricaoEstadual', 'ISENTO');
+    fd.set('responsavel', 'teste');
+    fd.set('cpfResponsavel', '000.000.000-00');
+    fd.set('rgResponsavel', '0000000');
+    fd.set('nascimentoResponsavel', '1990-01-01');
+    fd.set('nomeMaeResponsavel', 'teste');
+    fd.set('cep', '00000-000');
+    fd.set('rua', 'teste');
+    fd.set('numero', '0');
+    fd.set('complemento', '');
+    fd.set('bairro', 'teste');
+    fd.set('cidade', 'teste');
+    fd.set('uf', 'PR');
+    fd.set('observacao', 'teste');
+    fd.set('idsCorreiosEnviados', '1');
+    fd.append('idNumero', '0000000000');
+    fd.append('idApelido', '');
+    fd.append('idSenha', 'x');
+
+    const r = await criarCliente(fd);
+    if (r.erro) return `A FUNÇÃO RECUSOU: ${r.erro}`;
+
+    if (r.id) await prisma.cliente.delete({ where: { id: r.id } });
+    return 'cadastrou e apagou — o caminho do botão funciona';
+  }));
+
   linhas.push('');
   linhas.push(`Vercel Blob configurado: ${process.env.BLOB_READ_WRITE_TOKEN ? 'sim' : 'NÃO'}`);
   linhas.push(`Banco configurado: ${process.env.DATABASE_URL ? 'sim' : 'NÃO'}`);
