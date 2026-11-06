@@ -1,7 +1,7 @@
 'use client';
 
 import { salvarChecklist } from '@/actions/checklist';
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 
 interface Pop {
   id: string;
@@ -122,6 +122,35 @@ export default function ChecklistForm({
     return pops.every(pop => respostasIniciais[pop.id] !== false);
   });
 
+  /*
+    Quais POPs aparecem na lista.
+
+    Na maioria dos dias não há divergência nenhuma, e rolar por cinquenta
+    procedimentos para chegar ao botão era o atrito do dia a dia. Então:
+    - "Sem ocorrência" marcado: a lista some (veja o render);
+    - dia aberto que já tinha divergência: só os POPs com ocorrência, com um
+      botão para mostrar o resto;
+    - desmarcou "Sem ocorrência" num dia limpo: a lista inteira, para escolher.
+
+    Esconder é seguro para a nota: o servidor trata todo POP que não vier
+    marcado como conforme (`salvarChecklist`), então o que não está na tela
+    conta exatamente como antes.
+
+    Os que vieram com ocorrência ficam fixos na lista filtrada mesmo se forem
+    desmarcados — sumir no meio do clique pareceria que o POP se perdeu.
+  */
+  const inicialmenteComOcorrencia = useMemo(
+    () => new Set(pops.filter((p) => respostasIniciais[p.id] === false).map((p) => p.id)),
+    // Só a carga inicial importa aqui; `respostasIniciais` não muda depois.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  );
+  const [mostrarTodos, setMostrarTodos] = useState(inicialmenteComOcorrencia.size === 0);
+
+  const popsVisiveis = mostrarTodos
+    ? pops
+    : pops.filter((p) => ocorrencias[p.id] || inicialmenteComOcorrencia.has(p.id));
+
   const handleToggleSemOcorrencia = (e: React.ChangeEvent<HTMLInputElement>) => {
     const isChecked = e.target.checked;
     if (isChecked) {
@@ -133,6 +162,9 @@ export default function ChecklistForm({
       }
     }
     setSemOcorrencia(isChecked);
+    // Desmarcou para registrar uma divergência: mostra tudo, senão não há onde
+    // escolher o POP.
+    if (!isChecked) setMostrarTodos(true);
   };
 
   const handleCheckboxOcorrencia = (popId: string, isChecked: boolean) => {
@@ -216,13 +248,22 @@ export default function ChecklistForm({
         <div className="divider" />
 
         {/* Lista de POPs */}
+        {semOcorrencia ? (
+          // Dia sem divergência: uma linha só, e o botão logo abaixo.
+          <p style={{ fontSize: '0.9375rem', color: 'var(--text-muted)', margin: '4px 0 8px' }}>
+            <strong style={{ color: 'var(--text-main)' }}>{pops.length} procedimentos</strong>
+            {' '}— todos sem ocorrência.
+          </p>
+        ) : (
         <div style={{ marginBottom: 8 }}>
           <h3 style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-main)', marginBottom: 12 }}>
-            Procedimentos Operacionais ({pops.length})
+            {mostrarTodos
+              ? `Procedimentos Operacionais (${pops.length})`
+              : `Com ocorrência (${popsVisiveis.length} de ${pops.length})`}
           </h3>
 
-          {pops.map((pop) => (
-            <div key={pop.id} className="pop-item" style={{ opacity: semOcorrencia ? 0.6 : 1, transition: 'opacity 0.2s' }}>
+          {popsVisiveis.map((pop) => (
+            <div key={pop.id} className="pop-item">
               <input
                 type="checkbox"
                 id={`pop_${pop.id}`}
@@ -322,7 +363,19 @@ export default function ChecklistForm({
               </div>
             </div>
           ))}
+
+          {!mostrarTodos && (
+            <button
+              type="button"
+              className="btn btn-outline btn-sm"
+              style={{ marginTop: 12 }}
+              onClick={() => setMostrarTodos(true)}
+            >
+              Mostrar todos os procedimentos ({pops.length})
+            </button>
+          )}
         </div>
+        )}
 
         {/* Global observations if they previously existed (for continuity), otherwise hide */}
         {obsGlobal && (
